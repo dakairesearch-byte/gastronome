@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import RestaurantCard from '@/components/RestaurantCard';
 import { Restaurant, Review } from '@/lib/types';
 
 export default async function DiscoverPage() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   let restaurants: Restaurant[] = [];
   const restaurantRatings: Record<string, { avg: number; count: number }> = {};
@@ -62,17 +62,12 @@ export default async function DiscoverPage() {
       <section className="py-8 px-4 max-w-7xl mx-auto">
         {restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {restaurants.map((restaurant) => {
-              const rating = restaurantRatings[restaurant.id];
-              return (
+            {restaurants.map((restaurant) => (
                 <RestaurantCard
                   key={restaurant.id}
                   restaurant={restaurant}
-                  averageRating={rating?.avg || 0}
-                  reviewCount={rating?.count || 0}
                 />
-              );
-            })}
+            ))}
           </div>
         ) : (
           <div className="text-center py-16">
