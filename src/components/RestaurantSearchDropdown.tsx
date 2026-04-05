@@ -130,8 +130,8 @@ export default function RestaurantSearchDropdown({
           name: r.name,
           cuisine: r.cuisine,
           city: r.city,
-          address: r.address,
-          avg_rating: r.avg_rating,
+          address: r.address ?? undefined,
+          avg_rating: r.avg_rating ?? undefined,
           isLocal: true,
           isGooglePlace: false,
         }))
