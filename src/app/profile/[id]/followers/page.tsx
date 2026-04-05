@@ -9,7 +9,8 @@ import CriticCard from '@/components/CriticCard'
 import EmptyState from '@/components/EmptyState'
 import { Users } from 'lucide-react'
 
-export default function FollowersPage({ params }: { params: { id: string } }) {
+export default function FollowersPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [followers, setFollowers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
