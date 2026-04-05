@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import RestaurantCard from '@/components/RestaurantCard';
 import { Restaurant, Review } from '@/lib/types';
 
 export default async function TopRatedPage() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   let restaurants: Restaurant[] = [];
   const restaurantRatings: Record<string, { avg: number; count: number }> = {};
@@ -76,8 +76,6 @@ export default async function TopRatedPage() {
               <RestaurantCard
                 key={restaurant.id}
                 restaurant={restaurant}
-                averageRating={restaurant.avgRating}
-                reviewCount={restaurant.reviewCount}
               />
             ))}
           </div>
