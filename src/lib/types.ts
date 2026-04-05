@@ -1,4 +1,4 @@
-import { Database } from './database.types';
+import { Database } from '@/types/database';
 
 // Database row types - derived from generated types
 export type Profile = Database['public']['Tables']['profiles']['Row'];
