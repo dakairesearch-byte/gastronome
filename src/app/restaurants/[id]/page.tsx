@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import ReviewCard from '@/components/ReviewCard'
 import RestaurantCard from '@/components/RestaurantCard'
 import ReviewStats from '@/components/ReviewStats'
+import AggregatedRatings from '@/components/AggregatedRatings'
 import StarRating from '@/components/StarRating'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -206,6 +207,16 @@ export default async function RestaurantPage({
                 averageRating={restaurant.avg_rating || 0}
               />
             )}
+
+            <AggregatedRatings
+              googleRating={restaurant.google_rating}
+              googleReviewCount={restaurant.google_review_count}
+              yelpRating={restaurant.yelp_rating}
+              yelpReviewCount={restaurant.yelp_review_count}
+              beliScore={restaurant.beli_score}
+              gastronomeRating={restaurant.avg_rating}
+              gastronomeReviewCount={restaurant.review_count}
+            />
           </div>
         </div>
       </div>
