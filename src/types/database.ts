@@ -57,6 +57,11 @@ export type Database = {
           price_range: number
           avg_rating: number | null
           review_count: number
+          google_rating: number | null
+          google_review_count: number | null
+          yelp_rating: number | null
+          yelp_review_count: number | null
+          beli_score: number | null
           created_at: string
           updated_at: string
         }
@@ -71,6 +76,11 @@ export type Database = {
           price_range: number
           avg_rating?: number | null
           review_count?: number
+          google_rating?: number | null
+          google_review_count?: number | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          beli_score?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -85,6 +95,11 @@ export type Database = {
           price_range?: number
           avg_rating?: number | null
           review_count?: number
+          google_rating?: number | null
+          google_review_count?: number | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          beli_score?: number | null
           created_at?: string
           updated_at?: string
         }
