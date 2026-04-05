@@ -72,9 +72,10 @@ async function getRestaurantData(restaurantId: string) {
 export default async function RestaurantPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const data = await getRestaurantData(params.id)
+  const { id } = await params
+  const data = await getRestaurantData(id)
 
   if (!data) {
     notFound()
