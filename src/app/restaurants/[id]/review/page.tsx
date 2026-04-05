@@ -123,9 +123,9 @@ export default function WriteReviewPage() {
             </label>
             <StarRating
               rating={rating}
-              size="lg"
-              interactive
-              onChange={(value) => setRating(value)}
+              size={28}
+              readonly={false}
+              onRate={(value) => setRating(value)}
             />
           </div>
 
