@@ -144,7 +144,7 @@ export default function AggregatedRatings({
 
         <div className="flex items-center justify-between p-3 rounded-lg border bg-purple-50 border-purple-200">
           <div className="flex items-center gap-2">
-            <span className="text-lg">\u{1F4CA}</span>
+            <span className="text-lg">{'\u{1F4CA}'}</span>
             <span className="font-semibold text-sm text-purple-700">Beli</span>
           </div>
           <div className="flex items-center gap-2">
