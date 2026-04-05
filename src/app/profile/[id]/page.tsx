@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ReviewCard from '@/components/ReviewCard'
@@ -15,7 +15,8 @@ interface ReviewWithData {
   photos: ReviewPhoto[]
 }
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
+export default function ProfilePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [reviews, setReviews] = useState<ReviewWithData[]>([])
   const [followers, setFollowers] = useState(0)
