@@ -14,6 +14,7 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [avatarPreview, setAvatarPreview] = useState('')
+  const [creativeModeEnabled, setCreativeModeEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -46,6 +47,7 @@ export default function EditProfilePage() {
           setBio(profileData.bio || '')
           setAvatarUrl(profileData.avatar_url || '')
           setAvatarPreview(profileData.avatar_url || '')
+          setCreativeModeEnabled(profileData.creative_mode_enabled || false)
         }
       } catch (err) {
         setError('Failed to load profile')
@@ -96,6 +98,7 @@ export default function EditProfilePage() {
           display_name: displayName.trim(),
           bio: bio.trim() || null,
           avatar_url: avatarUrl.trim() || null,
+          creative_mode_enabled: creativeModeEnabled,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id)
@@ -278,7 +281,39 @@ export default function EditProfilePage() {
             </p>
             {profile.is_critic && (
               <p className="text-sm text-blue-800 font-semibold text-amber-600">
-                â You are a featured critic
+                Ã¢ÂÂ You are a featured critic
+              </p>
+            )}
+          </div>
+
+          {/* Creative Mode Toggle */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Creative Mode</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Enable advanced posting features like long-form threads, image uploads, and rich formatting in the review composer.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={creativeModeEnabled}
+                onClick={() => setCreativeModeEnabled(!creativeModeEnabled)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
+                  creativeModeEnabled ? 'bg-amber-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    creativeModeEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            {creativeModeEnabled && (
+              <p className="text-xs text-amber-700 font-medium">
+                Creative Mode is on â your review composer will include rich formatting, image uploads, and thread support.
               </p>
             )}
           </div>
