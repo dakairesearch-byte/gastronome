@@ -203,6 +203,7 @@ export default async function RestaurantPage({
               <ReviewStats
                 ratings={ratingBreakdown}
                 totalReviews={reviews.length}
+                averageRating={restaurant.avg_rating || 0}
               />
             )}
           </div>
