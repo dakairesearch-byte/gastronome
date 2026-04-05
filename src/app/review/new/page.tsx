@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StarRating from '@/components/StarRating'
-import GooglePlacesAutocomplete, {
-  GooglePlacesResult,
-} from '@/components/GooglePlacesAutocomplete'
+import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete'
 import { Restaurant } from '@/types/database'
-import { AlertCircle, Loader2, Image as ImageIcon, X } from 'lucide-react'
+import { AlertCircle, Loader2, X, Sparkles, Settings } from 'lucide-react'
+import Link from 'next/link'
 
 export default function NewReviewPage() {
   const [user, setUser] = useState<any>(null)
@@ -28,6 +27,8 @@ export default function NewReviewPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showNewRestaurant, setShowNewRestaurant] = useState(false)
+  const [creativeModeEnabled, setCreativeModeEnabled] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(true)
   const supabase = createClient()
   const router = useRouter()
 
@@ -44,6 +45,18 @@ export default function NewReviewPage() {
 
       setUser(session.user)
       fetchRestaurants()
+
+      // Check creative mode setting
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('creative_mode_enabled')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profile) {
+        setCreativeModeEnabled(profile.creative_mode_enabled || false)
+      }
+      setProfileLoading(false)
     }
 
     checkAuth()
@@ -64,7 +77,6 @@ export default function NewReviewPage() {
 
   const handleAutocompleteSelect = (result: any) => {
     if (result.isFromGoogle) {
-      // Google Places result - auto-fill the new restaurant form
       setShowNewRestaurant(true)
       setNewRestaurantName(result.name)
       setNewRestaurantCity(result.city)
@@ -72,7 +84,6 @@ export default function NewReviewPage() {
       setSelectedRestaurant('')
       setSelectedRestaurantData(null)
     } else {
-      // Local restaurant result
       setShowNewRestaurant(false)
       handleRestaurantSelect(result.id)
     }
@@ -131,12 +142,21 @@ export default function NewReviewPage() {
         return
       }
 
-      if (title.trim().length === 0) {
+      // For quick post mode, auto-generate title if empty
+      const reviewTitle = creativeModeEnabled
+        ? title
+        : title.trim() || `${rating}-star review`
+
+      const reviewContent = creativeModeEnabled
+        ? content
+        : content.trim() || `Rated ${rating} out of 5 stars.`
+
+      if (creativeModeEnabled && reviewTitle.trim().length === 0) {
         setError('Please enter a review title')
         return
       }
 
-      if (content.trim().length < 20) {
+      if (creativeModeEnabled && reviewContent.trim().length < 20) {
         setError('Review must be at least 20 characters long')
         return
       }
@@ -149,8 +169,8 @@ export default function NewReviewPage() {
             restaurant_id: restaurantId,
             author_id: user.id,
             rating,
-            title,
-            content,
+            title: reviewTitle,
+            content: reviewContent,
           },
         ])
         .select()
@@ -161,7 +181,7 @@ export default function NewReviewPage() {
         return
       }
 
-      // Add photo if provided
+      // Add photo if provided (creative mode)
       if (photoUrl.trim() && createdReview) {
         await supabase.from('review_photos').insert([
           {
@@ -202,7 +222,7 @@ export default function NewReviewPage() {
     }
   }
 
-  if (!user) {
+  if (!user || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin text-amber-500" size={32} />
@@ -212,14 +232,30 @@ export default function NewReviewPage() {
 
   return (
     <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${creativeModeEnabled ? 'max-w-4xl' : 'max-w-2xl'}`}>
         <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Write a Review
-          </h1>
-          <p className="text-lg text-gray-600">
-            Share your dining experience with our community
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+                {creativeModeEnabled ? 'Write a Review' : 'Quick Review'}
+              </h1>
+              <p className="text-lg text-gray-600">
+                {creativeModeEnabled
+                  ? 'Share your detailed dining experience with our community'
+                  : 'Rate a restaurant in seconds'}
+              </p>
+            </div>
+            {!creativeModeEnabled && (
+              <Link
+                href="/profile/edit"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 transition-colors"
+                title="Enable Creative Mode in settings for detailed reviews"
+              >
+                <Sparkles size={14} />
+                <span>Want more options?</span>
+              </Link>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -229,7 +265,7 @@ export default function NewReviewPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Restaurant Selection */}
           <div className="space-y-4 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200">
             <h2 className="text-lg font-semibold text-gray-900">
@@ -247,9 +283,9 @@ export default function NewReviewPage() {
                   <div className="p-3 bg-white rounded border border-amber-100">
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">{selectedRestaurantData.name}</span>
-                      {' â¢ '}
+                      {' \u2022 '}
                       <span className="text-gray-600">{selectedRestaurantData.cuisine}</span>
-                      {' â¢ '}
+                      {' \u2022 '}
                       <span className="text-gray-600">{selectedRestaurantData.city}</span>
                     </p>
                   </div>
@@ -346,111 +382,132 @@ export default function NewReviewPage() {
           </div>
 
           {/* Rating */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <label className="block text-lg font-semibold text-gray-900">
               Your Rating
             </label>
-            <div className="p-6 bg-amber-50 rounded-lg border border-amber-200">
+            <div className={`p-4 ${creativeModeEnabled ? 'p-6' : 'p-4'} bg-amber-50 rounded-lg border border-amber-200`}>
               <StarRating
                 rating={rating}
-                size={40}
+                size={creativeModeEnabled ? 40 : 32}
                 readonly={false}
                 onRate={setRating}
               />
               {rating > 0 && (
-                <p className="mt-4 text-sm text-gray-600">
+                <p className="mt-3 text-sm text-gray-600">
                   You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
                 </p>
               )}
             </div>
           </div>
 
-          {/* Review Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Review Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              maxLength={100}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-              placeholder="e.g., Amazing pasta dishes with cozy atmosphere"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {title.length}/100 characters
-            </p>
-          </div>
-
-          {/* Review Content */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Review *
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              required
-              minLength={20}
-              maxLength={2000}
-              rows={10}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
-              placeholder="Share your dining experience in detail. What did you order? How was the service? Would you recommend this restaurant?"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {content.length}/2000 characters (minimum 20 required)
-            </p>
-          </div>
-
-          {/* Photo URL */}
-          <div className="space-y-4">
+          {/* Quick Post: Simple one-liner field */}
+          {!creativeModeEnabled && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Photo URL (optional)
+                Quick Thought (optional)
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={photoUrl}
-                  onChange={(e) => handlePhotoUrlChange(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                  placeholder="https://example.com/photo.jpg"
-                />
-                {photoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => handlePhotoUrlChange('')}
-                    className="px-4 py-3 text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
+              <input
+                type="text"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                maxLength={280}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+                placeholder="e.g., Amazing tacos, best I've had in Miami!"
+              />
               <p className="text-xs text-gray-500 mt-1">
-                Paste a direct link to a food photo (JPG, PNG, WebP). We recommend high-quality photos of your dish.
+                {content.length}/280 characters
               </p>
             </div>
+          )}
 
-            {/* Photo Preview */}
-            {photoPreview && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Photo Preview:</p>
-                <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
-                  <img
-                    src={photoPreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={() => setPhotoPreview('')}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  If the image doesn't load, check that the URL is correct and publicly accessible.
+          {/* Creative Mode: Full review fields */}
+          {creativeModeEnabled && (
+            <>
+              {/* Review Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Review Title *
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  maxLength={100}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+                  placeholder="e.g., Amazing pasta dishes with cozy atmosphere"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {title.length}/100 characters
                 </p>
               </div>
-            )}
-          </div>
+
+              {/* Review Content */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Review *
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                  minLength={20}
+                  maxLength={5000}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
+                  placeholder="Share your dining experience in detail. What did you order? How was the service? Would you recommend this restaurant?"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {content.length}/5000 characters (minimum 20 required)
+                </p>
+              </div>
+
+              {/* Photo URL */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Photo URL (optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={photoUrl}
+                      onChange={(e) => handlePhotoUrlChange(e.target.value)}
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+                      placeholder="https://example.com/photo.jpg"
+                    />
+                    {photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handlePhotoUrlChange('')}
+                        className="px-4 py-3 text-gray-600 hover:text-gray-900 transition-colors"
+                      >
+                        <X size={20} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Paste a direct link to a food photo (JPG, PNG, WebP).
+                  </p>
+                </div>
+
+                {photoPreview && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Photo Preview:</p>
+                    <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+                      <img
+                        src={photoPreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={() => setPhotoPreview('')}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Submit Buttons */}
           <div className="flex gap-3 pt-4">
@@ -460,7 +517,7 @@ export default function NewReviewPage() {
               className="flex-1 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Publishing Review...' : 'Publish Review'}
+              {loading ? 'Publishing...' : creativeModeEnabled ? 'Publish Review' : 'Post Review'}
             </button>
             <button
               type="button"
