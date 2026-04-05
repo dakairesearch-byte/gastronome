@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
