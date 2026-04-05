@@ -9,7 +9,8 @@ import CriticCard from '@/components/CriticCard'
 import EmptyState from '@/components/EmptyState'
 import { UserCheck } from 'lucide-react'
 
-export default function FollowingPage({ params }: { params: { id: string } }) {
+export default function FollowingPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [following, setFollowing] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
