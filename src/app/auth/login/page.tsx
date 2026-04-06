@@ -43,10 +43,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg border border-amber-100 p-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg mb-4">
-            <span className="text-white font-bold text-xl">E</span>
+            <span className="text-white font-bold text-xl">G</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your Epicurious account</p>
+          <p className="text-gray-600 mt-2">Sign in to your Gastronome account</p>
         </div>
 
         {error && (
@@ -80,7 +80,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-              placeholder="â¢â¢â¢â¢â¢â¢â¢â¢"
+              placeholder="Enter your password"
             />
           </div>
 
