@@ -18,8 +18,8 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="bg-amber-50 p-4 rounded-full mb-6">
-        <Icon size={32} className="text-amber-600" />
+      <div className="bg-emerald-50 p-4 rounded-full mb-6">
+        <Icon size={32} className="text-emerald-600" />
       </div>
       <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
         {title}
@@ -30,7 +30,7 @@ export default function EmptyState({
       {ctaText && ctaHref && (
         <Link
           href={ctaHref}
-          className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold"
+          className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors font-semibold"
         >
           {ctaText}
         </Link>
