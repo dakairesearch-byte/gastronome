@@ -238,7 +238,7 @@ export default function EditReviewPage() {
               {restaurant.name}
             </h2>
             <p className="text-gray-600 mt-1">
-              {restaurant.cuisine} â¢ {restaurant.city}
+              {restaurant.cuisine} • {restaurant.city}
             </p>
           </div>
 
