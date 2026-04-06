@@ -1,6 +1,6 @@
 export function ReviewCardSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-amber-50 overflow-hidden animate-pulse">
+    <div className="bg-white rounded-xl shadow-sm border border-emerald-50 overflow-hidden animate-pulse">
       <div className="w-full h-48 bg-gray-200" />
       <div className="p-4 space-y-3">
         <div className="space-y-2">
@@ -11,7 +11,7 @@ export function ReviewCardSkeleton() {
           <div className="h-4 bg-gray-200 rounded w-full" />
           <div className="h-4 bg-gray-200 rounded w-5/6" />
         </div>
-        <div className="pt-2 border-t border-amber-50 flex items-center justify-between">
+        <div className="pt-2 border-t border-emerald-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gray-200 rounded-full" />
             <div className="space-y-1">
@@ -28,7 +28,7 @@ export function ReviewCardSkeleton() {
 
 export function RestaurantCardSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-amber-50 p-4 animate-pulse">
+    <div className="bg-white rounded-xl shadow-sm border border-emerald-50 p-4 animate-pulse">
       <div className="space-y-3">
         <div className="space-y-2">
           <div className="h-5 bg-gray-200 rounded w-3/4" />
@@ -54,7 +54,7 @@ export function RestaurantCardSkeleton() {
 export function ProfileSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-12 sm:py-16 border-b border-amber-100">
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-12 sm:py-16 border-b border-emerald-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row gap-8 items-start">
             <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-200 rounded-full" />
