@@ -30,7 +30,7 @@ export default function StarRating({
             size={size}
             className={
               star <= rating
-                ? 'fill-amber-400 text-amber-400'
+                ? 'fill-emerald-400 text-emerald-400'
                 : 'text-gray-300'
             }
           />
