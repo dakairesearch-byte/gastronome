@@ -86,7 +86,7 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={32} />
+        <Loader2 className="animate-spin text-emerald-500" size={32} />
       </div>
     )
   }
@@ -105,7 +105,7 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
     <div className="min-h-screen bg-white py-8 sm:py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Link href={`/profile/${params.id}`} className="text-amber-600 hover:text-amber-700 mb-4 inline-block font-medium">
+          <Link href={`/profile/${params.id}`} className="text-emerald-600 hover:text-emerald-700 mb-4 inline-block font-medium">
             â Back to {profile.display_name}'s profile
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
