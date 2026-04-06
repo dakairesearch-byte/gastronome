@@ -400,7 +400,7 @@ export default function GooglePlacesAutocomplete({
                             {restaurant.name}
                           </p>
                           <p className="text-sm text-gray-600 truncate">
-                            {restaurant.cuisine} â¢ {restaurant.city}
+                            {restaurant.cuisine} • {restaurant.city}
                           </p>
                           {restaurant.address && (
                             <p className="text-xs text-gray-500 truncate">
