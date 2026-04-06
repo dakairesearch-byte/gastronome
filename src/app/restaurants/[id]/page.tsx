@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import ReviewCard from '@/components/ReviewCard'
 import RestaurantCard from '@/components/RestaurantCard'
 import ReviewStats from '@/components/ReviewStats'
-import AggregatedRatings from '@/components/AggregatedRatings'
 import StarRating from '@/components/StarRating'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -86,9 +85,9 @@ export default async function RestaurantPage({
   const ratingBreakdown = reviews.map((r) => r.review.rating)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Restaurant Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Main Info */}
@@ -99,27 +98,27 @@ export default async function RestaurantPage({
 
               {/* Quick Info */}
               <div className="flex flex-wrap gap-3 text-gray-600">
-                <span className="inline-flex items-center gap-1 text-sm">
-                  <ChefHat size={16} className="text-amber-600" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold">
+                  <ChefHat size={15} className="text-emerald-600" />
                   {restaurant.cuisine}
                 </span>
-                <span className="inline-flex items-center gap-1 text-sm">
-                  <MapPin size={16} className="text-amber-600" />
+                <span className="inline-flex items-center gap-1 text-sm text-gray-500">
+                  <MapPin size={15} className="text-gray-400" />
                   {restaurant.city}
                 </span>
-                <span className="inline-flex items-center gap-1 text-lg font-bold text-amber-700">
+                <span className="inline-flex items-center gap-1 text-lg font-bold text-emerald-700">
                   {priceDisplay}
                 </span>
               </div>
 
               {/* Address */}
               {restaurant.address && (
-                <p className="text-gray-700">{restaurant.address}</p>
+                <p className="text-gray-600">{restaurant.address}</p>
               )}
 
               {/* Rating Summary */}
               <div className="flex items-center gap-4 pt-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <StarRating
                     rating={Math.round(restaurant.avg_rating || 0)}
                     size={24}
@@ -129,7 +128,7 @@ export default async function RestaurantPage({
                     <p className="text-3xl font-bold text-gray-900">
                       {(restaurant.avg_rating || 0).toFixed(1)}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-500">
                       {restaurant.review_count} {restaurant.review_count === 1 ? 'review' : 'reviews'}
                     </p>
                   </div>
@@ -141,7 +140,7 @@ export default async function RestaurantPage({
             <div className="space-y-3 lg:col-span-1">
               <Link
                 href="/review/new"
-                className="w-full py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold text-center block"
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-center block shadow-sm"
               >
                 Write a Review
               </Link>
@@ -151,7 +150,7 @@ export default async function RestaurantPage({
                   href={restaurant.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-center block flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 border-2 border-emerald-500 text-emerald-700 rounded-xl hover:bg-emerald-50 transition-colors font-medium text-center flex items-center justify-center gap-2"
                 >
                   <Globe size={18} />
                   Visit Website
@@ -161,10 +160,10 @@ export default async function RestaurantPage({
               {restaurant.phone && (
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-center block flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-center flex items-center justify-center gap-2"
                 >
                   <Phone size={18} />
-                  Call
+                  {restaurant.phone}
                 </a>
               )}
             </div>
@@ -172,15 +171,33 @@ export default async function RestaurantPage({
         </div>
       </div>
 
-      {/* Reviews Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Reviews List */}
-          <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Reviews ({reviews.length})</h2>
+          {/* Reviews Section */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Review Stats */}
+            {reviews.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Review Breakdown
+                </h2>
+                <ReviewStats
+                  ratings={ratingBreakdown}
+                  totalReviews={reviews.length}
+                  averageRating={restaurant.avg_rating || 0}
+                />
+              </div>
+            )}
+
+            {/* Reviews List */}
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {reviews.length > 0 ? 'Recent Reviews' : 'No reviews yet'}
+              </h2>
+
               {reviews.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {reviews.map(({ review, author, photos }) => (
                     <ReviewCard
                       key={review.id}
@@ -192,47 +209,162 @@ export default async function RestaurantPage({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+                <div className="text-center py-12 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                  <p className="text-lg text-gray-600 mb-4">
+                    Be the first to review this restaurant!
+                  </p>
+                  <Link
+                    href="/review/new"
+                    className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+                  >
+                    Write a Review
+                  </Link>
                 </div>
               )}
             </div>
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {reviews.length > 0 && (
-              <ReviewStats
-                ratings={ratingBreakdown}
-                totalReviews={reviews.length}
-                averageRating={restaurant.avg_rating || 0}
-              />
-            )}
+          <div className="space-y-6">
+            {/* Restaurant Info Card */}
+            <div className="sticky top-20 space-y-6">
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 text-lg">
+                  Restaurant Details
+                </h3>
 
-            <AggregatedRatings
-              googleRating={restaurant.google_rating}
-              googleReviewCount={restaurant.google_review_count}
-              yelpRating={restaurant.yelp_rating}
-              yelpReviewCount={restaurant.yelp_review_count}
-              beliScore={restaurant.beli_score}
-              gastronomeRating={restaurant.avg_rating}
-              gastronomeReviewCount={restaurant.review_count}
-            />
+                {restaurant.cuisine && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Cuisine</p>
+                    <p className="text-gray-900 font-medium">{restaurant.cuisine}</p>
+                  </div>
+                )}
+
+                {restaurant.city && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Location</p>
+                    <p className="text-gray-900 font-medium">{restaurant.city}</p>
+                  </div>
+                )}
+
+                {restaurant.address && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Address</p>
+                    <p className="text-gray-800 text-sm">{restaurant.address}</p>
+                  </div>
+                )}
+
+                {restaurant.phone && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Phone</p>
+                    <a
+                      href={`tel:${restaurant.phone}`}
+                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      {restaurant.phone}
+                    </a>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Price Range</p>
+                  <p className="text-lg font-bold text-emerald-700">{priceDisplay}</p>
+                </div>
+              </div>
+
+              {/* External Ratings */}
+              {(restaurant.google_rating || restaurant.yelp_rating || restaurant.beli_score) && (
+                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    External Ratings
+                  </h3>
+                  <div className="space-y-3">
+                    {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">G</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-blue-600">Google</p>
+                            {restaurant.google_review_count != null && restaurant.google_review_count > 0 && (
+                              <p className="text-xs text-blue-400">
+                                {restaurant.google_review_count > 999
+                                  ? (restaurant.google_review_count / 1000).toFixed(1) + 'k reviews'
+                                  : restaurant.google_review_count + ' reviews'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xl font-bold text-blue-700">{Number(restaurant.google_rating).toFixed(1)}</span>
+                          <span className="text-blue-400 text-sm">/5</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">Y</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-red-600">Yelp</p>
+                            {restaurant.yelp_review_count != null && restaurant.yelp_review_count > 0 && (
+                              <p className="text-xs text-red-400">
+                                {restaurant.yelp_review_count > 999
+                                  ? (restaurant.yelp_review_count / 1000).toFixed(1) + 'k reviews'
+                                  : restaurant.yelp_review_count + ' reviews'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xl font-bold text-red-700">{Number(restaurant.yelp_rating).toFixed(1)}</span>
+                          <span className="text-red-400 text-sm">/5</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">B</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-purple-600">Beli</p>
+                            <p className="text-xs text-purple-400">Score</p>
+                          </div>
+                        </div>
+                        <span className="text-xl font-bold text-purple-700">{Number(restaurant.beli_score).toFixed(0)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Related Restaurants */}
+              {relatedRestaurants.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    More {restaurant.cuisine}
+                  </h3>
+                  <div className="space-y-4">
+                    {relatedRestaurants.map((related) => (
+                      <RestaurantCard
+                        key={related.id}
+                        restaurant={related}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Related Restaurants */}
-      {relatedRestaurants.length > 0 && (
-        <section className="py-12 px-4 max-w-7xl mx-auto border-t border-gray-200">
-          <h2 className="text-2xl font-bold mb-6">Similar Restaurants</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {relatedRestaurants.map((restaur) => (
-              <RestaurantCard key={restaur.id} restaurant={restaur} />
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   )
 }
