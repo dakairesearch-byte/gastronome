@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #f59e0b;
-  --color-primary-dark: #d97706;
-  --color-primary-light: #fcd34d;
-  --color-secondary: #ea580c;
+  --color-primary: #059669;
+  --color-primary-dark: #047857;
+  --color-primary-light: #6ee7b7;
+  --color-secondary: #0d9488;
 }
 
 html {
@@ -26,12 +26,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(253, 224, 71);
+  background-color: rgb(110, 231, 183);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(251, 191, 36);
+  background-color: rgb(52, 211, 153);
 }
 
 /* Smooth transitions */
@@ -46,7 +46,7 @@ a {
 :focus-visible {
   outline-width: 2px;
   outline-offset: 2px;
-  outline-color: rgb(217, 119, 6);
+  outline-color: rgb(5, 150, 105);
 }
 
 /* Star rating animation */
