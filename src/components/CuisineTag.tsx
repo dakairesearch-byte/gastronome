@@ -15,8 +15,8 @@ export default function CuisineTag({
     'inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all'
 
   const variantClasses = {
-    default: 'bg-amber-50 text-amber-700 hover:bg-amber-100',
-    featured: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
+    default: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+    featured: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm',
   }
 
   return (
