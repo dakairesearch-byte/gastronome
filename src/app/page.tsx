@@ -59,325 +59,231 @@ async function getHomePageData() {
     .order('avg_rating', { ascending: false })
     .limit(6)
 
-  // Get trending cuisines
-  const { data: allRestaurants } = await supabase
-    .from('restaurants')
-    .select('cuisine')
-
-  const cuisineCounts = (allRestaurants || []).reduce(
-    (acc, restaurant) => {
-      acc[restaurant.cuisine] = (acc[restaurant.cuisine] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
-  const trendingCuisines = Object.entries(cuisineCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6)
-    .map(([cuisine]) => cuisine)
-
-  return {
-    reviews: filteredReviews,
-    topRestaurants: topRestaurants || [],
-    trendingCuisines,
-  }
-}
-
-export default async function HomePage() {
-  const { reviews, topRestaurants, trendingCuisines } = await getHomePageData()
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900">
-      {/* Hero Section */}
-      <section className="py-20 px-4 max-w-7xl mx-auto text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6">
-          <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-            Gastronome
-          </span>
-        </h1>
-        <p className="text-xl text-neutral-300 mb-2">
-          Discover authentic food reviews from passionate home critics
-        </p>
-        <p className="text-neutral-400 mb-8">
-          Rate restaurants, share your dining experiences, and follow fellow food enthusiasts
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link
-            href="/restaurants"
-            className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-neutral-950 rounded-lg font-bold transition-colors"
-          >
-            Explore Restaurants
-          </Link>
-          <Link
-            href="/auth/signup"
-            className="px-6 py-3 border border-amber-500 text-amber-500 hover:bg-amber-500/10 rounded-lg font-bold transition-colors"
-          >
-            Join Community
-          </Link>
-        </div>
-      </section>
-
-      {/* Latest Reviews Section */}
-      <section className="py-16 px-4 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <TrendingUp className="text-amber-500" size={28} />
-          <h2 className="text-3xl font-bold text-white">Latest Reviews</h2>
-        </div>
-        {reviews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reviews.map(({ review, restaurant, author, photos }) => (
-              <ReviewCard
-                key={review.id}
-                review={review}
-                restaurant={restaurant}
-                author={author}
-                photos={photos}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-neutral-800/50 rounded-xl border border-neutral-700">
-            <p className="text-neutral-300 text-lg mb-4">No reviews yet. Be the first to share your dining experience!</p>
-            <Link
-              href="/auth/signup"
-              className="inline-block px-6 py-3 bg-amber-500 hover:bg-amber-600 text-neutral-950 rounded-lg font-bold transition-colors"
-            >
-              Write a Review
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* Top Rated Restaurants */}
-      {topRestaurants.length > 0 && (
-        <section className="py-16 px-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <ChefHat className="text-amber-500" size={28} />
-            <h2 className="text-3xl font-bold text-white">Top Rated Restaurants</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topRestaurants.map((restaurant) => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Trending Cuisines */}
-      {trendingCuisines.length > 0 && (
-        <section className="py-16 px-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Users className="text-amber-500" size={28} />
-            <h2 className="text-3xl font-bold text-white">Trending Cuisines</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {trendingCuisines.map((cuisine) => (
-              <CuisineTag key={cuisine} cuisine={cuisine} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Call to Action */}
-      <section className="py-20 px-4 max-w-7xl mx-auto text-center">
-        <h2 className="text-3xl font-bold mb-4 text-white">Ready to Share Your Thoughts?</h2>
-        <p className="text-neutral-400 mb-8">
-          Join our community of passionate food critics and share your restaurant reviews
-        </p>
-        <Link
-          href="/auth/signup"
-          className="inline-block px-6 py-3 bg-amber-500 hover:bg-amber-600 text-neutral-950 rounded-lg font-bold transition-colors"
-        >
-          Get Started
-        </Link>
-      </section>
-    </div>
-  )
-}
-import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import ReviewCard from '@/components/ReviewCard'
-import RestaurantCard from '@/components/RestaurantCard'
-import CriticCard from '@/components/CriticCard'
-import CuisineTag from '@/components/CuisineTag'
-import { TrendingUp, Users, ChefHat } from 'lucide-react'
-
-export const revalidate = 60
-
-async function getHomePageData() {
-  const supabase = await createServerSupabaseClient()
-
-  // Get latest reviews
-  const { data: reviews } = await supabase
-    .from('reviews')
+  // Get featured critics
+  const { data: critics } = await supabase
+    .from('profiles')
     .select('*')
+    .eq('is_critic', true)
     .order('created_at', { ascending: false })
     .limit(6)
 
-  const reviewsWithData = await Promise.all(
-    (reviews || []).map(async (review) => {
-      const [restaurantRes, authorRes, photosRes] = await Promise.all([
-        supabase
-          .from('restaurants')
-          .select('*')
-          .eq('id', review.restaurant_id)
-          .single(),
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', review.author_id)
-          .single(),
-        supabase
-          .from('review_photos')
-          .select('*')
-          .eq('review_id', review.id),
-      ])
+  const criticsWithData = await Promise.all(
+    (critics || []).map(async (critic) => {
+      const { count: reviewCount } = await supabase
+        .from('reviews')
+        .select('*', { count: 'exact', head: true })
+        .eq('author_id', critic.id)
+
+      const { count: followerCount } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', critic.id)
 
       return {
-        review,
-        restaurant: restaurantRes.data,
-        author: authorRes.data,
-        photos: photosRes.data || [],
+        profile: critic,
+        reviewCount: reviewCount || 0,
+        followerCount: followerCount || 0,
       }
     })
   )
 
-  const filteredReviews = reviewsWithData.filter(
-    (item): item is typeof reviewsWithData[0] =>
-      item.restaurant !== null && item.author !== null
-  )
-
-  // Get top-rated restaurants (trending)
-  const { data: topRestaurants } = await supabase
-    .from('restaurants')
-    .select('*')
-    .gt('avg_rating', 0)
-    .order('avg_rating', { ascending: false })
-    .limit(6)
-
-  // Get trending cuisines
+  // Get unique cuisines
   const { data: allRestaurants } = await supabase
     .from('restaurants')
     .select('cuisine')
 
-  const cuisineCounts = (allRestaurants || []).reduce(
-    (acc, restaurant) => {
-      acc[restaurant.cuisine] = (acc[restaurant.cuisine] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
-  const trendingCuisines = Object.entries(cuisineCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6)
-    .map(([cuisine]) => cuisine)
+  const cuisines = [
+    ...new Set((allRestaurants || []).map((r) => r.cuisine)),
+  ]
+    .sort()
+    .slice(0, 8)
 
   return {
     reviews: filteredReviews,
     topRestaurants: topRestaurants || [],
-    trendingCuisines,
+    critics: criticsWithData,
+    cuisines,
   }
 }
 
-export default async function HomePage() {
-  const { reviews, topRestaurants, trendingCuisines } = await getHomePageData()
+export default async function Home() {
+  const { reviews, topRestaurants, critics, cuisines } = await getHomePageData()
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="py-20 px-4 max-w-7xl mx-auto text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6">
-          <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-            Gastronome
-          </span>
-        </h1>
-        <p className="text-xl text-neutral-300 mb-2">
-          Discover authentic food reviews from passionate home critics
-        </p>
-        <p className="text-neutral-400 mb-8">
-          Rate restaurants, share your dining experiences, and follow fellow food enthusiasts
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link
-            href="/discover"
-            className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-neutral-950 rounded-lg font-bold transition-colors"
-          >
-            Explore Restaurants
-          </Link>
-          <Link
-            href="/auth/signup"
-            className="px-6 py-3 border border-amber-500 text-amber-500 hover:bg-amber-500/10 rounded-lg font-bold transition-colors"
-          >
-            Join Community
-          </Link>
+      <section className="relative bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-16 sm:py-32 border-b border-emerald-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
+              Discover Authentic <span className="text-emerald-600">Food Reviews</span>
+            </h1>
+            <p className="text-xl sm:text-2xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+              Connect with passionate food critics. Share your dining experiences. Rate restaurants you love.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              <Link
+                href="/restaurants"
+                className="px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-lg shadow-sm"
+              >
+                Explore Restaurants
+              </Link>
+              <Link
+                href="/search"
+                className="px-8 py-3 border-2 border-emerald-500 text-emerald-700 rounded-xl hover:bg-emerald-50 transition-colors font-semibold text-lg"
+              >
+                Search Reviews
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Latest Reviews Section */}
-      {reviews.length > 0 && (
-        <section className="py-16 px-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <TrendingUp className="text-amber-500" size={28} />
-            <h2 className="text-3xl font-bold text-white">Latest Reviews</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reviews.map(({ review, restaurant, author, photos }) => (
-              <ReviewCard
-                key={review.id}
-                review={review}
-                restaurant={restaurant}
-                author={author}
-                photos={photos}
-              />
-            ))}
+      {/* Cuisine Discovery */}
+      {cuisines.length > 0 && (
+        <section className="py-12 sm:py-16 border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-6">
+              <ChefHat size={28} className="text-emerald-600" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                Explore by Cuisine
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {cuisines.map((cuisine) => (
+                <CuisineTag key={cuisine} cuisine={cuisine} variant="default" />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* Top Rated Restaurants */}
+      {/* Trending Restaurants */}
       {topRestaurants.length > 0 && (
-        <section className="py-16 px-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <ChefHat className="text-amber-500" size={28} />
-            <h2 className="text-3xl font-bold text-white">Top Rated Restaurants</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topRestaurants.map((restaurant) => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-            ))}
+        <section className="py-12 sm:py-16 border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-8">
+              <TrendingUp size={28} className="text-emerald-600" />
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Top Rated
+                </h2>
+                <p className="text-gray-500">Most loved restaurants by critics</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {topRestaurants.slice(0, 6).map((restaurant) => (
+                <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+              ))}
+            </div>
+            <div className="mt-8 text-center">
+              <Link
+                href="/restaurants"
+                className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+              >
+                View all restaurants â
+              </Link>
+            </div>
           </div>
         </section>
       )}
 
-      {/* Trending Cuisines */}
-      {trendingCuisines.length > 0 && (
-        <section className="py-16 px-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Users className="text-amber-500" size={28} />
-            <h2 className="text-3xl font-bold text-white">Trending Cuisines</h2>
+      {/* Latest Reviews */}
+      <section className="py-12 sm:py-16 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              Latest Reviews
+            </h2>
+            <p className="text-lg text-gray-500">
+              Discover what critics are saying right now
+            </p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {trendingCuisines.map((cuisine) => (
-              <CuisineTag key={cuisine} cuisine={cuisine} />
-            ))}
+
+          {reviews.length > 0 ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {reviews.slice(0, 6).map(({ review, restaurant, author, photos }) => (
+                  <ReviewCard
+                    key={review.id}
+                    review={review}
+                    restaurant={restaurant}
+                    author={author}
+                    photos={photos}
+                  />
+                ))}
+              </div>
+              {reviews.length > 6 && (
+                <div className="text-center pt-4">
+                  <Link
+                    href="/search"
+                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                  >
+                    View all reviews â
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+              <p className="text-lg text-gray-600 mb-6">
+                Be the first to share a dining experience!
+              </p>
+              <Link
+                href="/auth/signup"
+                className="inline-block px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+              >
+                Write a Review
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Featured Critics */}
+      {critics.length > 0 && (
+        <section className="py-12 sm:py-16 border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-8">
+              <Users size={28} className="text-emerald-600" />
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Featured Critics
+                </h2>
+                <p className="text-gray-500">Follow passionate food reviewers</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {critics.map(({ profile, reviewCount, followerCount }) => (
+                <CriticCard
+                  key={profile.id}
+                  profile={profile}
+                  reviewCount={reviewCount}
+                  followerCount={followerCount}
+                  isFeatured={true}
+                />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* Call to Action */}
-      <section className="py-20 px-4 max-w-7xl mx-auto text-center">
-        <h2 className="text-3xl font-bold mb-4 text-white">Ready to Share Your Thoughts?</h2>
-        <p className="text-neutral-400 mb-8">
-          Join our community of passionate food critics and share your restaurant reviews
-        </p>
-        <Link
-          href="/auth/signup"
-          className="inline-block px-6 py-3 bg-amber-500 hover:bg-amber-600 text-neutral-950 rounded-lg font-bold transition-colors"
-        >
-          Get Started
-        </Link>
+      {/* CTA Section */}
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-50 to-teal-50 border-t border-emerald-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            Ready to share your dining story?
+          </h2>
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+            Join our community of passionate food critics and discover amazing restaurants through authentic reviews.
+          </p>
+          <Link
+            href="/auth/signup"
+            className="inline-block px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-lg shadow-sm"
+          >
+            Get Started Today
+          </Link>
+        </div>
       </section>
     </div>
   )
