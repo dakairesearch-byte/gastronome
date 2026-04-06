@@ -76,12 +76,12 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-40 bg-white border-b border-amber-100 shadow-sm">
+    <nav className="sticky top-0 z-40 bg-white border-b border-emerald-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:shadow-md transition-shadow">
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:shadow-md transition-shadow">
               G
             </div>
             <span className="font-semibold text-gray-900 hidden sm:inline text-sm sm:text-base">
@@ -99,65 +99,72 @@ export default function Navbar() {
             />
           </div>
 
-          {/* Navigation Links */}
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/discover" className="text-sm text-gray-600 hover:text-amber-600 transition-colors">
-              Discover
+            <Link
+              href="/restaurants"
+              className="text-gray-700 hover:text-emerald-600 transition-colors font-medium text-sm"
+            >
+              Restaurants
             </Link>
-            <Link href="/top-rated" className="text-sm text-gray-600 hover:text-amber-600 transition-colors">
-              Top Rated
-            </Link>
-          </div>
 
-          {/* Desktop Right */}
-          <div className="hidden sm:flex items-center gap-3">
             {user ? (
-              <>
-                <Link
-                  href="/review/new"
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+              <div className="relative">
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-emerald-50 transition-colors"
                 >
-                  Write Review
-                </Link>
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileOpen(!profileOpen)}
-                    className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <User size={18} />
-                    <span className="hidden sm:inline text-sm">{profile?.display_name || 'Profile'}</span>
-                  </button>
-
-                  {profileOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                      <Link
-                        href={`/profile/${user.id}`}
-                        onClick={() => setProfileOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-amber-50 rounded-t-lg transition-colors"
-                      >
-                        My Profile
-                      </Link>
-                      <Link
-                        href="/my-reviews"
-                        onClick={() => setProfileOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-amber-50 transition-colors"
-                      >
-                        My Reviews
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
-                      >
-                        Logout
-                      </button>
-                    </div>
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.display_name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User size={20} className="text-gray-600" />
                   )}
-                </div>
-              </>
+                  <span className="text-sm font-medium text-gray-700 truncate max-w-[100px]">
+                    {profile?.display_name}
+                  </span>
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50">
+                    <Link
+                      href={`/profile/${user.id}`}
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 first:rounded-t-xl"
+                    >
+                      My Profile
+                    </Link>
+                    <Link
+                      href="/profile/edit"
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50"
+                    >
+                      Edit Profile
+                    </Link>
+                    <Link
+                      href="/review/new"
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50"
+                    >
+                      Write a Review
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 last:rounded-b-xl"
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 href="/auth/login"
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium text-sm shadow-sm"
               >
                 Login
               </Link>
@@ -167,16 +174,20 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="sm:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="md:hidden p-2 hover:bg-emerald-50 rounded-lg transition-colors"
           >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            {menuOpen ? (
+              <X size={24} className="text-gray-700" />
+            ) : (
+              <Menu size={24} className="text-gray-700" />
+            )}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="sm:hidden py-4 space-y-3 border-t border-gray-200">
-            <div className="px-2">
+          <div className="md:hidden pb-4 border-t border-emerald-100 mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+            <div className="px-4">
               <RestaurantSearchDropdown
                 onSelectLocal={handleSelectLocalRestaurant}
                 onSelectGoogle={handleSelectGooglePlace}
@@ -186,42 +197,35 @@ export default function Navbar() {
             </div>
 
             <Link
-              href="/discover"
+              href="/restaurants"
               onClick={() => setMenuOpen(false)}
-              className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              className="block px-4 py-2 text-gray-700 hover:bg-emerald-50 rounded transition-colors"
             >
-              Discover
-            </Link>
-            <Link
-              href="/top-rated"
-              onClick={() => setMenuOpen(false)}
-              className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
-            >
-              Top Rated
+              Restaurants
             </Link>
 
             {user ? (
               <>
                 <Link
-                  href="/review/new"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors font-medium"
-                >
-                  Write Review
-                </Link>
-                <Link
                   href={`/profile/${user.id}`}
                   onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  className="block px-4 py-2 text-gray-700 hover:bg-emerald-50 rounded transition-colors"
                 >
                   My Profile
                 </Link>
                 <Link
-                  href="/my-reviews"
+                  href="/profile/edit"
                   onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  className="block px-4 py-2 text-gray-700 hover:bg-emerald-50 rounded transition-colors"
                 >
-                  My Reviews
+                  Edit Profile
+                </Link>
+                <Link
+                  href="/review/new"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2 text-gray-700 hover:bg-emerald-50 rounded transition-colors"
+                >
+                  Write a Review
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -235,7 +239,7 @@ export default function Navbar() {
               <Link
                 href="/auth/login"
                 onClick={() => setMenuOpen(false)}
-                className="block px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors text-center font-medium"
+                className="block px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-center font-medium shadow-sm"
               >
                 Login
               </Link>
