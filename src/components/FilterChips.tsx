@@ -24,7 +24,7 @@ export default function FilterChips({
         {hasActiveFilters && (
           <button
             onClick={onClearAll}
-            className="text-sm text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1"
+            className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
           >
             <X size={16} />
             Clear filters
@@ -41,7 +41,7 @@ export default function FilterChips({
               onClick={() => onCuisineChange(cuisine)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 isSelected
-                  ? 'bg-amber-500 text-white shadow-sm'
+                  ? 'bg-emerald-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
