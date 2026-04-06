@@ -350,12 +350,12 @@ export default function GooglePlacesAutocomplete({
             if (results.length > 0) setIsOpen(true)
           }}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white text-gray-900"
+          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white text-gray-900"
           autoComplete="off"
         />
 
         {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500">
             <Loader2 size={18} className="animate-spin" />
           </div>
         )}
@@ -372,7 +372,7 @@ export default function GooglePlacesAutocomplete({
 
       {/* Dropdown Results */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
           {/* Local Results Section */}
           {results.some((r) => !r.isFromGoogle) && (
             <>
@@ -390,7 +390,7 @@ export default function GooglePlacesAutocomplete({
                       onClick={() => handleSelectResult(result)}
                       className={`w-full px-4 py-3 text-left border-b border-gray-100 transition-colors ${
                         selectedIndex === resultIndex
-                          ? 'bg-amber-50'
+                          ? 'bg-emerald-50'
                           : 'hover:bg-gray-50'
                       }`}
                     >
@@ -410,7 +410,7 @@ export default function GooglePlacesAutocomplete({
                         </div>
                         {restaurant.avg_rating && (
                           <div className="flex-shrink-0">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                               {restaurant.avg_rating.toFixed(1)}
                             </span>
                           </div>
@@ -439,7 +439,7 @@ export default function GooglePlacesAutocomplete({
                       onClick={() => handleSelectResult(result)}
                       className={`w-full px-4 py-3 text-left border-b border-gray-100 transition-colors ${
                         selectedIndex === resultIndex
-                          ? 'bg-amber-50'
+                          ? 'bg-emerald-50'
                           : 'hover:bg-gray-50'
                       }`}
                     >
@@ -466,7 +466,7 @@ export default function GooglePlacesAutocomplete({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-gray-400 hover:text-amber-600 transition-colors"
+                            className="text-gray-400 hover:text-emerald-600 transition-colors"
                           >
                             <ExternalLink size={16} />
                           </a>
@@ -482,7 +482,7 @@ export default function GooglePlacesAutocomplete({
 
       {/* Empty State */}
       {isOpen && query && !isLoading && results.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 text-center">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-4 text-center">
           <p className="text-gray-500 text-sm">No restaurants found</p>
         </div>
       )}
