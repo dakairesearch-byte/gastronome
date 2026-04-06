@@ -261,7 +261,7 @@ export default function RestaurantSearchDropdown({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => query && setIsOpen(true)}
-          className={`w-full ${sizeClasses[size]} pl-10 pr-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 transition-colors`}
+          className={`w-full ${sizeClasses[size]} pl-10 pr-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-emerald-500 transition-colors`}
         />
         {query && (
           <button
@@ -278,10 +278,10 @@ export default function RestaurantSearchDropdown({
       </div>
 
       {isOpen && (results.length > 0 || isLoading) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="animate-spin text-amber-500" size={20} />
+              <Loader2 className="animate-spin text-emerald-500" size={20} />
             </div>
           ) : (
             <ul className="py-2">
@@ -296,7 +296,7 @@ export default function RestaurantSearchDropdown({
                     }
                   }}
                   className={`px-4 py-3 cursor-pointer transition-colors ${
-                    index === selectedIndex ? 'bg-amber-50' : 'hover:bg-gray-50'
+                    index === selectedIndex ? 'bg-emerald-50' : 'hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -310,13 +310,13 @@ export default function RestaurantSearchDropdown({
                         )}
                         {result.avg_rating && result.avg_rating > 0 && (
                           <span className="flex items-center gap-0.5 text-xs">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
+                            <Star size={12} className="fill-emerald-400 text-emerald-400" />
                             {result.avg_rating.toFixed(1)}
                           </span>
                         )}
                         {result.rating && result.rating > 0 && (
                           <span className="flex items-center gap-0.5 text-xs">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
+                            <Star size={12} className="fill-emerald-400 text-emerald-400" />
                             {result.rating.toFixed(1)}
                           </span>
                         )}
@@ -333,7 +333,7 @@ export default function RestaurantSearchDropdown({
                       </div>
                     </div>
                     {index === selectedIndex && (
-                      <Check size={18} className="text-amber-500 flex-shrink-0 mt-1" />
+                      <Check size={18} className="text-emerald-500 flex-shrink-0 mt-1" />
                     )}
                   </div>
                 </li>
