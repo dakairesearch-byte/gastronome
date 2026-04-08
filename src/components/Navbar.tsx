@@ -107,6 +107,14 @@ export default function Navbar() {
             >
               Restaurants
             </Link>
+            {user && (
+              <Link
+                href="/feed"
+                className="text-gray-700 hover:text-emerald-600 transition-colors font-medium text-sm"
+              >
+                Feed
+              </Link>
+            )}
 
             {user ? (
               <div className="relative">
