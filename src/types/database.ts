@@ -65,6 +65,9 @@ export type Database = {
           yelp_rating: number | null
           yelp_review_count: number | null
           beli_score: number | null
+          google_url: string | null
+          yelp_url: string | null
+          beli_url: string | null
           created_at: string
           updated_at: string
         }
@@ -84,6 +87,9 @@ export type Database = {
           yelp_rating?: number | null
           yelp_review_count?: number | null
           beli_score?: number | null
+          google_url?: string | null
+          yelp_url?: string | null
+          beli_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -103,6 +109,9 @@ export type Database = {
           yelp_rating?: number | null
           yelp_review_count?: number | null
           beli_score?: number | null
+          google_url?: string | null
+          yelp_url?: string | null
+          beli_url?: string | null
           created_at?: string
           updated_at?: string
         }
