@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserSupabaseClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import ReviewCard from '@/components/ReviewCard'
 import Link from 'next/link'
 import { Users, UserPlus, Utensils } from 'lucide-react'
@@ -21,7 +21,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     async function loadFeed() {
-      const supabase = createBrowserSupabaseClient()
+      const supabase = createClient()
 
       // Get current user
       const { data: { user: currentUser } } = await supabase.auth.getUser()
