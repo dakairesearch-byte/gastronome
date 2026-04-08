@@ -5,7 +5,7 @@ import ReviewStats from '@/components/ReviewStats'
 import StarRating from '@/components/StarRating'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ChefHat } from 'lucide-react'
+import { MapPin, Phone, Globe, ChefHat, ExternalLink } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -84,6 +84,8 @@ export default async function RestaurantPage({
   const priceDisplay = '$'.repeat(restaurant.price_range)
   const ratingBreakdown = reviews.map((r) => r.review.rating)
 
+  const hasExternalRatings = restaurant.google_rating || restaurant.yelp_rating || restaurant.beli_score
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Restaurant Header */}
@@ -129,15 +131,94 @@ export default async function RestaurantPage({
                       {(restaurant.avg_rating || 0).toFixed(1)}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {restaurant.review_count} {restaurant.review_count === 1 ? 'review' : 'reviews'}
+                      {restaurant.review_count}{' '}
+                      {restaurant.review_count === 1 ? 'review' : 'reviews'}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3 lg:col-span-1">
+            {/* Action Buttons + External Ratings */}
+            <div className="space-y-4 lg:col-span-1">
+              {/* External Ratings - At the top */}
+              {hasExternalRatings && (
+                <div className="flex flex-wrap gap-2">
+                  {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && (
+                    <a
+                      href={restaurant.google_url || `https://www.google.com/maps/search/${encodeURIComponent(restaurant.name + ' ' + (restaurant.city || ''))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors group"
+                    >
+                      <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-white text-xs font-bold">G</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-blue-600">Google</p>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-blue-700">{Number(restaurant.google_rating).toFixed(1)}</span>
+                          {restaurant.google_review_count != null && restaurant.google_review_count > 0 && (
+                            <span className="text-xs text-blue-400">
+                              ({restaurant.google_review_count > 999
+                                ? (restaurant.google_review_count / 1000).toFixed(1) + 'k'
+                                : restaurant.google_review_count})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ExternalLink size={12} className="text-blue-400 group-hover:text-blue-600 shrink-0 ml-1" />
+                    </a>
+                  )}
+
+                  {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && (
+                    <a
+                      href={restaurant.yelp_url || `https://www.yelp.com/search?find_desc=${encodeURIComponent(restaurant.name)}&find_loc=${encodeURIComponent(restaurant.city || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors group"
+                    >
+                      <div className="w-7 h-7 bg-red-500 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-white text-xs font-bold">Y</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-red-600">Yelp</p>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-bold text-red-700">{Number(restaurant.yelp_rating).toFixed(1)}</span>
+                          {restaurant.yelp_review_count != null && restaurant.yelp_review_count > 0 && (
+                            <span className="text-xs text-red-400">
+                              ({restaurant.yelp_review_count > 999
+                                ? (restaurant.yelp_review_count / 1000).toFixed(1) + 'k'
+                                : restaurant.yelp_review_count})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ExternalLink size={12} className="text-red-400 group-hover:text-red-600 shrink-0 ml-1" />
+                    </a>
+                  )}
+
+                  {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && (
+                    <a
+                      href={restaurant.beli_url || `https://beliapp.com/search?q=${encodeURIComponent(restaurant.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors group"
+                    >
+                      <div className="w-7 h-7 bg-purple-500 rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-white text-xs font-bold">B</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-purple-600">Beli</p>
+                        <span className="text-sm font-bold text-purple-700">{Number(restaurant.beli_score).toFixed(0)}</span>
+                      </div>
+                      <ExternalLink size={12} className="text-purple-400 group-hover:text-purple-600 shrink-0 ml-1" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Write a Review - Below external ratings */}
               <Link
                 href="/review/new"
                 className="w-full py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-center block shadow-sm"
@@ -271,79 +352,6 @@ export default async function RestaurantPage({
                   <p className="text-lg font-bold text-emerald-700">{priceDisplay}</p>
                 </div>
               </div>
-
-              {/* External Ratings */}
-              {(restaurant.google_rating || restaurant.yelp_rating || restaurant.beli_score) && (
-                <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
-                  <h3 className="font-bold text-gray-900 text-lg">
-                    External Ratings
-                  </h3>
-                  <div className="space-y-3">
-                    {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && (
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">G</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-blue-600">Google</p>
-                            {restaurant.google_review_count != null && restaurant.google_review_count > 0 && (
-                              <p className="text-xs text-blue-400">
-                                {restaurant.google_review_count > 999
-                                  ? (restaurant.google_review_count / 1000).toFixed(1) + 'k reviews'
-                                  : restaurant.google_review_count + ' reviews'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xl font-bold text-blue-700">{Number(restaurant.google_rating).toFixed(1)}</span>
-                          <span className="text-blue-400 text-sm">/5</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && (
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">Y</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-red-600">Yelp</p>
-                            {restaurant.yelp_review_count != null && restaurant.yelp_review_count > 0 && (
-                              <p className="text-xs text-red-400">
-                                {restaurant.yelp_review_count > 999
-                                  ? (restaurant.yelp_review_count / 1000).toFixed(1) + 'k reviews'
-                                  : restaurant.yelp_review_count + ' reviews'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xl font-bold text-red-700">{Number(restaurant.yelp_rating).toFixed(1)}</span>
-                          <span className="text-red-400 text-sm">/5</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && (
-                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">B</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-purple-600">Beli</p>
-                            <p className="text-xs text-purple-400">Score</p>
-                          </div>
-                        </div>
-                        <span className="text-xl font-bold text-purple-700">{Number(restaurant.beli_score).toFixed(0)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Related Restaurants */}
               {relatedRestaurants.length > 0 && (
