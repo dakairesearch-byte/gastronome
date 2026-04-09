@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "Gastronome - Food Reviews by Passionate Critics",
@@ -23,10 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased scroll-smooth">
-      <body style={{ fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }} className="min-h-screen flex flex-col bg-white">
+      <body style={{ fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }} className="min-h-screen flex flex-col bg-[#FAFAF8]">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <BottomNav />
       </body>
     </html>
   );

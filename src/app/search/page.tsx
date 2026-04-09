@@ -41,7 +41,6 @@ function SearchContent() {
     const performSearch = async () => {
       setLoading(true)
       try {
-        // Search restaurants
         let restaurantQuery = supabase.from('restaurants').select('*')
 
         if (searchQuery.trim()) {
@@ -61,7 +60,6 @@ function SearchContent() {
 
         setRestaurants(restaurantData || [])
 
-        // Search reviews
         let reviewsData: any[] = []
         if (searchQuery.trim()) {
           const { data: allReviews } = await supabase
@@ -75,22 +73,10 @@ function SearchContent() {
             const reviewsWithData = await Promise.all(
               allReviews.map(async (review) => {
                 const [restaurant, author, photos] = await Promise.all([
-                  supabase
-                    .from('restaurants')
-                    .select('*')
-                    .eq('id', review.restaurant_id)
-                    .single(),
-                  supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', review.author_id)
-                    .single(),
-                  supabase
-                    .from('review_photos')
-                    .select('*')
-                    .eq('review_id', review.id),
+                  supabase.from('restaurants').select('*').eq('id', review.restaurant_id).single(),
+                  supabase.from('profiles').select('*').eq('id', review.author_id).single(),
+                  supabase.from('review_photos').select('*').eq('review_id', review.id),
                 ])
-
                 return {
                   review,
                   restaurant: restaurant.data,
@@ -99,10 +85,7 @@ function SearchContent() {
                 }
               })
             )
-
-            reviewsData = reviewsWithData.filter(
-              (item) => item.restaurant && item.author
-            )
+            reviewsData = reviewsWithData.filter((item) => item.restaurant && item.author)
           }
         }
 
@@ -128,151 +111,114 @@ function SearchContent() {
     setSelectedCuisines([])
   }
 
-  const displayedResults = activeTab === 'reviews' ? reviews : restaurants
   const hasResults = restaurants.length > 0 || reviews.length > 0
-  const displayCount = activeTab === 'reviews' ? reviews.length : restaurants.length
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Search Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              Find Your Next Favorite Restaurant
-            </h1>
-            <p className="text-lg text-gray-600">
-              Search reviews, restaurants, and cuisines from our community critics
-            </p>
-          </div>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl">
-            <SearchBar
-              placeholder="Search restaurants, dishes, or cuisines..."
-              initialValue={searchQuery}
-              onSearch={setSearchQuery}
-            />
-          </div>
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Search</h1>
+          <p className="text-sm text-gray-500 mt-1">Find restaurants, reviews, and cuisines</p>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filters */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-20 space-y-6">
-              {availableCuisines.length > 0 && (
-                <FilterChips
-                  cuisines={availableCuisines}
-                  selectedCuisines={selectedCuisines}
-                  onCuisineChange={handleCuisineChange}
-                  onClearAll={handleClearFilters}
-                />
-              )}
-            </div>
+        {/* Search Bar */}
+        <SearchBar
+          placeholder="Search restaurants, dishes, or cuisines..."
+          initialValue={searchQuery}
+          onSearch={setSearchQuery}
+        />
+
+        {/* Cuisine Filters */}
+        {availableCuisines.length > 0 && (
+          <FilterChips
+            cuisines={availableCuisines}
+            selectedCuisines={selectedCuisines}
+            onCuisineChange={handleCuisineChange}
+            onClearAll={handleClearFilters}
+          />
+        )}
+
+        {/* Tabs */}
+        {hasResults && (
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('reviews')}
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'reviews'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Reviews ({reviews.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('restaurants')}
+              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'restaurants'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Restaurants ({restaurants.length})
+            </button>
           </div>
+        )}
 
-          {/* Results */}
-          <div className="lg:col-span-3 space-y-8">
-            {/* Results Header */}
-            {hasResults && (
+        {/* Loading */}
+        {loading && (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) =>
+              activeTab === 'reviews' ? (
+                <ReviewCardSkeleton key={i} />
+              ) : (
+                <RestaurantCardSkeleton key={i} />
+              )
+            )}
+          </div>
+        )}
+
+        {/* No Results */}
+        {!loading && !hasResults && (
+          <EmptyState
+            icon={Search}
+            title={searchQuery || selectedCuisines.length > 0 ? 'No results found' : 'Start searching'}
+            description={
+              searchQuery || selectedCuisines.length > 0
+                ? 'Try adjusting your filters or search terms'
+                : 'Enter a restaurant name, cuisine, or dish to get started'
+            }
+            ctaText="Browse All Restaurants"
+            ctaHref="/restaurants"
+          />
+        )}
+
+        {/* Results */}
+        {!loading && hasResults && (
+          <>
+            {activeTab === 'reviews' && reviews.length > 0 ? (
               <div className="space-y-4">
-                <div className="flex gap-2 border-b border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('reviews')}
-                    className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                      activeTab === 'reviews'
-                        ? 'text-amber-600 border-amber-600'
-                        : 'text-gray-600 border-transparent hover:text-gray-900'
-                    }`}
-                  >
-                    Reviews ({reviews.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('restaurants')}
-                    className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                      activeTab === 'restaurants'
-                        ? 'text-amber-600 border-amber-600'
-                        : 'text-gray-600 border-transparent hover:text-gray-900'
-                    }`}
-                  >
-                    Restaurants ({restaurants.length})
-                  </button>
-                </div>
+                {reviews.map(({ review, restaurant, author, photos }) => (
+                  <ReviewCard key={review.id} review={review} restaurant={restaurant} author={author} photos={photos} />
+                ))}
               </div>
-            )}
-
-            {/* Loading State */}
-            {loading && (
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) =>
-                  activeTab === 'reviews' ? (
-                    <ReviewCardSkeleton key={i} />
-                  ) : (
-                    <RestaurantCardSkeleton key={i} />
-                  )
-                )}
+            ) : activeTab === 'restaurants' && restaurants.length > 0 ? (
+              <div className="space-y-3">
+                {restaurants.map((restaurant) => (
+                  <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                ))}
               </div>
-            )}
-
-            {/* No Results */}
-            {!loading && !hasResults && (
+            ) : (
               <EmptyState
-                icon={Search}
-                title={
-                  searchQuery || selectedCuisines.length > 0
-                    ? 'No results found'
-                    : 'Start searching'
-                }
-                description={
-                  searchQuery || selectedCuisines.length > 0
-                    ? 'Try adjusting your filters or search terms'
-                    : 'Enter a restaurant name, cuisine, or dish to get started'
-                }
-                ctaText="Browse All Restaurants"
-                ctaHref="/restaurants"
+                icon={UtensilsCrossed}
+                title={`No ${activeTab} found`}
+                description="Try switching tabs or adjusting your search filters"
               />
             )}
-
-            {/* Results Grid */}
-            {!loading && hasResults && (
-              <>
-                {activeTab === 'reviews' && reviews.length > 0 ? (
-                  <div className="space-y-6">
-                    {reviews.map(({ review, restaurant, author, photos }) => (
-                      <ReviewCard
-                        key={review.id}
-                        review={review}
-                        restaurant={restaurant}
-                        author={author}
-                        photos={photos}
-                      />
-                    ))}
-                  </div>
-                ) : activeTab === 'restaurants' && restaurants.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {restaurants.map((restaurant) => (
-                      <RestaurantCard
-                        key={restaurant.id}
-                        restaurant={restaurant}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={UtensilsCrossed}
-                    title={`No ${activeTab} found`}
-                    description={`Try switching tabs or adjusting your search filters`}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -280,7 +226,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <SearchContent />
     </Suspense>
   )

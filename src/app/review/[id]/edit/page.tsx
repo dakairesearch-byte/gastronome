@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StarRating from '@/components/StarRating'
 import { Review, ReviewPhoto, Restaurant } from '@/types/database'
-import { AlertCircle, Loader2, X, ArrowLeft } from 'lucide-react'
+import { AlertCircle, Loader2, X } from 'lucide-react'
 
 export default function EditReviewPage() {
   const router = useRouter()
@@ -40,7 +40,6 @@ export default function EditReviewPage() {
 
         setUser(session.user)
 
-        // Fetch review
         const { data: reviewData } = await supabase
           .from('reviews')
           .select('*')
@@ -53,7 +52,6 @@ export default function EditReviewPage() {
           return
         }
 
-        // Check ownership
         if (reviewData.author_id !== session.user.id) {
           setError('You do not have permission to edit this review')
           setLoading(false)
@@ -65,7 +63,6 @@ export default function EditReviewPage() {
         setContent(reviewData.content)
         setRating(reviewData.rating)
 
-        // Fetch restaurant
         const { data: restaurantData } = await supabase
           .from('restaurants')
           .select('*')
@@ -74,7 +71,6 @@ export default function EditReviewPage() {
 
         setRestaurant(restaurantData)
 
-        // Fetch photos
         const { data: photosData } = await supabase
           .from('review_photos')
           .select('*')
@@ -132,7 +128,6 @@ export default function EditReviewPage() {
         return
       }
 
-      // Update review
       const { error: updateError } = await supabase
         .from('reviews')
         .update({
@@ -148,12 +143,8 @@ export default function EditReviewPage() {
         return
       }
 
-      // Handle photos
       if (photoUrl.trim() && photoUrl !== (photos[0]?.photo_url || '')) {
-        // Delete old photos
         await supabase.from('review_photos').delete().eq('review_id', reviewId)
-
-        // Add new photo
         await supabase.from('review_photos').insert([
           {
             review_id: reviewId,
@@ -161,11 +152,9 @@ export default function EditReviewPage() {
           },
         ])
       } else if (!photoUrl.trim() && photos.length > 0) {
-        // Delete photos if URL is cleared
         await supabase.from('review_photos').delete().eq('review_id', reviewId)
       }
 
-      // Update restaurant avg_rating if rating changed
       if (review.rating !== rating && restaurant) {
         const { data: allReviews } = await supabase
           .from('reviews')
@@ -195,7 +184,7 @@ export default function EditReviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={32} />
+        <Loader2 className="animate-spin text-amber-500" size={24} />
       </div>
     )
   }
@@ -203,65 +192,57 @@ export default function EditReviewPage() {
   if (!review || !restaurant) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-lg text-gray-600">Review not found</p>
-        </div>
+        <p className="text-sm text-gray-500">Review not found</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Edit Your Review
-          </h1>
-          <p className="text-lg text-gray-600">
-            Update your review of {restaurant.name}
-          </p>
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900">Edit Review</h1>
+          <p className="text-sm text-gray-500 mt-1">Update your review of {restaurant.name}</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex gap-3">
-            <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex gap-2 text-sm">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Restaurant Info */}
-          <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-            <p className="text-sm text-gray-600 mb-2">Reviewing</p>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {restaurant.name}
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {restaurant.cuisine} • {restaurant.city}
+          <div className="p-4 bg-white rounded-lg border border-gray-100">
+            <p className="text-xs text-gray-400 mb-1">Reviewing</p>
+            <h2 className="text-base font-bold text-gray-900">{restaurant.name}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {restaurant.cuisine} &bull; {restaurant.city}
             </p>
           </div>
 
           {/* Rating */}
-          <div className="space-y-4">
-            <label className="block text-lg font-semibold text-gray-900">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
               Your Rating
             </label>
-            <div className="p-6 bg-amber-50 rounded-xl border border-amber-200">
+            <div className="p-4 bg-white rounded-lg border border-gray-100">
               <StarRating
                 rating={rating}
-                size={40}
+                size={32}
                 readonly={false}
                 onRate={setRating}
               />
-              <p className="mt-4 text-sm text-gray-600">
-                You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
+              <p className="mt-2 text-xs text-gray-500">
+                You rated this restaurant <span className="font-bold text-amber-600">{rating} stars</span>
               </p>
             </div>
           </div>
 
           {/* Review Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Review Title *
             </label>
             <input
@@ -270,17 +251,15 @@ export default function EditReviewPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={100}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Summarize your experience..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {title.length}/100 characters
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{title.length}/100</p>
           </div>
 
           {/* Review Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Your Review *
             </label>
             <textarea
@@ -289,19 +268,17 @@ export default function EditReviewPage() {
               required
               minLength={20}
               maxLength={2000}
-              rows={10}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
+              rows={8}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
               placeholder="Share your dining experience..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {content.length}/2000 characters (minimum 20 required)
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{content.length}/2000 (min 20)</p>
           </div>
 
           {/* Photo URL */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Photo URL (optional)
               </label>
               <div className="flex gap-2">
@@ -309,51 +286,47 @@ export default function EditReviewPage() {
                   type="url"
                   value={photoUrl}
                   onChange={(e) => handlePhotoUrlChange(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                   placeholder="https://example.com/photo.jpg"
                 />
                 {photoUrl && (
                   <button
                     type="button"
                     onClick={() => handlePhotoUrlChange('')}
-                    className="px-4 py-3 text-gray-600 hover:text-gray-900 transition-colors"
+                    className="px-3 py-2 text-gray-400 hover:text-gray-700 transition-colors"
                   >
-                    <X size={20} />
+                    <X size={16} />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Photo Preview */}
             {photoPreview && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Photo Preview:</p>
-                <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-300">
-                  <img
-                    src={photoPreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={() => setPhotoPreview('')}
-                  />
-                </div>
+              <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-100">
+                <img
+                  src={photoPreview}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  onError={() => setPhotoPreview('')}
+                />
               </div>
             )}
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={saving || rating === 0}
-              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {saving && <Loader2 size={18} className="animate-spin" />}
+              {saving && <Loader2 size={16} className="animate-spin" />}
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              className="px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Cancel
             </button>

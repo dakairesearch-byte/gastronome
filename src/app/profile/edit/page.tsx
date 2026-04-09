@@ -132,84 +132,70 @@ export default function EditProfilePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-lg text-gray-600">Profile not found</p>
+          <p className="text-sm text-gray-500">Profile not found</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Edit Profile
-          </h1>
-          <p className="text-lg text-gray-600">
-            Update your profile information
-          </p>
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-gray-900">Edit Profile</h1>
+          <p className="text-sm text-gray-500 mt-1">Update your profile information</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex gap-3">
-            <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex gap-2 text-sm">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl">
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
             <p>{success}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Avatar Section */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Avatar</h2>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">Avatar</label>
 
             {avatarPreview && (
-              <div className="mb-4">
-                <img
-                  src={avatarPreview}
-                  alt="Avatar preview"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-amber-200"
-                  onError={() => setAvatarPreview('')}
-                />
-              </div>
+              <img
+                src={avatarPreview}
+                alt="Avatar preview"
+                className="w-16 h-16 rounded-full object-cover"
+                onError={() => setAvatarPreview('')}
+              />
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Avatar URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(e) => handleAvatarUrlChange(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                  placeholder="https://example.com/avatar.jpg"
-                />
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={() => handleAvatarUrlChange('')}
-                    className="px-4 py-3 text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Paste a direct link to an image. We recommend a square image for best results.
-              </p>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={(e) => handleAvatarUrlChange(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+                placeholder="https://example.com/avatar.jpg"
+              />
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleAvatarUrlChange('')}
+                  className="px-3 py-2 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Display Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Display Name *
             </label>
             <input
@@ -218,81 +204,74 @@ export default function EditProfilePage() {
               onChange={(e) => setDisplayName(e.target.value)}
               required
               maxLength={50}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Your display name"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {displayName.length}/50 characters
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{displayName.length}/50</p>
           </div>
 
           {/* Username (Read-only) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username (cannot be changed)
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username
             </label>
             <input
               type="text"
               value={profile.username}
               disabled
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed text-sm"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Your username is permanent and used in your profile URL.
-            </p>
+            <p className="text-xs text-gray-400 mt-1">Cannot be changed</p>
           </div>
 
           {/* Email (Read-only) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email (cannot be changed)
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
             </label>
             <input
               type="email"
               value={profile.email}
               disabled
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed text-sm"
             />
+            <p className="text-xs text-gray-400 mt-1">Cannot be changed</p>
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Bio
             </label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               maxLength={500}
-              rows={5}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
-              placeholder="Tell us about yourself, your food interests, favorite cuisines..."
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
+              placeholder="Tell us about yourself and your food interests..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {bio.length}/500 characters
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{bio.length}/500</p>
           </div>
 
           {/* Account Info */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <h3 className="font-semibold text-blue-900 mb-2">Account Information</h3>
-            <p className="text-sm text-blue-800 mb-2">
-              <strong>Member since:</strong> {new Date(profile.created_at).toLocaleDateString()}
+          <div className="p-4 bg-white rounded-lg border border-gray-100">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Account</h3>
+            <p className="text-sm text-gray-500">
+              Member since {new Date(profile.created_at).toLocaleDateString()}
             </p>
             {profile.is_critic && (
-              <p className="text-sm text-blue-800 font-semibold text-amber-600">
-                ✓ You are a featured critic
-              </p>
+              <p className="text-sm text-amber-600 font-medium mt-1">Featured critic</p>
             )}
           </div>
 
           {/* Creative Mode Toggle */}
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+          <div className="p-4 bg-white rounded-lg border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-gray-900">Creative Mode</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Enable advanced posting features like long-form threads, image uploads, and rich formatting in the review composer.
+                <h3 className="text-sm font-medium text-gray-900">Creative Mode</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Long-form reviews, image uploads, and rich formatting
                 </p>
               </div>
               <button
@@ -311,27 +290,22 @@ export default function EditProfilePage() {
                 />
               </button>
             </div>
-            {creativeModeEnabled && (
-              <p className="text-xs text-amber-700 font-medium">
-                Creative Mode is on â your review composer will include rich formatting, image uploads, and thread support.
-              </p>
-            )}
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {saving && <Loader2 size={18} className="animate-spin" />}
+              {saving && <Loader2 size={16} className="animate-spin" />}
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              className="px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Cancel
             </button>
