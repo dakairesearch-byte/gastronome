@@ -7,7 +7,7 @@ export default function NotFound() {
       <div className="max-w-md text-center space-y-8">
         {/* 404 Display */}
         <div className="space-y-4">
-          <h1 className="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-teal-600">
+          <h1 className="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600">
             404
           </h1>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
