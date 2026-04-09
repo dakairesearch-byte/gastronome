@@ -34,7 +34,7 @@ export default function BottomNav() {
   ]
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-16 px-2">
         {tabs.map((tab) => {
           const isActive = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
@@ -45,7 +45,7 @@ export default function BottomNav() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className="flex flex-col items-center justify-center -mt-4"
+                className="relative flex flex-col items-center justify-center -mt-4 z-10"
               >
                 <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
                   <Icon size={24} className="text-white" strokeWidth={2.5} />
@@ -58,7 +58,7 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 ${
+              className={`relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2 ${
                 isActive ? 'text-amber-600' : 'text-gray-400'
               }`}
             >

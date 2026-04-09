@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Search,
   MapPin,
@@ -45,6 +46,7 @@ interface RestaurantSearchDropdownProps {
   placeholder?: string
   className?: string
   size?: 'sm' | 'md' | 'lg'
+  navigateOnEnter?: boolean
 }
 
 declare global {
@@ -66,7 +68,9 @@ export default function RestaurantSearchDropdown({
   placeholder = 'Find a restaurant...',
   className = '',
   size = 'md',
+  navigateOnEnter = true,
 }: RestaurantSearchDropdownProps) {
+  const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autocompleteServiceRef = useRef<any>(null)
@@ -208,6 +212,24 @@ export default function RestaurantSearchDropdown({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        if (isOpen && selectedIndex >= 0 && results[selectedIndex]) {
+          const selected = results[selectedIndex]
+          if (selected.isGooglePlace) {
+            handleSelectGoogle(selected)
+          } else {
+            handleSelectLocal(selected)
+          }
+        } else if (navigateOnEnter && query.trim()) {
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+          setQuery('')
+          setResults([])
+          setIsOpen(false)
+        }
+        return
+      }
+
       if (!isOpen || results.length === 0) return
 
       switch (e.key) {
@@ -219,23 +241,12 @@ export default function RestaurantSearchDropdown({
           e.preventDefault()
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
           break
-        case 'Enter':
-          e.preventDefault()
-          if (selectedIndex >= 0) {
-            const selected = results[selectedIndex]
-            if (selected.isGooglePlace) {
-              handleSelectGoogle(selected)
-            } else {
-              handleSelectLocal(selected)
-            }
-          }
-          break
         case 'Escape':
           setIsOpen(false)
           break
       }
     },
-    [isOpen, results, selectedIndex, handleSelectLocal, handleSelectGoogle]
+    [isOpen, results, selectedIndex, handleSelectLocal, handleSelectGoogle, navigateOnEnter, query, router]
   )
 
   // Clean up debounce timer on unmount
