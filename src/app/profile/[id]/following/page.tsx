@@ -4,10 +4,9 @@ import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { Loader2 } from 'lucide-react'
+import { Loader2, UserCheck } from 'lucide-react'
 import CriticCard from '@/components/CriticCard'
 import EmptyState from '@/components/EmptyState'
-import { UserCheck } from 'lucide-react'
 
 export default function FollowingPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
@@ -19,7 +18,6 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
   useEffect(() => {
     const fetchFollowing = async () => {
       try {
-        // Get main profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -28,7 +26,6 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
 
         setProfile(profileData)
 
-        // Get following
         const { data: followsData } = await supabase
           .from('follows')
           .select('following_id')
@@ -43,7 +40,6 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
             .in('id', followingIds)
 
           if (followingProfiles) {
-            // Fetch review counts for each profile
             const followingWithCounts = await Promise.all(
               followingProfiles.map(async (followingProfile) => {
                 const { count: reviewCount } = await supabase
@@ -80,7 +76,7 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={32} />
+        <Loader2 className="animate-spin text-amber-500" size={24} />
       </div>
     )
   }
@@ -88,30 +84,26 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
   if (!profile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-lg text-gray-600">Profile not found</p>
-        </div>
+        <p className="text-sm text-gray-500">Profile not found</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <Link href={`/profile/${params.id}`} className="text-amber-600 hover:text-amber-700 mb-4 inline-block font-medium">
-            â Back to {profile.display_name}'s profile
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6">
+          <Link href={`/profile/${params.id}`} className="text-amber-600 hover:text-amber-700 text-sm mb-3 inline-block font-medium">
+            &larr; {profile.display_name}
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Following
-          </h1>
-          <p className="text-lg text-gray-600">
-            {profile.display_name} is following {following.length} {following.length === 1 ? 'critic' : 'critics'}
+          <h1 className="text-xl font-bold text-gray-900">Following</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            {following.length} {following.length === 1 ? 'critic' : 'critics'}
           </p>
         </div>
 
         {following.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-3">
             {following.map(({ profile: followingProfile, reviewCount, followerCount }) => (
               <CriticCard
                 key={followingProfile.id}
@@ -125,7 +117,7 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
           <EmptyState
             icon={UserCheck}
             title="Not following anyone yet"
-            description={`${profile.display_name} hasn't followed any critics yet`}
+            description={`${profile.display_name} hasn't followed anyone yet`}
           />
         )}
       </div>

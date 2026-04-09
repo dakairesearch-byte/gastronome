@@ -140,52 +140,52 @@ export default function WriteReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
-        <div className="mb-8">
-          <Link href={`/restaurants/${restaurantId}`} className="text-amber-600 hover:text-amber-700 text-sm mb-4 inline-block font-medium">
+        <div className="mb-6">
+          <Link href={`/restaurants/${restaurantId}`} className="text-amber-600 hover:text-amber-700 text-sm mb-3 inline-block font-medium">
             &larr; Back to {restaurant.name}
           </Link>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl font-bold text-gray-900">
             Review {restaurant.name}
           </h1>
-          <p className="text-lg text-gray-600">Share your culinary experience</p>
+          <p className="text-sm text-gray-500 mt-1">Share your experience</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex gap-3">
-            <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex gap-2 text-sm">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
 
         {/* Restaurant Info */}
-        <div className="mb-6 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-          <p className="text-sm text-gray-600 mb-2">Reviewing</p>
-          <h2 className="text-2xl font-bold text-gray-900">{restaurant.name}</h2>
-          <p className="text-gray-600 mt-1">
+        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-100">
+          <p className="text-xs text-gray-400 mb-1">Reviewing</p>
+          <h2 className="text-base font-bold text-gray-900">{restaurant.name}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
             {restaurant.cuisine} &bull; {restaurant.city}
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Rating */}
-          <div className="space-y-3">
-            <label className="block text-lg font-semibold text-gray-900">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
               Your Rating
             </label>
-            <div className="p-6 bg-amber-50 rounded-xl border border-amber-200">
+            <div className="p-4 bg-white rounded-lg border border-gray-100">
               <StarRating
                 rating={rating}
-                size={40}
+                size={32}
                 readonly={false}
                 onRate={(value) => setRating(value)}
               />
               {rating > 0 && (
-                <p className="mt-3 text-sm text-gray-600">
-                  You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
+                <p className="mt-2 text-xs text-gray-500">
+                  You rated this restaurant <span className="font-bold text-amber-600">{rating} stars</span>
                 </p>
               )}
             </div>
@@ -193,7 +193,7 @@ export default function WriteReviewPage() {
 
           {/* Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
               Review Title *
             </label>
             <input
@@ -202,14 +202,14 @@ export default function WriteReviewPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Exceptional pasta and atmosphere"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
               required
             />
           </div>
 
           {/* Content */}
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
               Your Review *
             </label>
             <textarea
@@ -218,25 +218,25 @@ export default function WriteReviewPage() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Share your honest feedback about the food, service, and atmosphere..."
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
               required
             />
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={loading || !title.trim() || !content.trim() || rating === 0}
-              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Publishing Review...' : 'Publish Review'}
+              {loading && <Loader2 size={16} className="animate-spin" />}
+              {loading ? 'Publishing...' : 'Publish Review'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              className="px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Cancel
             </button>

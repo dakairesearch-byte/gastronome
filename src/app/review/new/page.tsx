@@ -237,44 +237,44 @@ export default function NewReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 sm:py-12">
-      <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${creativeModeEnabled ? 'max-w-4xl' : 'max-w-2xl'}`}>
-        <div className="mb-8">
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+              <h1 className="text-xl font-bold text-gray-900">
                 {creativeModeEnabled ? 'Write a Review' : 'Quick Review'}
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-sm text-gray-500 mt-1">
                 {creativeModeEnabled
-                  ? 'Share your detailed dining experience with our community'
+                  ? 'Share your detailed dining experience'
                   : 'Rate a restaurant in seconds'}
               </p>
             </div>
             {!creativeModeEnabled && (
               <Link
                 href="/profile/edit"
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-amber-600 transition-colors"
                 title="Enable Creative Mode in settings for detailed reviews"
               >
                 <Sparkles size={14} />
-                <span>Want more options?</span>
+                <span>More options</span>
               </Link>
             )}
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex gap-3">
-            <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex gap-2 text-sm">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Restaurant Selection */}
-          <div className="space-y-4 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="space-y-3 p-4 bg-white rounded-lg border border-gray-100">
+            <h2 className="text-sm font-medium text-gray-700">
               Select a Restaurant
             </h2>
 
@@ -286,13 +286,13 @@ export default function NewReviewPage() {
                 />
 
                 {selectedRestaurantData && (
-                  <div className="p-3 bg-white rounded border border-amber-100">
+                  <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">{selectedRestaurantData.name}</span>
                       {' \u2022 '}
-                      <span className="text-gray-600">{selectedRestaurantData.cuisine}</span>
+                      <span className="text-gray-500">{selectedRestaurantData.cuisine}</span>
                       {' \u2022 '}
-                      <span className="text-gray-600">{selectedRestaurantData.city}</span>
+                      <span className="text-gray-500">{selectedRestaurantData.city}</span>
                     </p>
                   </div>
                 )}
@@ -309,7 +309,7 @@ export default function NewReviewPage() {
                     }}
                     className="text-amber-600 hover:text-amber-700 font-medium text-sm transition-colors"
                   >
-                    + Add a new restaurant not in our database
+                    + Add a new restaurant
                   </button>
                 )}
               </>
@@ -321,7 +321,7 @@ export default function NewReviewPage() {
                   onChange={(e) => setNewRestaurantName(e.target.value)}
                   placeholder="Restaurant Name"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -329,9 +329,9 @@ export default function NewReviewPage() {
                     type="text"
                     value={newRestaurantCuisine}
                     onChange={(e) => setNewRestaurantCuisine(e.target.value)}
-                    placeholder="Cuisine Type (e.g., Italian, Thai)"
+                    placeholder="Cuisine Type (e.g., Italian)"
                     required
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+                    className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                   />
                   <input
                     type="text"
@@ -339,7 +339,7 @@ export default function NewReviewPage() {
                     onChange={(e) => setNewRestaurantCity(e.target.value)}
                     placeholder="City"
                     required
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+                    className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                   />
                 </div>
 
@@ -348,17 +348,17 @@ export default function NewReviewPage() {
                   value={newRestaurantAddress}
                   onChange={(e) => setNewRestaurantAddress(e.target.value)}
                   placeholder="Address (optional)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Price Range
                   </label>
                   <select
                     value={priceRange}
                     onChange={(e) => setPriceRange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                   >
                     <option value="1">$ (Budget-Friendly)</option>
                     <option value="2">$$ (Moderate)</option>
@@ -379,7 +379,7 @@ export default function NewReviewPage() {
                     setSelectedRestaurant('')
                     setSelectedRestaurantData(null)
                   }}
-                  className="text-sm text-gray-600 hover:text-gray-700 transition-colors"
+                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Back to search
                 </button>
@@ -388,20 +388,20 @@ export default function NewReviewPage() {
           </div>
 
           {/* Rating */}
-          <div className="space-y-3">
-            <label className="block text-lg font-semibold text-gray-900">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
               Your Rating
             </label>
-            <div className={`p-4 ${creativeModeEnabled ? 'p-6' : 'p-4'} bg-amber-50 rounded-xl border border-amber-200`}>
+            <div className="p-4 bg-white rounded-lg border border-gray-100">
               <StarRating
                 rating={rating}
-                size={creativeModeEnabled ? 40 : 32}
+                size={32}
                 readonly={false}
                 onRate={setRating}
               />
               {rating > 0 && (
-                <p className="mt-3 text-sm text-gray-600">
-                  You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
+                <p className="mt-2 text-xs text-gray-500">
+                  You rated this restaurant <span className="font-bold text-amber-600">{rating} stars</span>
                 </p>
               )}
             </div>
@@ -410,7 +410,7 @@ export default function NewReviewPage() {
           {/* Quick Post: Simple one-liner field */}
           {!creativeModeEnabled && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quick Thought (optional)
               </label>
               <input
@@ -418,11 +418,11 @@ export default function NewReviewPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 maxLength={280}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                placeholder="e.g., Amazing tacos, best I've had in Miami!"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+                placeholder="e.g., Amazing tacos, best I've had!"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {content.length}/280 characters
+              <p className="text-xs text-gray-400 mt-1">
+                {content.length}/280
               </p>
             </div>
           )}
@@ -430,9 +430,8 @@ export default function NewReviewPage() {
           {/* Creative Mode: Full review fields */}
           {creativeModeEnabled && (
             <>
-              {/* Review Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Review Title *
                 </label>
                 <input
@@ -441,17 +440,16 @@ export default function NewReviewPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   required
                   maxLength={100}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-                  placeholder="e.g., Amazing pasta dishes with cozy atmosphere"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+                  placeholder="e.g., Amazing pasta with cozy atmosphere"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  {title.length}/100 characters
+                <p className="text-xs text-gray-400 mt-1">
+                  {title.length}/100
                 </p>
               </div>
 
-              {/* Review Content */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Your Review *
                 </label>
                 <textarea
@@ -460,19 +458,18 @@ export default function NewReviewPage() {
                   required
                   minLength={20}
                   maxLength={5000}
-                  rows={10}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
-                  placeholder="Share your dining experience in detail. What did you order? How was the service? Would you recommend this restaurant?"
+                  rows={8}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
+                  placeholder="Share your dining experience in detail..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  {content.length}/5000 characters (minimum 20 required)
+                <p className="text-xs text-gray-400 mt-1">
+                  {content.length}/5000 (min 20)
                 </p>
               </div>
 
-              {/* Photo URL */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Photo URL (optional)
                   </label>
                   <div className="flex gap-2">
@@ -480,35 +477,29 @@ export default function NewReviewPage() {
                       type="url"
                       value={photoUrl}
                       onChange={(e) => handlePhotoUrlChange(e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                       placeholder="https://example.com/photo.jpg"
                     />
                     {photoUrl && (
                       <button
                         type="button"
                         onClick={() => handlePhotoUrlChange('')}
-                        className="px-4 py-3 text-gray-600 hover:text-gray-900 transition-colors"
+                        className="px-3 py-2 text-gray-400 hover:text-gray-700 transition-colors"
                       >
-                        <X size={20} />
+                        <X size={16} />
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Paste a direct link to a food photo (JPG, PNG, WebP).
-                  </p>
                 </div>
 
                 {photoPreview && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Photo Preview:</p>
-                    <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-300">
-                      <img
-                        src={photoPreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        onError={() => setPhotoPreview('')}
-                      />
-                    </div>
+                  <div className="relative w-full max-w-md h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-100">
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={() => setPhotoPreview('')}
+                    />
                   </div>
                 )}
               </div>
@@ -516,19 +507,19 @@ export default function NewReviewPage() {
           )}
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={loading || rating === 0}
-              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading && <Loader2 size={16} className="animate-spin" />}
               {loading ? 'Publishing...' : creativeModeEnabled ? 'Publish Review' : 'Post Review'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              className="px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Cancel
             </button>

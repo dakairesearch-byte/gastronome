@@ -17,20 +17,20 @@ export default function EmptyState({
   ctaHref,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="bg-amber-50 p-4 rounded-full mb-6">
-        <Icon size={32} className="text-amber-600" />
+    <div className="flex flex-col items-center justify-center py-12 px-4">
+      <div className="bg-gray-50 p-3 rounded-full mb-4">
+        <Icon size={24} className="text-gray-400" />
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+      <h3 className="text-base font-semibold text-gray-900 mb-1 text-center">
         {title}
       </h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">
+      <p className="text-sm text-gray-500 text-center mb-5 max-w-sm">
         {description}
       </p>
       {ctaText && ctaHref && (
         <Link
           href={ctaHref}
-          className="px-6 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold"
+          className="px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
         >
           {ctaText}
         </Link>
