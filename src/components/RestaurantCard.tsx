@@ -49,10 +49,10 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
             </div>
           </div>
 
-          {/* External Scores Row */}
-          {(restaurant.google_rating || restaurant.yelp_rating || restaurant.beli_score) && (
+          {/* External Scores Row - only show when real URLs exist */}
+          {(restaurant.google_url || restaurant.yelp_url || restaurant.beli_url) && (
             <div className="flex items-center gap-2 flex-wrap">
-              {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && (
+              {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && restaurant.google_url && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
                   <span className="text-xs font-semibold text-blue-500">Google</span>
                   <span className="text-sm font-bold text-blue-700">{Number(restaurant.google_rating).toFixed(1)}</span>
@@ -61,7 +61,7 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   )}
                 </div>
               )}
-              {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && (
+              {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && restaurant.yelp_url && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 rounded-lg border border-red-100">
                   <span className="text-xs font-semibold text-red-500">Yelp</span>
                   <span className="text-sm font-bold text-red-700">{Number(restaurant.yelp_rating).toFixed(1)}</span>
@@ -70,7 +70,7 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   )}
                 </div>
               )}
-              {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && (
+              {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && restaurant.beli_url && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-50 rounded-lg border border-purple-100">
                   <span className="text-xs font-semibold text-purple-500">Beli</span>
                   <span className="text-sm font-bold text-purple-700">{Number(restaurant.beli_score).toFixed(0)}</span>
