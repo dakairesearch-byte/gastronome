@@ -18,6 +18,32 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (!displayName.trim()) {
+      setError('Display name is required')
+      return
+    }
+    if (!username.trim()) {
+      setError('Username is required')
+      return
+    }
+    if (username.trim().length < 3) {
+      setError('Username must be at least 3 characters')
+      return
+    }
+    if (!email.trim()) {
+      setError('Email is required')
+      return
+    }
+    if (!password) {
+      setError('Password is required')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -79,7 +105,7 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
             {error}
           </div>
         )}

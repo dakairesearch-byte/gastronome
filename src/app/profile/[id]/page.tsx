@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ReviewCard from '@/components/ReviewCard'
 import { Profile, Review, Restaurant, ReviewPhoto } from '@/types/database'
@@ -25,7 +26,9 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
   const [isOwnProfile, setIsOwnProfile] = useState(false)
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [followLoading, setFollowLoading] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -78,7 +81,12 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
   }, [params.id, supabase])
 
   const toggleFollow = async () => {
-    if (!currentUser || isOwnProfile) return
+    if (isOwnProfile) return
+    if (!currentUser) {
+      router.push('/auth/login')
+      return
+    }
+    setFollowLoading(true)
     try {
       if (isFollowing) {
         await supabase.from('follows').delete()
@@ -91,6 +99,8 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
       setIsFollowing(!isFollowing)
     } catch (error) {
       console.error('Error toggling follow:', error)
+    } finally {
+      setFollowLoading(false)
     }
   }
 
@@ -180,13 +190,14 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             <button
               type="button"
               onClick={toggleFollow}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              disabled={followLoading}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
                 isFollowing
                   ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   : 'bg-amber-500 text-white hover:bg-amber-600'
               }`}
             >
-              {isFollowing ? 'Following' : 'Follow'}
+              {followLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
             </button>
           )}
         </div>

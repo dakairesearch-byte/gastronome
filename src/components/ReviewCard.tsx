@@ -29,6 +29,7 @@ export default function ReviewCard({
 }: ReviewCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showCopied, setShowCopied] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -103,15 +104,37 @@ export default function ReviewCard({
 
   const handleShare = async () => {
     const url = `${window.location.origin}/restaurants/${restaurant.id}`
-    if (navigator.share) {
-      navigator.share({
-        title: review.title,
-        text: `Check out this review of ${restaurant.name} by ${author.display_name}`,
-        url,
-      })
-    } else {
-      navigator.clipboard.writeText(url)
-      alert('Link copied to clipboard!')
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: review.title,
+          text: `Check out this review of ${restaurant.name} by ${author.display_name}`,
+          url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setShowCopied(true)
+        setTimeout(() => setShowCopied(false), 2000)
+      }
+    } catch {
+      // Fallback for environments where clipboard API isn't available
+      try {
+        await navigator.clipboard.writeText(url)
+        setShowCopied(true)
+        setTimeout(() => setShowCopied(false), 2000)
+      } catch {
+        // Last resort fallback
+        const textarea = document.createElement('textarea')
+        textarea.value = url
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        setShowCopied(true)
+        setTimeout(() => setShowCopied(false), 2000)
+      }
     }
   }
 
@@ -144,14 +167,21 @@ export default function ReviewCard({
         </Link>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="p-1.5 text-gray-300 hover:text-gray-500 rounded-full hover:bg-gray-50 transition-colors"
-            aria-label="Share review"
-          >
-            <Share2 size={15} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="p-1.5 text-gray-300 hover:text-gray-500 rounded-full hover:bg-gray-50 transition-colors"
+              aria-label="Share review"
+            >
+              <Share2 size={15} />
+            </button>
+            {showCopied && (
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap">
+                Link copied!
+              </span>
+            )}
+          </div>
 
           {isOwnReview && (
             <div className="relative">
