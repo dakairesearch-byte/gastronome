@@ -167,8 +167,10 @@ function RestaurantsContent() {
               />
               {inputValue && (
                 <button
+                  type="button"
                   onClick={() => { setInputValue(''); setSearchQuery(''); setSuggestions([]); setShowSuggestions(false) }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Clear search"
                 >
                   <X size={18} />
                 </button>
@@ -253,6 +255,7 @@ function RestaurantsContent() {
               </h2>
               {(selectedCuisines.length > 0 || searchQuery) && (
                 <button
+                  type="button"
                   onClick={handleClearFilters}
                   className="text-sm text-amber-600 hover:text-amber-700 transition-colors font-medium"
                 >
