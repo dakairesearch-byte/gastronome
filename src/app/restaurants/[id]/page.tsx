@@ -84,7 +84,7 @@ export default async function RestaurantPage({
   const priceDisplay = '$'.repeat(restaurant.price_range)
   const ratingBreakdown = reviews.map((r) => r.review.rating)
 
-  const hasExternalRatings = restaurant.google_rating || restaurant.yelp_rating || restaurant.beli_score
+  const hasExternalRatings = (restaurant.google_rating && restaurant.google_url) || (restaurant.yelp_rating && restaurant.yelp_url) || (restaurant.beli_score && restaurant.beli_url)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -144,9 +144,9 @@ export default async function RestaurantPage({
               {/* External Ratings - At the top */}
               {hasExternalRatings && (
                 <div className="flex flex-wrap gap-2">
-                  {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && (
+                  {restaurant.google_rating != null && Number(restaurant.google_rating) > 0 && restaurant.google_url && (
                     <a
-                      href={restaurant.google_url || `https://www.google.com/maps/search/${encodeURIComponent(restaurant.name + ' ' + (restaurant.city || ''))}`}
+                      href={restaurant.google_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-colors group"
@@ -171,9 +171,9 @@ export default async function RestaurantPage({
                     </a>
                   )}
 
-                  {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && (
+                  {restaurant.yelp_rating != null && Number(restaurant.yelp_rating) > 0 && restaurant.yelp_url && (
                     <a
-                      href={restaurant.yelp_url || `https://www.yelp.com/search?find_desc=${encodeURIComponent(restaurant.name)}&find_loc=${encodeURIComponent(restaurant.city || '')}`}
+                      href={restaurant.yelp_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors group"
@@ -198,9 +198,9 @@ export default async function RestaurantPage({
                     </a>
                   )}
 
-                  {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && (
+                  {restaurant.beli_score != null && Number(restaurant.beli_score) > 0 && restaurant.beli_url && (
                     <a
-                      href={restaurant.beli_url || `https://beliapp.com/search?q=${encodeURIComponent(restaurant.name)}`}
+                      href={restaurant.beli_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors group"
