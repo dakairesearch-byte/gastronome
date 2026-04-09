@@ -238,6 +238,15 @@ export default function RestaurantSearchDropdown({
     [isOpen, results, selectedIndex, handleSelectLocal, handleSelectGoogle]
   )
 
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

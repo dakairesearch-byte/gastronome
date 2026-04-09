@@ -12,7 +12,7 @@ import { UserCheck } from 'lucide-react'
 export default function FollowingPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [following, setFollowing] = useState<Profile[]>([])
+  const [following, setFollowing] = useState<{ profile: Profile; reviewCount: number; followerCount: number }[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -64,13 +64,7 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
               })
             )
 
-            setFollowing(
-              followingWithCounts.map((f) => ({
-                ...f.profile,
-                _reviewCount: f.reviewCount,
-                _followerCount: f.followerCount,
-              }))
-            )
+            setFollowing(followingWithCounts)
           }
         }
       } catch (err) {
@@ -118,12 +112,12 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
 
         {following.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {following.map((followingProfile: any) => (
+            {following.map(({ profile: followingProfile, reviewCount, followerCount }) => (
               <CriticCard
                 key={followingProfile.id}
                 profile={followingProfile}
-                reviewCount={followingProfile._reviewCount}
-                followerCount={followingProfile._followerCount}
+                reviewCount={reviewCount}
+                followerCount={followerCount}
               />
             ))}
           </div>

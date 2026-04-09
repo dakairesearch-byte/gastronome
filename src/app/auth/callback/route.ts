@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // return the user to an error page with instructions
+  // return the user to the login page with an error indicator
   const url = request.nextUrl.clone()
-  url.pathname = '/auth/auth-code-error'
+  url.pathname = '/auth/login'
+  url.searchParams.set('error', 'auth_failed')
   return NextResponse.redirect(url)
 }

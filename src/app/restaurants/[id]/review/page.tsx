@@ -67,6 +67,16 @@ export default function WriteReviewPage() {
       return;
     }
 
+    if (!title.trim()) {
+      setError('Please enter a review title');
+      return;
+    }
+
+    if (content.trim().length < 20) {
+      setError('Review must be at least 20 characters');
+      return;
+    }
+
     setLoading(true);
     setError('');
 

@@ -16,12 +16,14 @@ export default function StarRating({
   onRate,
 }: StarRatingProps) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1" role="group" aria-label="Star rating">
       {[1, 2, 3, 4, 5].map((star) => (
         <button
+          type="button"
           key={star}
           onClick={() => !readonly && onRate?.(star)}
           disabled={readonly}
+          aria-label={`${star} star${star !== 1 ? 's' : ''}`}
           className={`transition-colors ${
             readonly ? 'cursor-default' : 'cursor-pointer hover:opacity-80'
           }`}

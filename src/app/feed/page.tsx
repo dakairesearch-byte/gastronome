@@ -215,21 +215,21 @@ export default function FeedPage() {
                   href={`/profile/${author.id}`}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
-                  {author.avatar_url ? (
+                  {author?.avatar_url ? (
                     <img
                       src={author.avatar_url}
-                      alt={author.display_name || author.username}
+                      alt={author.display_name || author.username || 'User'}
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
                       <span className="text-xs font-semibold text-amber-700">
-                        {(author.display_name || author.username || '?')[0].toUpperCase()}
+                        {(author?.display_name || author?.username || '?')[0].toUpperCase()}
                       </span>
                     </div>
                   )}
                   <span className="text-sm font-semibold text-gray-900">
-                    {author.display_name || author.username}
+                    {author?.display_name || author?.username || 'Unknown'}
                   </span>
                 </Link>
                 <span className="text-sm text-gray-400">reviewed</span>
