@@ -104,41 +104,16 @@ export default function NewReviewPage() {
     setLoading(true)
 
     try {
-      let restaurantId = selectedRestaurant
-
-      // Create new restaurant if needed
-      if (showNewRestaurant && newRestaurantName) {
-        const { data: newRestaurant, error: createError } = await supabase
-          .from('restaurants')
-          .insert([
-            {
-              name: newRestaurantName,
-              cuisine: newRestaurantCuisine,
-              city: newRestaurantCity,
-              address: newRestaurantAddress || null,
-              price_range: parseInt(priceRange),
-              review_count: 1,
-              avg_rating: rating,
-            },
-          ])
-          .select()
-          .single()
-
-        if (createError) {
-          setError('Failed to create restaurant: ' + createError.message)
-          return
-        }
-
-        restaurantId = newRestaurant.id
-      }
-
-      if (!restaurantId) {
+      // Validate before any API calls
+      if (!showNewRestaurant && !selectedRestaurant) {
         setError('Please select or create a restaurant')
+        setLoading(false)
         return
       }
 
       if (rating === 0) {
         setError('Please select a rating')
+        setLoading(false)
         return
       }
 
@@ -153,12 +128,43 @@ export default function NewReviewPage() {
 
       if (creativeModeEnabled && reviewTitle.trim().length === 0) {
         setError('Please enter a review title')
+        setLoading(false)
         return
       }
 
       if (creativeModeEnabled && reviewContent.trim().length < 20) {
         setError('Review must be at least 20 characters long')
+        setLoading(false)
         return
+      }
+
+      let restaurantId = selectedRestaurant
+
+      // Create new restaurant if needed
+      if (showNewRestaurant && newRestaurantName) {
+        const { data: newRestaurant, error: createError } = await supabase
+          .from('restaurants')
+          .insert([
+            {
+              name: newRestaurantName,
+              cuisine: newRestaurantCuisine,
+              city: newRestaurantCity,
+              address: newRestaurantAddress || null,
+              price_range: parseInt(priceRange),
+              review_count: 0,
+              avg_rating: null,
+            },
+          ])
+          .select()
+          .single()
+
+        if (createError) {
+          setError('Failed to create restaurant: ' + createError.message)
+          setLoading(false)
+          return
+        }
+
+        restaurantId = newRestaurant.id
       }
 
       // Create review

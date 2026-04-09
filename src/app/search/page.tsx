@@ -45,8 +45,9 @@ function SearchContent() {
         let restaurantQuery = supabase.from('restaurants').select('*')
 
         if (searchQuery.trim()) {
+          const sanitized = searchQuery.replace(/[%_\\]/g, '')
           restaurantQuery = restaurantQuery.or(
-            `name.ilike.%${searchQuery}%,cuisine.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`
+            `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
           )
         }
 
@@ -66,7 +67,7 @@ function SearchContent() {
           const { data: allReviews } = await supabase
             .from('reviews')
             .select('*')
-            .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
+            .or(`title.ilike.%${searchQuery.replace(/[%_\\]/g, '')}%,content.ilike.%${searchQuery.replace(/[%_\\]/g, '')}%`)
             .order('created_at', { ascending: false })
             .limit(20)
 
@@ -180,6 +181,7 @@ function SearchContent() {
               <div className="space-y-4">
                 <div className="flex gap-2 border-b border-gray-200">
                   <button
+                    type="button"
                     onClick={() => setActiveTab('reviews')}
                     className={`px-4 py-3 font-medium border-b-2 transition-colors ${
                       activeTab === 'reviews'
@@ -190,6 +192,7 @@ function SearchContent() {
                     Reviews ({reviews.length})
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('restaurants')}
                     className={`px-4 py-3 font-medium border-b-2 transition-colors ${
                       activeTab === 'restaurants'

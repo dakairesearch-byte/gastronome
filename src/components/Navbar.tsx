@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { User, LogOut, Menu, X, Search } from 'lucide-react'
+import { User, LogOut, Menu, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import RestaurantSearchDropdown from './RestaurantSearchDropdown'
 import { Restaurant } from '@/types/database'

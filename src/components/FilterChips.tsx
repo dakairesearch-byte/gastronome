@@ -21,8 +21,9 @@ export default function FilterChips({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-900">Cuisines</h3>
-        {hasActiveFilters && (
+        {hasActiveFilters && onClearAll && (
           <button
+            type="button"
             onClick={onClearAll}
             className="text-sm text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1"
           >
@@ -37,6 +38,7 @@ export default function FilterChips({
           const isSelected = selectedCuisines.includes(cuisine)
           return (
             <button
+              type="button"
               key={cuisine}
               onClick={() => onCuisineChange(cuisine)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${

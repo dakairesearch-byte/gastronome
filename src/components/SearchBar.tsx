@@ -49,6 +49,7 @@ export default function SearchBar({
             <button
               type="button"
               onClick={handleClear}
+              aria-label="Clear search"
               className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X size={18} />
@@ -56,6 +57,7 @@ export default function SearchBar({
           )}
           <button
             type="submit"
+            aria-label="Search"
             className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
           >
             <Search size={20} />
