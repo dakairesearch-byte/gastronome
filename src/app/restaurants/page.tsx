@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import RestaurantCard from '@/components/RestaurantCard'
 import SearchBar from '@/components/SearchBar'
@@ -10,13 +11,15 @@ import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
 import { Restaurant } from '@/types/database'
 import { MapPin } from 'lucide-react'
 
-export default function RestaurantsPage() {
+function RestaurantsContent() {
+  const searchParams = useSearchParams()
+  const cityParam = searchParams.get('city') || ''
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([])
   const [availableCuisines, setAvailableCuisines] = useState<string[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'rating' | 'reviews' | 'newest'>('rating')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(cityParam)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -203,5 +206,13 @@ export default function RestaurantsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RestaurantsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <RestaurantsContent />
+    </Suspense>
   )
 }

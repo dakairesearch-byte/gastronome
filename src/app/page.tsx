@@ -4,6 +4,7 @@ import ReviewCard from '@/components/ReviewCard'
 import RestaurantCard from '@/components/RestaurantCard'
 import CriticCard from '@/components/CriticCard'
 import CuisineTag from '@/components/CuisineTag'
+import CitySelector from '@/components/CitySelector'
 import { TrendingUp, Users, ChefHat } from 'lucide-react'
 
 export const revalidate = 60
@@ -87,10 +88,10 @@ async function getHomePageData() {
     })
   )
 
-  // Get unique cuisines
+  // Get unique cuisines and cities
   const { data: allRestaurants } = await supabase
     .from('restaurants')
-    .select('cuisine')
+    .select('cuisine, city')
 
   const cuisines = [
     ...new Set((allRestaurants || []).map((r) => r.cuisine)),
@@ -98,43 +99,35 @@ async function getHomePageData() {
     .sort()
     .slice(0, 8)
 
+  const cities = [
+    ...new Set((allRestaurants || []).map((r) => r.city)),
+  ].sort()
+
   return {
     reviews: filteredReviews,
     topRestaurants: topRestaurants || [],
     critics: criticsWithData,
     cuisines,
+    cities,
   }
 }
 
 export default async function Home() {
-  const { reviews, topRestaurants, critics, cuisines } = await getHomePageData()
+  const { reviews, topRestaurants, critics, cuisines, cities } = await getHomePageData()
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-amber-50 via-white to-orange-50 py-16 sm:py-32 border-b border-amber-100">
+      <section className="relative bg-gradient-to-br from-amber-50 via-white to-orange-50 py-20 sm:py-32 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-6">
+          <div className="text-center space-y-8">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
               Discover Authentic <span className="text-amber-600">Food Reviews</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-              Connect with passionate food critics. Share your dining experiences. Rate restaurants you love.
+              Find the best restaurants in your city, rated by passionate food critics.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link
-                href="/restaurants"
-                className="px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold text-lg shadow-sm"
-              >
-                Explore Restaurants
-              </Link>
-              <Link
-                href="/search"
-                className="px-8 py-3 border-2 border-amber-500 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-semibold text-lg"
-              >
-                Search Reviews
-              </Link>
-            </div>
+            <CitySelector availableCities={cities} />
           </div>
         </div>
       </section>
