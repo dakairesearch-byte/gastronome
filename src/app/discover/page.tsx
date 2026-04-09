@@ -25,7 +25,7 @@ export default async function DiscoverPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Discover Restaurants</h1>
           <p className="text-lg text-gray-600">
@@ -46,9 +46,9 @@ export default async function DiscoverPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
-            <div className="bg-emerald-50 p-4 rounded-full mb-6 inline-block">
-              <MapPin size={32} className="text-emerald-600" />
+          <div className="text-center py-16 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+            <div className="bg-amber-50 p-4 rounded-full mb-6 inline-block">
+              <MapPin size={32} className="text-amber-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">No Restaurants Yet</h2>
             <p className="text-gray-600">

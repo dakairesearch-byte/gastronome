@@ -42,7 +42,7 @@ export default function SearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-4 py-3 pl-4 pr-12 text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+          className="w-full px-4 py-3 pl-4 pr-12 text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {query && (
@@ -56,7 +56,7 @@ export default function SearchBar({
           )}
           <button
             type="submit"
-            className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
+            className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
           >
             <Search size={20} />
           </button>

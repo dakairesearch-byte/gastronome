@@ -34,7 +34,7 @@ export default function ReviewStats({
                 size={20}
                 className={
                   star <= Math.round(averageRating)
-                    ? 'fill-emerald-400 text-emerald-400'
+                    ? 'fill-amber-400 text-amber-400'
                     : 'text-gray-300'
                 }
               />
@@ -56,11 +56,11 @@ export default function ReviewStats({
                   <span className="text-sm font-medium text-gray-700">
                     {star}
                   </span>
-                  <Star size={14} className="text-emerald-400 fill-emerald-400" />
+                  <Star size={14} className="text-amber-400 fill-amber-400" />
                 </div>
                 <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-emerald-400 h-full transition-all duration-300"
+                    className="bg-amber-400 h-full transition-all duration-300"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>

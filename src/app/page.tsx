@@ -112,11 +112,11 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-16 sm:py-32 border-b border-emerald-100">
+      <section className="relative bg-gradient-to-br from-amber-50 via-white to-orange-50 py-16 sm:py-32 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              Discover Authentic <span className="text-emerald-600">Food Reviews</span>
+              Discover Authentic <span className="text-amber-600">Food Reviews</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
               Connect with passionate food critics. Share your dining experiences. Rate restaurants you love.
@@ -124,13 +124,13 @@ export default async function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link
                 href="/restaurants"
-                className="px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-lg shadow-sm"
+                className="px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold text-lg shadow-sm"
               >
                 Explore Restaurants
               </Link>
               <Link
                 href="/search"
-                className="px-8 py-3 border-2 border-emerald-500 text-emerald-700 rounded-xl hover:bg-emerald-50 transition-colors font-semibold text-lg"
+                className="px-8 py-3 border-2 border-amber-500 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-semibold text-lg"
               >
                 Search Reviews
               </Link>
@@ -144,7 +144,7 @@ export default async function Home() {
         <section className="py-12 sm:py-16 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-6">
-              <ChefHat size={28} className="text-emerald-600" />
+              <ChefHat size={28} className="text-amber-600" />
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Explore by Cuisine
               </h2>
@@ -163,7 +163,7 @@ export default async function Home() {
         <section className="py-12 sm:py-16 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-8">
-              <TrendingUp size={28} className="text-emerald-600" />
+              <TrendingUp size={28} className="text-amber-600" />
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
                   Top Rated
@@ -179,7 +179,7 @@ export default async function Home() {
             <div className="mt-8 text-center">
               <Link
                 href="/restaurants"
-                className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                className="text-amber-600 hover:text-amber-700 font-semibold transition-colors"
               >
                 View all restaurants â
               </Link>
@@ -217,7 +217,7 @@ export default async function Home() {
                 <div className="text-center pt-4">
                   <Link
                     href="/search"
-                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                    className="text-amber-600 hover:text-amber-700 font-semibold transition-colors"
                   >
                     View all reviews â
                   </Link>
@@ -225,13 +225,13 @@ export default async function Home() {
               )}
             </div>
           ) : (
-            <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+            <div className="text-center py-16 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
               <p className="text-lg text-gray-600 mb-6">
                 Be the first to share a dining experience!
               </p>
               <Link
                 href="/auth/signup"
-                className="inline-block px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+                className="inline-block px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold shadow-sm"
               >
                 Write a Review
               </Link>
@@ -245,7 +245,7 @@ export default async function Home() {
         <section className="py-12 sm:py-16 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-8">
-              <Users size={28} className="text-emerald-600" />
+              <Users size={28} className="text-amber-600" />
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
                   Featured Critics
@@ -269,7 +269,7 @@ export default async function Home() {
       )}
 
       {/* CTA Section */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-50 to-teal-50 border-t border-emerald-100">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-amber-50 to-orange-50 border-t border-amber-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Ready to share your dining story?
@@ -279,7 +279,7 @@ export default async function Home() {
           </p>
           <Link
             href="/auth/signup"
-            className="inline-block px-8 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-lg shadow-sm"
+            className="inline-block px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold text-lg shadow-sm"
           >
             Get Started Today
           </Link>

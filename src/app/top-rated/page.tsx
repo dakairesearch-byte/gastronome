@@ -26,10 +26,10 @@ export default async function TopRatedPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 mb-2">
-            <TrendingUp size={28} className="text-emerald-600" />
+            <TrendingUp size={28} className="text-amber-600" />
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Top Rated</h1>
           </div>
           <p className="text-lg text-gray-600">
@@ -50,9 +50,9 @@ export default async function TopRatedPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
-            <div className="bg-emerald-50 p-4 rounded-full mb-6 inline-block">
-              <TrendingUp size={32} className="text-emerald-600" />
+          <div className="text-center py-16 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+            <div className="bg-amber-50 p-4 rounded-full mb-6 inline-block">
+              <TrendingUp size={32} className="text-amber-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">No Rated Restaurants Yet</h2>
             <p className="text-gray-600">

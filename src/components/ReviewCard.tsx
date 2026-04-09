@@ -119,7 +119,7 @@ export default function ReviewCard({
   }
 
   return (
-    <article className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-emerald-50 group">
+    <article className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100/80 group">
       {photoUrl && (
         <Link href={`/restaurants/${restaurant.id}`}>
           <div className="relative w-full h-48 sm:h-56 bg-gray-100 overflow-hidden">
@@ -139,7 +139,7 @@ export default function ReviewCard({
         <Link href={`/restaurants/${restaurant.id}`}>
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 text-lg group-hover:text-emerald-600 transition-colors truncate">
+              <h3 className="font-semibold text-gray-900 text-lg group-hover:text-amber-600 transition-colors truncate">
                 {restaurant.name}
               </h3>
               <p className="text-sm text-gray-600">{restaurant.cuisine}</p>
@@ -182,7 +182,7 @@ export default function ReviewCard({
           <div className="flex items-center gap-1">
             <button
               onClick={handleShare}
-              className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+              className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
               title="Share"
             >
               <Share2 size={16} />
@@ -209,7 +209,7 @@ export default function ReviewCard({
                     <Link
                       href={`/review/${review.id}/edit`}
                       onClick={() => setShowMenu(false)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 first:rounded-t-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-amber-50 first:rounded-t-lg transition-colors"
                     >
                       <Edit2 size={16} />
                       Edit Review

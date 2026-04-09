@@ -114,7 +114,7 @@ export default function WriteReviewPage() {
   if (pageLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-emerald-500" size={32} />
+        <Loader2 className="animate-spin text-amber-500" size={32} />
       </div>
     );
   }
@@ -134,7 +134,7 @@ export default function WriteReviewPage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href={`/restaurants/${restaurantId}`} className="text-emerald-600 hover:text-emerald-700 text-sm mb-4 inline-block font-medium">
+          <Link href={`/restaurants/${restaurantId}`} className="text-amber-600 hover:text-amber-700 text-sm mb-4 inline-block font-medium">
             &larr; Back to {restaurant.name}
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -151,7 +151,7 @@ export default function WriteReviewPage() {
         )}
 
         {/* Restaurant Info */}
-        <div className="mb-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+        <div className="mb-6 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
           <p className="text-sm text-gray-600 mb-2">Reviewing</p>
           <h2 className="text-2xl font-bold text-gray-900">{restaurant.name}</h2>
           <p className="text-gray-600 mt-1">
@@ -166,7 +166,7 @@ export default function WriteReviewPage() {
             <label className="block text-lg font-semibold text-gray-900">
               Your Rating
             </label>
-            <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200">
+            <div className="p-6 bg-amber-50 rounded-xl border border-amber-200">
               <StarRating
                 rating={rating}
                 size={40}
@@ -175,7 +175,7 @@ export default function WriteReviewPage() {
               />
               {rating > 0 && (
                 <p className="mt-3 text-sm text-gray-600">
-                  You rated this restaurant <span className="font-bold text-emerald-700">{rating} stars</span>
+                  You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
                 </p>
               )}
             </div>
@@ -192,7 +192,7 @@ export default function WriteReviewPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Exceptional pasta and atmosphere"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
               required
             />
           </div>
@@ -208,7 +208,7 @@ export default function WriteReviewPage() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Share your honest feedback about the food, service, and atmosphere..."
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
               required
             />
           </div>
@@ -218,7 +218,7 @@ export default function WriteReviewPage() {
             <button
               type="submit"
               disabled={loading || !title.trim() || !content.trim() || rating === 0}
-              className="flex-1 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? 'Publishing Review...' : 'Publish Review'}

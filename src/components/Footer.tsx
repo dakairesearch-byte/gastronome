@@ -5,16 +5,16 @@ export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-gray-900 text-gray-300 border-t border-gray-800">
+    <footer className="bg-gray-950 text-gray-400 border-t border-gray-800/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
                 G
               </div>
-              <span className="font-semibold text-white">Gastronome</span>
+              <span className="font-bold text-white tracking-tight">Gastronome</span>
             </Link>
             <p className="text-sm text-gray-400">
               Discover authentic food reviews from passionate home critics. Rate restaurants, share your dining experiences, and follow fellow food enthusiasts.
@@ -29,25 +29,25 @@ export default function Footer() {
             <nav className="space-y-3">
               <Link
                 href="/restaurants"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Restaurants
               </Link>
               <Link
                 href="/search"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Search
               </Link>
               <Link
                 href="/auth/signup"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Sign Up
                </Link>
               <Link
                 href="/auth/login"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Login
               </Link>
@@ -62,25 +62,25 @@ export default function Footer() {
             <nav className="space-y-3">
               <Link
                 href="/review/new"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Write a Review
               </Link>
               <Link
                 href="/restaurants"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Explore Restaurants
               </Link>
               <Link
                 href="/top-rated"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Trending
               </Link>
               <Link
                 href="/search"
-                className="block text-sm hover:text-emerald-400 transition-colors"
+                className="block text-sm hover:text-amber-400 transition-colors"
               >
                 Top Critics
               </Link>
@@ -95,14 +95,14 @@ export default function Footer() {
             <div className="space-y-3">
               <Link
                 href="/restaurants"
-                className="flex items-center gap-2 text-sm hover:text-emerald-400 transition-colors"
+                className="flex items-center gap-2 text-sm hover:text-amber-400 transition-colors"
               >
                 <MapPin size={16} />
                 Find restaurants near you
               </Link>
               <a
                 href="mailto:hello@gastronome.local"
-                className="flex items-center gap-2 text-sm hover:text-emerald-400 transition-colors"
+                className="flex items-center gap-2 text-sm hover:text-amber-400 transition-colors"
               >
                 <Mail size={16} />
                 Contact us
@@ -110,21 +110,21 @@ export default function Footer() {
               <div className="flex gap-3 pt-2">
                 <a
                   href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors"
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
                   aria-label="Facebook"
                 >
                   <span className="text-xs">f</span>
                 </a>
                 <a
                   href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors"
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
                   aria-label="Twitter"
                 >
                   <span className="text-xs">ð</span>
                 </a>
                 <a
                   href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors"
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
                   aria-label="Instagram"
                 >
                   <span className="text-xs">ð·</span>

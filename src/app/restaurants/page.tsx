@@ -92,7 +92,7 @@ export default function RestaurantsPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -126,7 +126,7 @@ export default function RestaurantsPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
                 >
                   <option value="rating">Top Rated</option>
                   <option value="reviews">Most Reviewed</option>
@@ -157,7 +157,7 @@ export default function RestaurantsPage() {
               {(selectedCuisines.length > 0 || searchQuery) && (
                 <button
                   onClick={handleClearFilters}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors font-medium"
+                  className="text-sm text-amber-600 hover:text-amber-700 transition-colors font-medium"
                 >
                   Clear filters
                 </button>
