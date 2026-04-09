@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import RestaurantCard from '@/components/RestaurantCard'
-import SearchBar from '@/components/SearchBar'
 import FilterChips from '@/components/FilterChips'
 import EmptyState from '@/components/EmptyState'
 import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
 import { Restaurant } from '@/types/database'
-import { MapPin } from 'lucide-react'
+import { MapPin, Search, X, Star } from 'lucide-react'
 
 function RestaurantsContent() {
   const searchParams = useSearchParams()
@@ -20,7 +19,12 @@ function RestaurantsContent() {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'rating' | 'reviews' | 'newest'>('rating')
   const [searchQuery, setSearchQuery] = useState(cityParam)
+  const [inputValue, setInputValue] = useState(cityParam)
+  const [suggestions, setSuggestions] = useState<Restaurant[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [loading, setLoading] = useState(true)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -79,6 +83,48 @@ function RestaurantsContent() {
     setFilteredRestaurants(filtered)
   }, [restaurants, selectedCuisines, sortBy, searchQuery])
 
+  // Update suggestions as input changes
+  useEffect(() => {
+    if (!inputValue.trim() || restaurants.length === 0) {
+      setSuggestions([])
+      return
+    }
+    const q = inputValue.toLowerCase()
+    const matches = restaurants
+      .filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.cuisine.toLowerCase().includes(q) ||
+          r.city.toLowerCase().includes(q)
+      )
+      .slice(0, 5)
+    setSuggestions(matches)
+  }, [inputValue, restaurants])
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSearchInput = (value: string) => {
+    setInputValue(value)
+    setSearchQuery(value)
+    setShowSuggestions(value.trim().length > 0)
+  }
+
+  const handleSelectSuggestion = (restaurant: Restaurant) => {
+    setShowSuggestions(false)
+    setInputValue('')
+    setSearchQuery('')
+    router.push(`/restaurants/${restaurant.id}`)
+  }
+
   const handleCuisineChange = (cuisine: string) => {
     setSelectedCuisines((prev) =>
       prev.includes(cuisine)
@@ -90,6 +136,7 @@ function RestaurantsContent() {
   const handleClearFilters = () => {
     setSelectedCuisines([])
     setSearchQuery('')
+    setInputValue('')
   }
 
   return (
@@ -106,13 +153,60 @@ function RestaurantsContent() {
             </p>
           </div>
 
-          {/* Search Bar */}
-          <div className="max-w-2xl">
-            <SearchBar
-              placeholder="Search by name, cuisine, or city..."
-              onSearch={setSearchQuery}
-              initialValue={searchQuery}
-            />
+          {/* Live Search */}
+          <div className="max-w-2xl" ref={searchContainerRef}>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onFocus={() => inputValue.trim() && setShowSuggestions(true)}
+                placeholder="Search by name, cuisine, or city..."
+                className="w-full px-4 py-3 pl-12 pr-12 text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
+              />
+              {inputValue && (
+                <button
+                  onClick={() => { setInputValue(''); setSearchQuery(''); setSuggestions([]); setShowSuggestions(false) }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              )}
+
+              {/* Suggestions Dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-80 overflow-y-auto">
+                  <ul className="py-2">
+                    {suggestions.map((restaurant) => (
+                      <li
+                        key={restaurant.id}
+                        onClick={() => handleSelectSuggestion(restaurant)}
+                        className="px-4 py-3 cursor-pointer hover:bg-amber-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{restaurant.name}</p>
+                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                              <span>{restaurant.cuisine}</span>
+                              <span>&middot;</span>
+                              <MapPin size={12} className="flex-shrink-0" />
+                              <span className="truncate">{restaurant.city}</span>
+                            </p>
+                          </div>
+                          {restaurant.avg_rating != null && restaurant.avg_rating > 0 && (
+                            <span className="flex items-center gap-1 text-sm text-amber-600 font-medium flex-shrink-0">
+                              <Star size={14} className="fill-amber-400 text-amber-400" />
+                              {restaurant.avg_rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
