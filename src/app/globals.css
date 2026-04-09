@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #059669;
-  --color-primary-dark: #047857;
-  --color-primary-light: #6ee7b7;
-  --color-secondary: #0d9488;
+  --color-primary: #d97706;
+  --color-primary-dark: #b45309;
+  --color-primary-light: #fbbf24;
+  --color-secondary: #ea580c;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -17,27 +19,27 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgb(249, 250, 251);
+  background-color: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(110, 231, 183);
+  background-color: rgb(217, 119, 6, 0.3);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(52, 211, 153);
+  background-color: rgb(217, 119, 6, 0.5);
 }
 
 /* Smooth transitions */
 button,
 a {
-  transition-property: color;
+  transition-property: color, background-color, border-color, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
 }
@@ -46,7 +48,7 @@ a {
 :focus-visible {
   outline-width: 2px;
   outline-offset: 2px;
-  outline-color: rgb(5, 150, 105);
+  outline-color: rgb(217, 119, 6);
 }
 
 /* Star rating animation */
@@ -60,4 +62,10 @@ a {
   100% {
     transform: scale(1);
   }
+}
+
+/* Selection color */
+::selection {
+  background-color: rgb(253, 230, 138);
+  color: rgb(120, 53, 15);
 }

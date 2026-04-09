@@ -1,19 +1,20 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import RestaurantCard from '@/components/RestaurantCard';
-import { Restaurant, Review } from '@/lib/types';
+import { Restaurant } from '@/lib/types';
+import { TrendingUp } from 'lucide-react';
 
 export default async function TopRatedPage() {
   const supabase = await createServerSupabaseClient();
 
   let restaurants: Restaurant[] = [];
-  const restaurantRatings: Record<string, { avg: number; count: number }> = {};
 
-  // Fetch all restaurants
+  // Fetch all restaurants with ratings
   try {
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
-      .order('name', { ascending: true });
+      .gt('review_count', 0)
+      .order('avg_rating', { ascending: false });
 
     if (!error && data) {
       restaurants = data;
@@ -22,57 +23,26 @@ export default async function TopRatedPage() {
     console.error('Error fetching restaurants:', err);
   }
 
-  // Fetch reviews to calculate ratings
-  if (restaurants.length > 0) {
-    try {
-      const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('restaurant_id, rating');
-
-      if (!error && reviews) {
-        (reviews as any[]).forEach((review) => {
-          if (!restaurantRatings[review.restaurant_id]) {
-            restaurantRatings[review.restaurant_id] = { avg: 0, count: 0 };
-          }
-          restaurantRatings[review.restaurant_id].avg += review.rating;
-          restaurantRatings[review.restaurant_id].count += 1;
-        });
-
-        // Calculate averages
-        Object.keys(restaurantRatings).forEach((key) => {
-          restaurantRatings[key].avg = restaurantRatings[key].avg / restaurantRatings[key].count;
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching reviews:', err);
-    }
-  }
-
-  // Sort by rating
-  const topRatedRestaurants = restaurants
-    .map((r) => ({
-      ...r,
-      avgRating: restaurantRatings[r.id]?.avg || 0,
-      reviewCount: restaurantRatings[r.id]?.count || 0,
-    }))
-    .filter((r) => r.reviewCount > 0)
-    .sort((a, b) => b.avgRating - a.avgRating);
-
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <section className="py-12 px-4 max-w-7xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold mb-3">Top Rated</h1>
-        <p className="text-neutral-400 text-lg">
-          The best restaurants loved by our community
-        </p>
-      </section>
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp size={28} className="text-amber-600" />
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Top Rated</h1>
+          </div>
+          <p className="text-lg text-gray-600">
+            The best restaurants loved by our community
+          </p>
+        </div>
+      </div>
 
       {/* Restaurants Grid */}
-      <section className="py-8 px-4 max-w-7xl mx-auto">
-        {topRatedRestaurants.length > 0 ? (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topRatedRestaurants.map((restaurant) => (
+            {restaurants.map((restaurant) => (
               <RestaurantCard
                 key={restaurant.id}
                 restaurant={restaurant}
@@ -80,15 +50,17 @@ export default async function TopRatedPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">⭐</div>
-            <h2 className="text-2xl font-bold text-white mb-2">No Rated Restaurants Yet</h2>
-            <p className="text-neutral-400">
+          <div className="text-center py-16 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
+            <div className="bg-amber-50 p-4 rounded-full mb-6 inline-block">
+              <TrendingUp size={32} className="text-amber-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Rated Restaurants Yet</h2>
+            <p className="text-gray-600">
               Be the first to leave a review and help other food lovers discover great places!
             </p>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

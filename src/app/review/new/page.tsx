@@ -225,7 +225,7 @@ export default function NewReviewPage() {
   if (!user || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-emerald-500" size={32} />
+        <Loader2 className="animate-spin text-amber-500" size={32} />
       </div>
     )
   }
@@ -248,7 +248,7 @@ export default function NewReviewPage() {
             {!creativeModeEnabled && (
               <Link
                 href="/profile/edit"
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-emerald-600 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 transition-colors"
                 title="Enable Creative Mode in settings for detailed reviews"
               >
                 <Sparkles size={14} />
@@ -267,7 +267,7 @@ export default function NewReviewPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Restaurant Selection */}
-          <div className="space-y-4 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+          <div className="space-y-4 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
             <h2 className="text-lg font-semibold text-gray-900">
               Select a Restaurant
             </h2>
@@ -280,7 +280,7 @@ export default function NewReviewPage() {
                 />
 
                 {selectedRestaurantData && (
-                  <div className="p-3 bg-white rounded border border-emerald-100">
+                  <div className="p-3 bg-white rounded border border-amber-100">
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">{selectedRestaurantData.name}</span>
                       {' \u2022 '}
@@ -301,7 +301,7 @@ export default function NewReviewPage() {
                       setNewRestaurantCity('')
                       setNewRestaurantAddress('')
                     }}
-                    className="text-emerald-600 hover:text-emerald-700 font-medium text-sm transition-colors"
+                    className="text-amber-600 hover:text-amber-700 font-medium text-sm transition-colors"
                   >
                     + Add a new restaurant not in our database
                   </button>
@@ -315,7 +315,7 @@ export default function NewReviewPage() {
                   onChange={(e) => setNewRestaurantName(e.target.value)}
                   placeholder="Restaurant Name"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -325,7 +325,7 @@ export default function NewReviewPage() {
                     onChange={(e) => setNewRestaurantCuisine(e.target.value)}
                     placeholder="Cuisine Type (e.g., Italian, Thai)"
                     required
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
                   />
                   <input
                     type="text"
@@ -333,7 +333,7 @@ export default function NewReviewPage() {
                     onChange={(e) => setNewRestaurantCity(e.target.value)}
                     placeholder="City"
                     required
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
                   />
                 </div>
 
@@ -342,7 +342,7 @@ export default function NewReviewPage() {
                   value={newRestaurantAddress}
                   onChange={(e) => setNewRestaurantAddress(e.target.value)}
                   placeholder="Address (optional)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
                 />
 
                 <div>
@@ -352,7 +352,7 @@ export default function NewReviewPage() {
                   <select
                     value={priceRange}
                     onChange={(e) => setPriceRange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition bg-white"
                   >
                     <option value="1">$ (Budget-Friendly)</option>
                     <option value="2">$$ (Moderate)</option>
@@ -386,7 +386,7 @@ export default function NewReviewPage() {
             <label className="block text-lg font-semibold text-gray-900">
               Your Rating
             </label>
-            <div className={`p-4 ${creativeModeEnabled ? 'p-6' : 'p-4'} bg-emerald-50 rounded-xl border border-emerald-200`}>
+            <div className={`p-4 ${creativeModeEnabled ? 'p-6' : 'p-4'} bg-amber-50 rounded-xl border border-amber-200`}>
               <StarRating
                 rating={rating}
                 size={creativeModeEnabled ? 40 : 32}
@@ -395,7 +395,7 @@ export default function NewReviewPage() {
               />
               {rating > 0 && (
                 <p className="mt-3 text-sm text-gray-600">
-                  You rated this restaurant <span className="font-bold text-emerald-700">{rating} stars</span>
+                  You rated this restaurant <span className="font-bold text-amber-700">{rating} stars</span>
                 </p>
               )}
             </div>
@@ -412,7 +412,7 @@ export default function NewReviewPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 maxLength={280}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
                 placeholder="e.g., Amazing tacos, best I've had in Miami!"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -435,7 +435,7 @@ export default function NewReviewPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   required
                   maxLength={100}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
                   placeholder="e.g., Amazing pasta dishes with cozy atmosphere"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -455,7 +455,7 @@ export default function NewReviewPage() {
                   minLength={20}
                   maxLength={5000}
                   rows={10}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none"
                   placeholder="Share your dining experience in detail. What did you order? How was the service? Would you recommend this restaurant?"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -474,7 +474,7 @@ export default function NewReviewPage() {
                       type="url"
                       value={photoUrl}
                       onChange={(e) => handlePhotoUrlChange(e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
                       placeholder="https://example.com/photo.jpg"
                     />
                     {photoUrl && (
@@ -514,7 +514,7 @@ export default function NewReviewPage() {
             <button
               type="submit"
               disabled={loading || rating === 0}
-              className="flex-1 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? 'Publishing...' : creativeModeEnabled ? 'Publish Review' : 'Post Review'}

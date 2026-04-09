@@ -162,7 +162,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile not found</h2>
           <p className="text-gray-600 mb-4">The profile you're looking for doesn't exist.</p>
-          <Link href="/" className="text-emerald-600 hover:text-emerald-700 font-medium">
+          <Link href="/" className="text-amber-600 hover:text-amber-700 font-medium">
             Go back home
           </Link>
         </div>
@@ -173,7 +173,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
   return (
     <div className="min-h-screen bg-white">
       {/* Profile Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Avatar and Basic Info */}
@@ -185,7 +185,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-lg flex-shrink-0"
                 />
               ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-4xl font-bold flex-shrink-0 border-4 border-white shadow-lg">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-4xl font-bold flex-shrink-0 border-4 border-white shadow-lg">
                   {profile.display_name.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -199,7 +199,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                     <p className="text-lg text-gray-600">@{profile.username}</p>
                   </div>
                   {profile.is_critic && (
-                    <span className="inline-block px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-full">
+                    <span className="inline-block px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-full">
                       CRITIC
                     </span>
                   )}
@@ -221,7 +221,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   </div>
                   <Link
                     href={`/profile/${params.id}/followers`}
-                    className="text-center sm:text-left hover:text-emerald-600 transition-colors cursor-pointer"
+                    className="text-center sm:text-left hover:text-amber-600 transition-colors cursor-pointer"
                   >
                     <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                       {followers}
@@ -230,7 +230,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   </Link>
                   <Link
                     href={`/profile/${params.id}/following`}
-                    className="text-center sm:text-left hover:text-emerald-600 transition-colors cursor-pointer"
+                    className="text-center sm:text-left hover:text-amber-600 transition-colors cursor-pointer"
                   >
                     <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                       {following}
@@ -247,14 +247,14 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                 <>
                   <Link
                     href="/profile/edit"
-                    className="w-full py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors font-semibold text-center flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors font-semibold text-center flex items-center justify-center gap-2"
                   >
                     <Edit2 size={18} />
                     Edit Profile
                   </Link>
                   <Link
                     href="/review/new"
-                    className="w-full py-3 border-2 border-emerald-500 text-emerald-600 rounded-xl hover:bg-emerald-50 transition-colors font-semibold text-center"
+                    className="w-full py-3 border-2 border-amber-500 text-amber-600 rounded-xl hover:bg-amber-50 transition-colors font-semibold text-center"
                   >
                     Write Review
                   </Link>
@@ -266,7 +266,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                     className={`w-full py-3 rounded-xl font-semibold transition-colors ${
                       isFollowing
                         ? 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-amber-500 text-white hover:bg-amber-600'
                     }`}
                   >
                     {isFollowing ? 'Following' : 'Follow'}
@@ -275,7 +275,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   {profile.email && (
                     <a
                       href={`mailto:${profile.email}`}
-                      className="w-full py-3 border-2 border-emerald-500 text-emerald-600 rounded-xl hover:bg-emerald-50 transition-colors font-semibold text-center flex items-center justify-center gap-2"
+                      className="w-full py-3 border-2 border-amber-500 text-amber-600 rounded-xl hover:bg-amber-50 transition-colors font-semibold text-center flex items-center justify-center gap-2"
                     >
                       <Mail size={18} />
                       Contact
@@ -296,7 +296,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
               onClick={() => setActiveTab('reviews')}
               className={`py-4 px-2 border-b-2 font-medium transition-colors ${
                 activeTab === 'reviews'
-                  ? 'text-emerald-600 border-emerald-600'
+                  ? 'text-amber-600 border-amber-600'
                   : 'text-gray-600 border-transparent hover:text-gray-900'
               }`}
             >
@@ -308,7 +308,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   onClick={() => setActiveTab('followers')}
                   className={`py-4 px-2 border-b-2 font-medium transition-colors ${
                     activeTab === 'followers'
-                      ? 'text-emerald-600 border-emerald-600'
+                      ? 'text-amber-600 border-amber-600'
                       : 'text-gray-600 border-transparent hover:text-gray-900'
                   }`}
                 >
@@ -318,7 +318,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                   onClick={() => setActiveTab('following')}
                   className={`py-4 px-2 border-b-2 font-medium transition-colors ${
                     activeTab === 'following'
-                      ? 'text-emerald-600 border-emerald-600'
+                      ? 'text-amber-600 border-amber-600'
                       : 'text-gray-600 border-transparent hover:text-gray-900'
                   }`}
                 >
@@ -371,7 +371,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             </p>
             <Link
               href={`/profile/${params.id}/followers`}
-              className="mt-4 inline-block text-emerald-600 hover:text-emerald-700 font-medium"
+              className="mt-4 inline-block text-amber-600 hover:text-amber-700 font-medium"
             >
               Go to followers â
             </Link>
@@ -385,7 +385,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             </p>
             <Link
               href={`/profile/${params.id}/following`}
-              className="mt-4 inline-block text-emerald-600 hover:text-emerald-700 font-medium"
+              className="mt-4 inline-block text-amber-600 hover:text-amber-700 font-medium"
             >
               Go to following â
             </Link>

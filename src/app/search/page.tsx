@@ -134,7 +134,7 @@ function SearchContent() {
   return (
     <div className="min-h-screen bg-white">
       {/* Search Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -183,7 +183,7 @@ function SearchContent() {
                     onClick={() => setActiveTab('reviews')}
                     className={`px-4 py-3 font-medium border-b-2 transition-colors ${
                       activeTab === 'reviews'
-                        ? 'text-emerald-600 border-emerald-600'
+                        ? 'text-amber-600 border-amber-600'
                         : 'text-gray-600 border-transparent hover:text-gray-900'
                     }`}
                   >
@@ -193,7 +193,7 @@ function SearchContent() {
                     onClick={() => setActiveTab('restaurants')}
                     className={`px-4 py-3 font-medium border-b-2 transition-colors ${
                       activeTab === 'restaurants'
-                        ? 'text-emerald-600 border-emerald-600'
+                        ? 'text-amber-600 border-amber-600'
                         : 'text-gray-600 border-transparent hover:text-gray-900'
                     }`}
                   >

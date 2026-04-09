@@ -89,7 +89,7 @@ export default async function RestaurantPage({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Restaurant Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 py-8 sm:py-12 border-b border-amber-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Main Info */}
@@ -100,15 +100,15 @@ export default async function RestaurantPage({
 
               {/* Quick Info */}
               <div className="flex flex-wrap gap-3 text-gray-600">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold">
-                  <ChefHat size={15} className="text-emerald-600" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
+                  <ChefHat size={15} className="text-amber-600" />
                   {restaurant.cuisine}
                 </span>
                 <span className="inline-flex items-center gap-1 text-sm text-gray-500">
                   <MapPin size={15} className="text-gray-400" />
                   {restaurant.city}
                 </span>
-                <span className="inline-flex items-center gap-1 text-lg font-bold text-emerald-700">
+                <span className="inline-flex items-center gap-1 text-lg font-bold text-amber-700">
                   {priceDisplay}
                 </span>
               </div>
@@ -220,8 +220,8 @@ export default async function RestaurantPage({
 
               {/* Write a Review - Below external ratings */}
               <Link
-                href="/review/new"
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-center block shadow-sm"
+                href={`/restaurants/${restaurant.id}/review`}
+                className="w-full py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold text-center block shadow-sm"
               >
                 Write a Review
               </Link>
@@ -231,7 +231,7 @@ export default async function RestaurantPage({
                   href={restaurant.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full px-4 py-3 border-2 border-emerald-500 text-emerald-700 rounded-xl hover:bg-emerald-50 transition-colors font-medium text-center flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 border-2 border-amber-500 text-amber-700 rounded-xl hover:bg-amber-50 transition-colors font-medium text-center flex items-center justify-center gap-2"
                 >
                   <Globe size={18} />
                   Visit Website
@@ -290,13 +290,13 @@ export default async function RestaurantPage({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <div className="text-center py-12 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
                   <p className="text-lg text-gray-600 mb-4">
                     Be the first to review this restaurant!
                   </p>
                   <Link
-                    href="/review/new"
-                    className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+                    href={`/restaurants/${restaurant.id}/review`}
+                    className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold shadow-sm"
                   >
                     Write a Review
                   </Link>
@@ -340,7 +340,7 @@ export default async function RestaurantPage({
                     <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Phone</p>
                     <a
                       href={`tel:${restaurant.phone}`}
-                      className="text-emerald-600 hover:text-emerald-700 font-medium"
+                      className="text-amber-600 hover:text-amber-700 font-medium"
                     >
                       {restaurant.phone}
                     </a>
@@ -349,7 +349,7 @@ export default async function RestaurantPage({
 
                 <div>
                   <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">Price Range</p>
-                  <p className="text-lg font-bold text-emerald-700">{priceDisplay}</p>
+                  <p className="text-lg font-bold text-amber-700">{priceDisplay}</p>
                 </div>
               </div>
 

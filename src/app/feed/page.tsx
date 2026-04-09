@@ -126,15 +126,15 @@ export default function FeedPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-          <div className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-12">
-            <Users size={48} className="mx-auto text-emerald-500 mb-4" />
+          <div className="text-center bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-12">
+            <Users size={48} className="mx-auto text-amber-500 mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-3">Your Feed</h1>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               Sign in to see reviews from people you follow and discover new restaurants through their experiences.
             </p>
             <Link
               href="/auth/login"
-              className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold shadow-sm"
             >
               Sign In
             </Link>
@@ -150,15 +150,15 @@ export default function FeedPage() {
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Feed</h1>
-          <div className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-12">
-            <UserPlus size={48} className="mx-auto text-emerald-500 mb-4" />
+          <div className="text-center bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-12">
+            <UserPlus size={48} className="mx-auto text-amber-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Follow food lovers</h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               Start following other reviewers to see their latest restaurant reviews and recommendations in your feed.
             </p>
             <Link
               href="/search"
-              className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold shadow-sm"
             >
               Discover Reviewers
             </Link>
@@ -174,15 +174,15 @@ export default function FeedPage() {
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Feed</h1>
-          <div className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-12">
-            <Utensils size={48} className="mx-auto text-emerald-500 mb-4" />
+          <div className="text-center bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-12">
+            <Utensils size={48} className="mx-auto text-amber-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-3">No reviews yet</h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               The people you follow haven&apos;t posted any reviews yet. Check back soon or explore restaurants on your own!
             </p>
             <Link
               href="/restaurants"
-              className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
+              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-semibold shadow-sm"
             >
               Browse Restaurants
             </Link>
@@ -222,8 +222,8 @@ export default function FeedPage() {
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-emerald-700">
+                    <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-amber-700">
                         {(author.display_name || author.username || '?')[0].toUpperCase()}
                       </span>
                     </div>
@@ -235,7 +235,7 @@ export default function FeedPage() {
                 <span className="text-sm text-gray-400">reviewed</span>
                 <Link
                   href={`/restaurants/${restaurant.id}`}
-                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                  className="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors"
                 >
                   {restaurant.name}
                 </Link>
