@@ -281,7 +281,7 @@ export default function EditProfilePage() {
             </p>
             {profile.is_critic && (
               <p className="text-sm text-blue-800 font-semibold text-emerald-600">
-                ÃÂ¢ÃÂÃÂ You are a featured critic
+                ✓ You are a featured critic
               </p>
             )}
           </div>

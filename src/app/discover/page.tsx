@@ -1,12 +1,12 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import RestaurantCard from '@/components/RestaurantCard';
-import { Restaurant, Review } from '@/lib/types';
+import { Restaurant } from '@/lib/types';
+import { MapPin } from 'lucide-react';
 
 export default async function DiscoverPage() {
   const supabase = await createServerSupabaseClient();
 
   let restaurants: Restaurant[] = [];
-  const restaurantRatings: Record<string, { avg: number; count: number }> = {};
 
   // Fetch all restaurants
   try {
@@ -22,44 +22,20 @@ export default async function DiscoverPage() {
     console.error('Error fetching restaurants:', err);
   }
 
-  // Fetch reviews to calculate ratings
-  if (restaurants.length > 0) {
-    try {
-      const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('restaurant_id, rating');
-
-      if (!error && reviews) {
-        (reviews as any[]).forEach((review) => {
-          if (!restaurantRatings[review.restaurant_id]) {
-            restaurantRatings[review.restaurant_id] = { avg: 0, count: 0 };
-          }
-          restaurantRatings[review.restaurant_id].avg += review.rating;
-          restaurantRatings[review.restaurant_id].count += 1;
-        });
-
-        // Calculate averages
-        Object.keys(restaurantRatings).forEach((key) => {
-          restaurantRatings[key].avg = restaurantRatings[key].avg / restaurantRatings[key].count;
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching reviews:', err);
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <section className="py-12 px-4 max-w-7xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold mb-3">Discover Restaurants</h1>
-        <p className="text-neutral-400 text-lg">
-          Explore amazing restaurants and read authentic reviews from our community.
-        </p>
-      </section>
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 py-8 sm:py-12 border-b border-emerald-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Discover Restaurants</h1>
+          <p className="text-lg text-gray-600">
+            Explore amazing restaurants and read authentic reviews from our community.
+          </p>
+        </div>
+      </div>
 
       {/* Restaurants Grid */}
-      <section className="py-8 px-4 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {restaurants.map((restaurant) => (
@@ -70,15 +46,17 @@ export default async function DiscoverPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">🍽️</div>
-            <h2 className="text-2xl font-bold text-white mb-2">No Restaurants Yet</h2>
-            <p className="text-neutral-400">
+          <div className="text-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+            <div className="bg-emerald-50 p-4 rounded-full mb-6 inline-block">
+              <MapPin size={32} className="text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Restaurants Yet</h2>
+            <p className="text-gray-600">
               Be the first to add a restaurant to our community!
             </p>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

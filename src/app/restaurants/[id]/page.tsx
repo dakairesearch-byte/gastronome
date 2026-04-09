@@ -220,7 +220,7 @@ export default async function RestaurantPage({
 
               {/* Write a Review - Below external ratings */}
               <Link
-                href="/review/new"
+                href={`/restaurants/${restaurant.id}/review`}
                 className="w-full py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold text-center block shadow-sm"
               >
                 Write a Review
@@ -295,7 +295,7 @@ export default async function RestaurantPage({
                     Be the first to review this restaurant!
                   </p>
                   <Link
-                    href="/review/new"
+                    href={`/restaurants/${restaurant.id}/review`}
                     className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-sm"
                   >
                     Write a Review

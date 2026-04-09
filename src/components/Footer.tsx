@@ -72,18 +72,18 @@ export default function Footer() {
               >
                 Explore Restaurants
               </Link>
-              <a
-                href="#"
-                 className="block text-sm hover:text-emerald-400 transition-colors"
+              <Link
+                href="/top-rated"
+                className="block text-sm hover:text-emerald-400 transition-colors"
               >
                 Trending
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                href="/search"
                 className="block text-sm hover:text-emerald-400 transition-colors"
               >
                 Top Critics
-              </a>
+              </Link>
             </nav>
           </div>
 
@@ -93,13 +93,13 @@ export default function Footer() {
               Connect
             </h3>
             <div className="space-y-3">
-              <a
-                href="#"
+              <Link
+                href="/restaurants"
                 className="flex items-center gap-2 text-sm hover:text-emerald-400 transition-colors"
               >
                 <MapPin size={16} />
                 Find restaurants near you
-              </a>
+              </Link>
               <a
                 href="mailto:hello@gastronome.local"
                 className="flex items-center gap-2 text-sm hover:text-emerald-400 transition-colors"

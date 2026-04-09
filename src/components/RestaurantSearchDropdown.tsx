@@ -137,6 +137,7 @@ export default function RestaurantSearchDropdown({
         }))
 
         setResults(localSearchResults)
+        setIsOpen(localSearchResults.length > 0)
       } catch (error) {
         console.error('Error searching local restaurants:', error)
       }
