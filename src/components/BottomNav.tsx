@@ -28,7 +28,7 @@ export default function BottomNav() {
   const tabs = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/restaurants', icon: Search, label: 'Explore' },
-    { href: '/review/new', icon: Plus, label: 'Review', isAction: true },
+    ...(userId ? [{ href: '/review/new', icon: Plus, label: 'Review', isAction: true }] : []),
     { href: '/feed', icon: Bookmark, label: 'Feed' },
     { href: userId ? `/profile/${userId}` : '/auth/login', icon: User, label: 'Profile' },
   ]
