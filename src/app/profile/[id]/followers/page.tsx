@@ -12,7 +12,7 @@ import { Users } from 'lucide-react'
 export default function FollowersPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [followers, setFollowers] = useState<Profile[]>([])
+  const [followers, setFollowers] = useState<{ profile: Profile; reviewCount: number; followerCount: number }[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -64,13 +64,7 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
               })
             )
 
-            setFollowers(
-              followersWithCounts.map((f) => ({
-                ...f.profile,
-                _reviewCount: f.reviewCount,
-                _followerCount: f.followerCount,
-              }))
-            )
+            setFollowers(followersWithCounts)
           }
         }
       } catch (err) {
@@ -118,12 +112,12 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
 
         {followers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {followers.map((follower: any) => (
+            {followers.map(({ profile: follower, reviewCount, followerCount }) => (
               <CriticCard
                 key={follower.id}
                 profile={follower}
-                reviewCount={follower._reviewCount}
-                followerCount={follower._followerCount}
+                reviewCount={reviewCount}
+                followerCount={followerCount}
               />
             ))}
           </div>

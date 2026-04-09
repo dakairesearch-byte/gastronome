@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StarRating from '@/components/StarRating'
 import { Review, ReviewPhoto, Restaurant } from '@/types/database'
-import { AlertCircle, Loader2, X } from 'lucide-react'
+import { AlertCircle, Loader2, X, ArrowLeft } from 'lucide-react'
 
 export default function EditReviewPage() {
   const router = useRouter()
@@ -48,13 +48,15 @@ export default function EditReviewPage() {
           .single()
 
         if (!reviewData) {
-          router.push('/404')
+          setError('Review not found')
+          setLoading(false)
           return
         }
 
         // Check ownership
         if (reviewData.author_id !== session.user.id) {
-          router.push('/404')
+          setError('You do not have permission to edit this review')
+          setLoading(false)
           return
         }
 
@@ -114,16 +116,19 @@ export default function EditReviewPage() {
 
       if (rating === 0) {
         setError('Please select a rating')
+        setSaving(false)
         return
       }
 
       if (title.trim().length === 0) {
         setError('Please enter a review title')
+        setSaving(false)
         return
       }
 
       if (content.trim().length < 20) {
         setError('Review must be at least 20 characters long')
+        setSaving(false)
         return
       }
 
@@ -160,26 +165,20 @@ export default function EditReviewPage() {
         await supabase.from('review_photos').delete().eq('review_id', reviewId)
       }
 
-      // Update restaurant rating if rating changed
+      // Update restaurant avg_rating if rating changed
       if (review.rating !== rating && restaurant) {
         const { data: allReviews } = await supabase
           .from('reviews')
           .select('rating')
           .eq('restaurant_id', restaurant.id)
 
-        if (allReviews) {
-          // Update the current review's rating in the array
-          const updatedRatings = allReviews.map((r) =>
-            r.rating === review.rating ? rating : r.rating
-          )
+        if (allReviews && allReviews.length > 0) {
           const newAvgRating =
-            updatedRatings.reduce((a, b) => a + b, 0) / updatedRatings.length
+            allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
 
           await supabase
             .from('restaurants')
-            .update({
-              avg_rating: newAvgRating,
-            })
+            .update({ avg_rating: newAvgRating })
             .eq('id', restaurant.id)
         }
       }

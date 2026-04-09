@@ -6,7 +6,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import StarRating from './StarRating'
 import { Review, Profile, Restaurant, ReviewPhoto } from '@/types/database'
-import { Share2, Trash2, Edit2, ThumbsUp } from 'lucide-react'
+import { Share2, Trash2, Edit2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -181,9 +181,11 @@ export default function ReviewCard({
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={handleShare}
               className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
               title="Share"
+              aria-label="Share review"
             >
               <Share2 size={16} />
             </button>
@@ -191,9 +193,11 @@ export default function ReviewCard({
             {isOwnReview && (
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setShowMenu(!showMenu)}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                   title="More options"
+                  aria-label="More options"
                 >
                   <svg
                     className="w-4 h-4"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Search, ChevronDown } from 'lucide-react'
 
@@ -40,16 +40,25 @@ export default function CitySelector({ availableCities = [] }: CitySelectorProps
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Merge DB cities with major cities, deduplicate, and sort
-  const allCities = [...new Set([...availableCities, ...MAJOR_CITIES])].sort()
+  const allCities = useMemo(
+    () => [...new Set([...availableCities, ...MAJOR_CITIES])].sort(),
+    [availableCities]
+  )
 
-  const filteredCities = searchQuery.trim()
-    ? allCities.filter((city) =>
-        city.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : allCities
+  const filteredCities = useMemo(
+    () => searchQuery.trim()
+      ? allCities.filter((city) =>
+          city.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allCities,
+    [allCities, searchQuery]
+  )
 
   // Mark which cities have restaurants in the DB
-  const citiesWithRestaurants = new Set(availableCities.map((c) => c.toLowerCase()))
+  const citiesWithRestaurants = useMemo(
+    () => new Set(availableCities.map((c) => c.toLowerCase())),
+    [availableCities]
+  )
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

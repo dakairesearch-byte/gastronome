@@ -25,7 +25,7 @@ export default function CuisineTag({
       className={`${baseClasses} ${variantClasses[variant]}`}
     >
       <span>{cuisine}</span>
-      {count && <span className="text-sm opacity-75">({count})</span>}
+      {count != null && <span className="text-sm opacity-75">({count})</span>}
     </Link>
   )
 }

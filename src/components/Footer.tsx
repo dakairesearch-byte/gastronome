@@ -108,27 +108,27 @@ export default function Footer() {
                 Contact us
               </a>
               <div className="flex gap-3 pt-2">
-                <a
-                  href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                <span
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors cursor-pointer"
                   aria-label="Facebook"
+                  role="img"
                 >
-                  <span className="text-xs">f</span>
-                </a>
-                <a
-                  href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                  <span className="text-xs text-white">f</span>
+                </span>
+                <span
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors cursor-pointer"
                   aria-label="Twitter"
+                  role="img"
                 >
-                  <span className="text-xs">ð</span>
-                </a>
-                <a
-                  href="#"
-                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                  <span className="text-xs text-white">X</span>
+                </span>
+                <span
+                  className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors cursor-pointer"
                   aria-label="Instagram"
+                  role="img"
                 >
-                  <span className="text-xs">ð·</span>
-                </a>
+                  <span className="text-xs text-white">ig</span>
+                </span>
               </div>
             </div>
           </div>
