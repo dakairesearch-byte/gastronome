@@ -34,7 +34,7 @@ export default function CriticCard({
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-sm group-hover:text-amber-600 transition-colors truncate">
+            <h3 className="font-semibold text-gray-900 text-sm group-hover:text-emerald-600 transition-colors truncate">
               {profile.display_name}
             </h3>
             <p className="text-xs text-gray-400 truncate">@{profile.username}</p>

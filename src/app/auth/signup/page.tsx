@@ -97,7 +97,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-sm bg-white rounded-lg border border-gray-100 p-6">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-10 h-10 bg-amber-500 rounded-lg mb-3">
+          <div className="inline-flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-lg mb-3">
             <span className="text-white font-bold text-lg">G</span>
           </div>
           <h1 className="text-xl font-bold text-gray-900">Create account</h1>
@@ -121,7 +121,7 @@ export default function SignupPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Your Name"
             />
           </div>
@@ -136,7 +136,7 @@ export default function SignupPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, '_'))}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="your_username"
             />
           </div>
@@ -151,7 +151,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="you@example.com"
             />
           </div>
@@ -167,7 +167,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Create a password"
             />
           </div>
@@ -175,7 +175,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
@@ -183,7 +183,7 @@ export default function SignupPage() {
 
         <p className="text-center text-gray-600 mt-6">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-amber-600 hover:text-amber-700 font-semibold">
+          <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-semibold">
             Sign in
           </Link>
         </p>

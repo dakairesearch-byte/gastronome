@@ -100,7 +100,7 @@ export default function FeedPage() {
             <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
               Sign in to see reviews from people you follow.
             </p>
-            <Link href="/auth/login" className="inline-block px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium">
+            <Link href="/auth/login" className="inline-block px-5 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium">
               Sign In
             </Link>
           </div>
@@ -120,7 +120,7 @@ export default function FeedPage() {
             <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
               Start following other reviewers to see their latest reviews in your feed.
             </p>
-            <Link href="/restaurants" className="inline-block px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium">
+            <Link href="/restaurants" className="inline-block px-5 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium">
               Discover
             </Link>
           </div>
@@ -140,7 +140,7 @@ export default function FeedPage() {
             <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
               The people you follow haven&apos;t posted any reviews yet.
             </p>
-            <Link href="/restaurants" className="inline-block px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium">
+            <Link href="/restaurants" className="inline-block px-5 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium">
               Browse Restaurants
             </Link>
           </div>

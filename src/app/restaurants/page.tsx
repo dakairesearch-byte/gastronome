@@ -119,7 +119,7 @@ function RestaurantsContent() {
             value={inputValue}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search by name, cuisine, or city..."
-            className="w-full py-2.5 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+            className="w-full py-2.5 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
           />
           {inputValue && (
             <button
@@ -165,7 +165,7 @@ function RestaurantsContent() {
         <p className="text-xs text-gray-400">
           {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''}
           {(selectedCuisines.length > 0 || searchQuery) && (
-            <button type="button" onClick={handleClearFilters} className="ml-2 text-amber-600 hover:text-amber-700 font-medium">
+            <button type="button" onClick={handleClearFilters} className="ml-2 text-emerald-600 hover:text-emerald-700 font-medium">
               Clear filters
             </button>
           )}

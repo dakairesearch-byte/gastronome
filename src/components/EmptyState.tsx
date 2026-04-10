@@ -30,7 +30,7 @@ export default function EmptyState({
       {ctaText && ctaHref && (
         <Link
           href={ctaHref}
-          className="px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+          className="px-5 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
         >
           {ctaText}
         </Link>

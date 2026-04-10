@@ -117,7 +117,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-lg font-bold text-gray-900 mb-1">Profile not found</h2>
-          <Link href="/" className="text-sm text-amber-600 hover:text-amber-700">Go home</Link>
+          <Link href="/" className="text-sm text-emerald-600 hover:text-emerald-700">Go home</Link>
         </div>
       </div>
     )
@@ -136,7 +136,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
               {profile.display_name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -156,11 +156,11 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                 <span className="text-sm font-bold text-gray-900">{reviews.length}</span>
                 <span className="text-xs text-gray-400 ml-1">reviews</span>
               </div>
-              <Link href={`/profile/${params.id}/followers`} className="hover:text-amber-600 transition-colors">
+              <Link href={`/profile/${params.id}/followers`} className="hover:text-emerald-600 transition-colors">
                 <span className="text-sm font-bold text-gray-900">{followers}</span>
                 <span className="text-xs text-gray-400 ml-1">followers</span>
               </Link>
-              <Link href={`/profile/${params.id}/following`} className="hover:text-amber-600 transition-colors">
+              <Link href={`/profile/${params.id}/following`} className="hover:text-emerald-600 transition-colors">
                 <span className="text-sm font-bold text-gray-900">{following}</span>
                 <span className="text-xs text-gray-400 ml-1">following</span>
               </Link>
@@ -181,7 +181,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
               </Link>
               <Link
                 href="/review/new"
-                className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium text-center"
+                className="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium text-center"
               >
                 Write Review
               </Link>
@@ -194,7 +194,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
                 isFollowing
                   ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-amber-500 text-white hover:bg-amber-600'
+                  : 'bg-emerald-500 text-white hover:bg-emerald-600'
               }`}
             >
               {followLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}

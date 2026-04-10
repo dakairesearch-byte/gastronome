@@ -67,7 +67,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14 gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
               G
             </div>
             <span className="font-bold text-gray-900 hidden sm:inline text-sm tracking-tight">
@@ -160,7 +160,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/auth/login"
-                className="px-4 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+                className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
               >
                 Sign in
               </Link>

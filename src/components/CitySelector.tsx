@@ -102,13 +102,13 @@ export default function CitySelector({ availableCities = [] }: CitySelectorProps
       {/* City Selector */}
       <div ref={containerRef} className="relative">
         <div
-          className="flex items-center bg-white rounded-2xl shadow-lg border border-amber-200/60 overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
+          className="flex items-center bg-white rounded-2xl shadow-lg border border-emerald-200/60 overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => {
             setIsOpen(!isOpen)
             setTimeout(() => inputRef.current?.focus(), 50)
           }}
         >
-          <div className="flex items-center gap-2 pl-5 pr-3 py-4 text-amber-600">
+          <div className="flex items-center gap-2 pl-5 pr-3 py-4 text-emerald-600">
             <MapPin size={22} />
           </div>
 
@@ -147,16 +147,16 @@ export default function CitySelector({ availableCities = [] }: CitySelectorProps
                       onClick={() => handleCitySelect(city)}
                       className={`px-5 py-3 cursor-pointer transition-colors flex items-center justify-between ${
                         selectedCity === city
-                          ? 'bg-amber-50 text-amber-700'
+                          ? 'bg-emerald-50 text-emerald-700'
                           : 'hover:bg-gray-50 text-gray-700'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <MapPin size={16} className={selectedCity === city ? 'text-amber-500' : 'text-gray-400'} />
+                        <MapPin size={16} className={selectedCity === city ? 'text-emerald-500' : 'text-gray-400'} />
                         <span className="font-medium">{city}</span>
                       </div>
                       {hasRestaurants && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
                           restaurants
                         </span>
                       )}
@@ -176,7 +176,7 @@ export default function CitySelector({ availableCities = [] }: CitySelectorProps
       {/* Explore Button */}
       <button
         onClick={handleExplore}
-        className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 flex items-center justify-center gap-2"
+        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-2xl hover:from-emerald-600 hover:to-emerald-600 transition-all font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 flex items-center justify-center gap-2"
       >
         <Search size={20} />
         {selectedCity ? `Explore ${selectedCity}` : 'Explore All Restaurants'}

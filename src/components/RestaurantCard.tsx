@@ -20,7 +20,7 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-base truncate group-hover:text-amber-600 transition-colors">
+            <h3 className="font-semibold text-gray-900 text-base truncate group-hover:text-emerald-600 transition-colors">
               {restaurant.name}
             </h3>
             <p className="text-sm text-gray-500 mt-0.5">

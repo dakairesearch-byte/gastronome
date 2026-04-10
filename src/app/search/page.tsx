@@ -380,7 +380,7 @@ function SearchContent() {
                                 {place.rating.toFixed(1)}
                               </span>
                             )}
-                            <span className="text-xs text-amber-600 font-medium">Review</span>
+                            <span className="text-xs text-emerald-600 font-medium">Review</span>
                           </div>
                         </div>
                       </Link>

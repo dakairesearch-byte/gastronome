@@ -47,7 +47,7 @@ export default function BottomNav() {
                 href={tab.href}
                 className="relative flex flex-col items-center justify-center -mt-4 z-10"
               >
-                <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
                   <Icon size={24} className="text-white" strokeWidth={2.5} />
                 </div>
               </Link>
@@ -59,7 +59,7 @@ export default function BottomNav() {
               key={tab.href}
               href={tab.href}
               className={`relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2 ${
-                isActive ? 'text-amber-600' : 'text-gray-400'
+                isActive ? 'text-emerald-600' : 'text-gray-400'
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />

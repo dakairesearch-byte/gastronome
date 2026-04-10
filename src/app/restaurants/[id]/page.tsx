@@ -97,7 +97,7 @@ export default async function RestaurantPage({
           <div className="flex gap-2">
             <Link
               href={`/restaurants/${restaurant.id}/review`}
-              className="flex-1 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium text-sm text-center"
+              className="flex-1 py-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium text-sm text-center"
             >
               Write a Review
             </Link>
@@ -189,7 +189,7 @@ export default async function RestaurantPage({
               <p className="text-gray-500 mb-4">Be the first to review this restaurant!</p>
               <Link
                 href={`/restaurants/${restaurant.id}/review`}
-                className="inline-block px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+                className="inline-block px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
               >
                 Write a Review
               </Link>

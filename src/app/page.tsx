@@ -91,7 +91,7 @@ export default async function Home() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">Trending</h2>
-              <Link href="/restaurants" className="text-sm text-amber-600 hover:text-amber-700 font-medium">
+              <Link href="/restaurants" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 See all
               </Link>
             </div>
@@ -144,7 +144,7 @@ export default async function Home() {
               <p className="text-gray-500 mb-4">No reviews yet. Be the first!</p>
               <Link
                 href="/auth/signup"
-                className="inline-block px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+                className="inline-block px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
               >
                 Write a Review
               </Link>
