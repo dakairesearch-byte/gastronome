@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   Search,
   MapPin,
-  ExternalLink,
   Star,
   Check,
   Loader2,
@@ -86,7 +85,6 @@ export default function RestaurantSearchDropdown({
   const supabase = createClient()
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
 
-  // Size classes
   const sizeClasses = {
     sm: 'px-2 py-1 text-sm',
     md: 'px-4 py-3 text-base',
@@ -95,7 +93,11 @@ export default function RestaurantSearchDropdown({
 
   // Load Google Places API
   useEffect(() => {
-    if (!apiKey) {
+    if (!apiKey) return
+
+    if (window.google?.maps?.places?.AutocompleteService) {
+      setGoogleApiAvailable(true)
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
       return
     }
 
@@ -111,17 +113,13 @@ export default function RestaurantSearchDropdown({
     document.head.appendChild(script)
 
     return () => {
-      document.head.removeChild(script)
+      if (script.parentNode) script.parentNode.removeChild(script)
     }
   }, [apiKey])
 
   const searchLocalRestaurants = useCallback(
-    async (searchQuery: string) => {
-      if (!searchQuery.trim()) {
-        setResults([])
-        return
-      }
-
+    async (searchQuery: string): Promise<SearchResult[]> => {
+      if (!searchQuery.trim()) return []
       try {
         const { data: localResults } = await supabase
           .from('restaurants')
@@ -129,7 +127,7 @@ export default function RestaurantSearchDropdown({
           .ilike('name', `%${searchQuery}%`)
           .limit(5)
 
-        const localSearchResults: SearchResult[] = (localResults || []).map((r) => ({
+        return (localResults || []).map((r) => ({
           id: r.id,
           name: r.name,
           cuisine: r.cuisine,
@@ -139,14 +137,80 @@ export default function RestaurantSearchDropdown({
           isLocal: true,
           isGooglePlace: false,
         }))
-
-        setResults(localSearchResults)
-        setIsOpen(localSearchResults.length > 0)
       } catch (error) {
         console.error('Error searching local restaurants:', error)
+        return []
       }
     },
     [supabase]
+  )
+
+  const searchGooglePlaces = useCallback(
+    async (searchQuery: string): Promise<SearchResult[]> => {
+      if (!searchQuery.trim() || !autocompleteServiceRef.current) return []
+      try {
+        const predictions = await new Promise<any[]>((resolve) => {
+          autocompleteServiceRef.current.getPlacePredictions(
+            { input: searchQuery, types: ['establishment'] },
+            (preds: any[] | null, status: string) => {
+              if (status === 'OK' && preds) resolve(preds)
+              else resolve([])
+            }
+          )
+        })
+
+        return predictions.slice(0, 5).map((prediction) => {
+          const parts = prediction.description.split(',')
+          const city = parts.length > 1 ? parts[1].trim() : ''
+          return {
+            placeId: prediction.place_id,
+            name: prediction.structured_formatting?.main_text || prediction.description.split(',')[0],
+            city,
+            address: prediction.description,
+            isLocal: false,
+            isGooglePlace: true,
+          }
+        })
+      } catch (error) {
+        console.error('Google Places search error:', error)
+        return []
+      }
+    },
+    []
+  )
+
+  const performSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery.trim()) {
+        setResults([])
+        setIsOpen(false)
+        return
+      }
+
+      setIsLoading(true)
+      setSelectedIndex(-1)
+
+      try {
+        const [localResults, googleResults] = await Promise.all([
+          searchLocalRestaurants(searchQuery),
+          googleApiAvailable ? searchGooglePlaces(searchQuery) : Promise.resolve([]),
+        ])
+
+        const localNames = new Set(localResults.map((r) => r.name.toLowerCase()))
+        const filteredGoogle = googleResults.filter(
+          (g) => !localNames.has(g.name.toLowerCase())
+        )
+
+        const combined = [...localResults, ...filteredGoogle]
+        setResults(combined)
+        setIsOpen(combined.length > 0)
+      } catch (error) {
+        console.error('Search error:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [searchLocalRestaurants, searchGooglePlaces, googleApiAvailable]
   )
 
   const handleInputChange = useCallback(
@@ -155,22 +219,20 @@ export default function RestaurantSearchDropdown({
       setQuery(value)
       setSelectedIndex(-1)
 
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
 
       if (value.trim()) {
         setIsLoading(true)
         debounceTimerRef.current = setTimeout(() => {
-          searchLocalRestaurants(value)
-          setIsLoading(false)
+          performSearch(value)
         }, 300)
       } else {
         setResults([])
+        setIsOpen(false)
         setIsLoading(false)
       }
     },
-    [searchLocalRestaurants]
+    [performSearch]
   )
 
   const handleSelectLocal = useCallback(
@@ -216,11 +278,8 @@ export default function RestaurantSearchDropdown({
         e.preventDefault()
         if (isOpen && selectedIndex >= 0 && results[selectedIndex]) {
           const selected = results[selectedIndex]
-          if (selected.isGooglePlace) {
-            handleSelectGoogle(selected)
-          } else {
-            handleSelectLocal(selected)
-          }
+          if (selected.isGooglePlace) handleSelectGoogle(selected)
+          else handleSelectLocal(selected)
         } else if (navigateOnEnter && query.trim()) {
           router.push(`/search?q=${encodeURIComponent(query.trim())}`)
           setQuery('')
@@ -249,23 +308,18 @@ export default function RestaurantSearchDropdown({
     [isOpen, results, selectedIndex, handleSelectLocal, handleSelectGoogle, navigateOnEnter, query, router]
   )
 
-  // Clean up debounce timer on unmount
   useEffect(() => {
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
   }, [])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
@@ -281,7 +335,7 @@ export default function RestaurantSearchDropdown({
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => query && setIsOpen(true)}
+          onFocus={() => query && results.length > 0 && setIsOpen(true)}
           className={`w-full ${sizeClasses[size]} pl-10 pr-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-emerald-500 transition-colors`}
         />
         {query && (
@@ -289,6 +343,7 @@ export default function RestaurantSearchDropdown({
             onClick={() => {
               setQuery('')
               setResults([])
+              setIsOpen(false)
               inputRef.current?.focus()
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -299,67 +354,104 @@ export default function RestaurantSearchDropdown({
       </div>
 
       {isOpen && (results.length > 0 || isLoading) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-6">
               <Loader2 className="animate-spin text-emerald-500" size={20} />
             </div>
           ) : (
-            <ul className="py-2">
-              {results.map((result, index) => (
-                <li
-                  key={`${result.isGooglePlace ? 'google' : 'local'}-${result.id || result.placeId}`}
-                  onClick={() => {
-                    if (result.isGooglePlace) {
-                      handleSelectGoogle(result)
-                    } else {
-                      handleSelectLocal(result)
-                    }
-                  }}
-                  className={`px-4 py-3 cursor-pointer transition-colors ${
-                    index === selectedIndex ? 'bg-emerald-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900 truncate">{result.name}</p>
-                        {result.isGooglePlace && (
-                          <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
-                            Google
-                          </span>
-                        )}
-                        {result.avg_rating && result.avg_rating > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {result.avg_rating.toFixed(1)}
-                          </span>
-                        )}
-                        {result.rating && result.rating > 0 && (
-                          <span className="flex items-center gap-0.5 text-xs">
-                            <Star size={12} className="fill-amber-400 text-amber-400" />
-                            {result.rating.toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-600 truncate">
-                        {result.cuisine && (
-                          <>
-                            <span>{result.cuisine}</span>
-                            <span>•</span>
-                          </>
-                        )}
-                        <MapPin size={14} className="flex-shrink-0" />
-                        <span className="truncate">{result.city}</span>
-                      </div>
-                    </div>
-                    {index === selectedIndex && (
-                      <Check size={18} className="text-emerald-500 flex-shrink-0 mt-1" />
-                    )}
+            <>
+              {/* Local results */}
+              {results.some((r) => r.isLocal) && (
+                <>
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    On Gastronome
                   </div>
-                </li>
-              ))}
-            </ul>
+                  <ul>
+                    {results.filter((r) => r.isLocal).map((result) => {
+                      const index = results.indexOf(result)
+                      return (
+                        <li
+                          key={`local-${result.id}`}
+                          onClick={() => handleSelectLocal(result)}
+                          className={`px-4 py-2.5 cursor-pointer transition-colors ${
+                            index === selectedIndex ? 'bg-emerald-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-gray-900 truncate text-sm">{result.name}</p>
+                                {result.avg_rating != null && result.avg_rating > 0 && (
+                                  <span className="flex items-center gap-0.5 text-xs">
+                                    <Star size={11} className="fill-amber-400 text-amber-400" />
+                                    {result.avg_rating.toFixed(1)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                {result.cuisine && (
+                                  <>
+                                    <span>{result.cuisine}</span>
+                                    <span>&middot;</span>
+                                  </>
+                                )}
+                                <MapPin size={11} className="flex-shrink-0" />
+                                <span className="truncate">{result.city}</span>
+                              </div>
+                            </div>
+                            {index === selectedIndex && (
+                              <Check size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                            )}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </>
+              )}
+
+              {/* Google results */}
+              {results.some((r) => r.isGooglePlace) && (
+                <>
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-t border-gray-100">
+                    From Google
+                  </div>
+                  <ul>
+                    {results.filter((r) => r.isGooglePlace).map((result) => {
+                      const index = results.indexOf(result)
+                      return (
+                        <li
+                          key={`google-${result.placeId}`}
+                          onClick={() => handleSelectGoogle(result)}
+                          className={`px-4 py-2.5 cursor-pointer transition-colors ${
+                            index === selectedIndex ? 'bg-emerald-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-gray-900 truncate text-sm">{result.name}</p>
+                                <span className="inline-block px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded font-medium">
+                                  Google
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <MapPin size={11} className="flex-shrink-0" />
+                                <span className="truncate">{result.address || result.city}</span>
+                              </div>
+                            </div>
+                            {index === selectedIndex && (
+                              <Check size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                            )}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </>
+              )}
+            </>
           )}
         </div>
       )}
