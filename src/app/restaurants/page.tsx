@@ -1,28 +1,105 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import RestaurantCard from '@/components/RestaurantCard'
 import FilterChips from '@/components/FilterChips'
 import EmptyState from '@/components/EmptyState'
 import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
 import { Restaurant } from '@/types/database'
-import { Search, X, MapPin } from 'lucide-react'
+import { Search, X, MapPin, ExternalLink, Loader2 } from 'lucide-react'
+
+interface GooglePlaceResult {
+  placeId: string
+  name: string
+  address: string
+  city: string
+}
+
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        places?: {
+          AutocompleteService: any
+          PlacesService: any
+        }
+      }
+    }
+  }
+}
 
 function RestaurantsContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const cityParam = searchParams.get('city') || ''
   const tabParam = searchParams.get('tab') || 'all'
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([])
+  const [googleResults, setGoogleResults] = useState<GooglePlaceResult[]>([])
+  const [googleSearching, setGoogleSearching] = useState(false)
   const [availableCuisines, setAvailableCuisines] = useState<string[]>([])
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<'all' | 'top' | 'new'>(tabParam as any || 'all')
   const [searchQuery, setSearchQuery] = useState(cityParam)
   const [inputValue, setInputValue] = useState(cityParam)
   const [loading, setLoading] = useState(true)
+  const autocompleteServiceRef = useRef<any>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+
+  // Load Google Places API
+  useEffect(() => {
+    if (!apiKey) return
+    if (window.google?.maps?.places?.AutocompleteService) {
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.onload = () => {
+      if (window.google?.maps?.places?.AutocompleteService) {
+        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
+      }
+    }
+    document.head.appendChild(script)
+    return () => { if (script.parentNode) script.parentNode.removeChild(script) }
+  }, [apiKey])
+
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current) }
+  }, [])
+
+  const searchGooglePlaces = useCallback(async (query: string): Promise<GooglePlaceResult[]> => {
+    if (!query.trim() || !autocompleteServiceRef.current) return []
+    try {
+      const predictions = await new Promise<any[]>((resolve) => {
+        autocompleteServiceRef.current.getPlacePredictions(
+          { input: query, types: ['establishment'] },
+          (preds: any[] | null, status: string) => {
+            if (status === 'OK' && preds) resolve(preds)
+            else resolve([])
+          }
+        )
+      })
+      return predictions.slice(0, 5).map((p) => {
+        const parts = p.description.split(',')
+        const city = parts.length > 1 ? parts[1].trim() : ''
+        return {
+          placeId: p.place_id,
+          name: p.structured_formatting?.main_text || parts[0],
+          city,
+          address: p.description,
+        }
+      })
+    } catch {
+      return []
+    }
+  }, [])
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -75,6 +152,27 @@ function RestaurantsContent() {
 
     setFilteredRestaurants(filtered)
   }, [restaurants, selectedCuisines, activeTab, searchQuery])
+
+  // Search Google Places when query changes (debounced)
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+
+    if (!searchQuery.trim()) {
+      setGoogleResults([])
+      setGoogleSearching(false)
+      return
+    }
+
+    setGoogleSearching(true)
+    debounceTimerRef.current = setTimeout(async () => {
+      const results = await searchGooglePlaces(searchQuery)
+      // Deduplicate: remove Google results that match local restaurant names
+      const localNames = new Set(filteredRestaurants.map((r) => r.name.toLowerCase()))
+      const filtered = results.filter((g) => !localNames.has(g.name.toLowerCase()))
+      setGoogleResults(filtered)
+      setGoogleSearching(false)
+    }, 400)
+  }, [searchQuery, searchGooglePlaces, filteredRestaurants])
 
   const handleSearchInput = (value: string) => {
     setInputValue(value)
@@ -191,8 +289,8 @@ function RestaurantsContent() {
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && filteredRestaurants.length === 0 && (
+        {/* Empty — only show if no local AND no google results */}
+        {!loading && filteredRestaurants.length === 0 && googleResults.length === 0 && !googleSearching && (
           <EmptyState
             icon={MapPin}
             title="No restaurants found"
@@ -210,6 +308,54 @@ function RestaurantsContent() {
             {filteredRestaurants.map((restaurant) => (
               <RestaurantCard key={restaurant.id} restaurant={restaurant} />
             ))}
+          </div>
+        )}
+
+        {/* Google Places Results */}
+        {searchQuery.trim() && (googleResults.length > 0 || googleSearching) && (
+          <div className={filteredRestaurants.length > 0 ? 'mt-8' : ''}>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded font-medium">
+                Google
+              </span>
+              <h2 className="text-sm font-semibold text-gray-500">Results from Google Places</h2>
+            </div>
+            {googleSearching ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin text-gray-400" size={20} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {googleResults.map((place) => (
+                  <button
+                    key={place.placeId}
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        `/review/new?name=${encodeURIComponent(place.name)}&city=${encodeURIComponent(place.city)}&address=${encodeURIComponent(place.address)}`
+                      )
+                    }
+                    className="bg-white rounded-xl border border-gray-100 p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 group"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 truncate group-hover:text-emerald-600 transition-colors">
+                          {place.name}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1.5 text-sm text-gray-500">
+                          <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{place.address}</span>
+                        </div>
+                      </div>
+                      <ExternalLink size={14} className="text-gray-300 flex-shrink-0 mt-1" />
+                    </div>
+                    <p className="text-xs text-emerald-600 font-medium mt-3">
+                      Write a review &rarr;
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
