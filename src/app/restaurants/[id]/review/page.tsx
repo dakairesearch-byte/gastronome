@@ -124,7 +124,7 @@ export default function WriteReviewPage() {
   if (pageLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={32} />
+        <Loader2 className="animate-spin text-emerald-500" size={32} />
       </div>
     );
   }
@@ -144,7 +144,7 @@ export default function WriteReviewPage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
         <div className="mb-6">
-          <Link href={`/restaurants/${restaurantId}`} className="text-amber-600 hover:text-amber-700 text-sm mb-3 inline-block font-medium">
+          <Link href={`/restaurants/${restaurantId}`} className="text-emerald-600 hover:text-emerald-700 text-sm mb-3 inline-block font-medium">
             &larr; Back to {restaurant.name}
           </Link>
           <h1 className="text-xl font-bold text-gray-900">
@@ -185,7 +185,7 @@ export default function WriteReviewPage() {
               />
               {rating > 0 && (
                 <p className="mt-2 text-xs text-gray-500">
-                  You rated this restaurant <span className="font-bold text-amber-600">{rating} stars</span>
+                  You rated this restaurant <span className="font-bold text-emerald-600">{rating} stars</span>
                 </p>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function WriteReviewPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Exceptional pasta and atmosphere"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               required
             />
           </div>
@@ -218,7 +218,7 @@ export default function WriteReviewPage() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Share your honest feedback about the food, service, and atmosphere..."
               rows={6}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition resize-none text-sm"
               required
             />
           </div>
@@ -228,7 +228,7 @@ export default function WriteReviewPage() {
             <button
               type="submit"
               disabled={loading || !title.trim() || !content.trim() || rating === 0}
-              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
               {loading ? 'Publishing...' : 'Publish Review'}

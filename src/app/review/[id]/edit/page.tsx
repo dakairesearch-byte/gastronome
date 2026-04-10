@@ -184,7 +184,7 @@ export default function EditReviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={24} />
+        <Loader2 className="animate-spin text-emerald-500" size={24} />
       </div>
     )
   }
@@ -235,7 +235,7 @@ export default function EditReviewPage() {
                 onRate={setRating}
               />
               <p className="mt-2 text-xs text-gray-500">
-                You rated this restaurant <span className="font-bold text-amber-600">{rating} stars</span>
+                You rated this restaurant <span className="font-bold text-emerald-600">{rating} stars</span>
               </p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function EditReviewPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={100}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Summarize your experience..."
             />
             <p className="text-xs text-gray-400 mt-1">{title.length}/100</p>
@@ -269,7 +269,7 @@ export default function EditReviewPage() {
               minLength={20}
               maxLength={2000}
               rows={8}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition resize-none text-sm"
               placeholder="Share your dining experience..."
             />
             <p className="text-xs text-gray-400 mt-1">{content.length}/2000 (min 20)</p>
@@ -286,7 +286,7 @@ export default function EditReviewPage() {
                   type="url"
                   value={photoUrl}
                   onChange={(e) => handlePhotoUrlChange(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
                   placeholder="https://example.com/photo.jpg"
                 />
                 {photoUrl && (
@@ -318,7 +318,7 @@ export default function EditReviewPage() {
             <button
               type="submit"
               disabled={saving || rating === 0}
-              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saving && <Loader2 size={16} className="animate-spin" />}
               {saving ? 'Saving...' : 'Save Changes'}

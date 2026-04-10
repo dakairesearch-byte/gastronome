@@ -123,7 +123,7 @@ export default function EditProfilePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-amber-500" size={32} />
+        <Loader2 className="animate-spin text-emerald-500" size={32} />
       </div>
     )
   }
@@ -178,7 +178,7 @@ export default function EditProfilePage() {
                 type="url"
                 value={avatarUrl}
                 onChange={(e) => handleAvatarUrlChange(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
                 placeholder="https://example.com/avatar.jpg"
               />
               {avatarUrl && (
@@ -204,7 +204,7 @@ export default function EditProfilePage() {
               onChange={(e) => setDisplayName(e.target.value)}
               required
               maxLength={50}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
               placeholder="Your display name"
             />
             <p className="text-xs text-gray-400 mt-1">{displayName.length}/50</p>
@@ -248,7 +248,7 @@ export default function EditProfilePage() {
               onChange={(e) => setBio(e.target.value)}
               maxLength={500}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition resize-none text-sm"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition resize-none text-sm"
               placeholder="Tell us about yourself and your food interests..."
             />
             <p className="text-xs text-gray-400 mt-1">{bio.length}/500</p>
@@ -261,7 +261,7 @@ export default function EditProfilePage() {
               Member since {new Date(profile.created_at).toLocaleDateString()}
             </p>
             {profile.is_critic && (
-              <p className="text-sm text-amber-600 font-medium mt-1">Featured critic</p>
+              <p className="text-sm text-emerald-600 font-medium mt-1">Featured critic</p>
             )}
           </div>
 
@@ -279,8 +279,8 @@ export default function EditProfilePage() {
                 role="switch"
                 aria-checked={creativeModeEnabled}
                 onClick={() => setCreativeModeEnabled(!creativeModeEnabled)}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                  creativeModeEnabled ? 'bg-amber-500' : 'bg-gray-300'
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                  creativeModeEnabled ? 'bg-emerald-500' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -297,7 +297,7 @@ export default function EditProfilePage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saving && <Loader2 size={16} className="animate-spin" />}
               {saving ? 'Saving...' : 'Save Changes'}

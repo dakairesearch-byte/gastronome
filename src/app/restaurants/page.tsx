@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import RestaurantCard from '@/components/RestaurantCard'
 import FilterChips from '@/components/FilterChips'
@@ -22,7 +22,6 @@ function RestaurantsContent() {
   const [searchQuery, setSearchQuery] = useState(cityParam)
   const [inputValue, setInputValue] = useState(cityParam)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -99,82 +98,94 @@ function RestaurantsContent() {
   const tabs = [
     { key: 'all' as const, label: 'All' },
     { key: 'top' as const, label: 'Top Rated' },
-    { key: 'new' as const, label: 'New' },
+    { key: 'new' as const, label: 'Newest' },
   ]
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Explore</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Explore restaurants</h1>
           <p className="text-sm text-gray-500 mt-1">Discover restaurants reviewed by our community</p>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            placeholder="Search by name, cuisine, or city..."
-            className="w-full py-2.5 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
-          />
-          {inputValue && (
-            <button
-              type="button"
-              onClick={() => { setInputValue(''); setSearchQuery('') }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Clear search"
-            >
-              <X size={16} />
-            </button>
+        {/* Sticky Filter Bar */}
+        <div className="sticky top-14 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 bg-white/80 backdrop-blur-xl border-b border-gray-100 mb-6 space-y-3">
+          {/* Search + Tabs row */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                placeholder="Search by name, cuisine, or city..."
+                className="w-full py-2 pl-9 pr-9 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition focus:bg-white"
+              />
+              {inputValue && (
+                <button
+                  type="button"
+                  onClick={() => { setInputValue(''); setSearchQuery('') }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 flex-shrink-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                    activeTab === tab.key
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cuisine Filters */}
+          {availableCuisines.length > 0 && (
+            <FilterChips
+              cuisines={availableCuisines}
+              selectedCuisines={selectedCuisines}
+              onCuisineChange={handleCuisineChange}
+              onClearAll={handleClearFilters}
+            />
           )}
+
+          {/* Results count */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''}
+            </p>
+            {(selectedCuisines.length > 0 || searchQuery) && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
         </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Cuisine Filters */}
-        {availableCuisines.length > 0 && (
-          <FilterChips
-            cuisines={availableCuisines}
-            selectedCuisines={selectedCuisines}
-            onCuisineChange={handleCuisineChange}
-            onClearAll={handleClearFilters}
-          />
-        )}
-
-        {/* Results count */}
-        <p className="text-xs text-gray-400">
-          {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''}
-          {(selectedCuisines.length > 0 || searchQuery) && (
-            <button type="button" onClick={handleClearFilters} className="ml-2 text-amber-600 hover:text-amber-700 font-medium">
-              Clear filters
-            </button>
-          )}
-        </p>
 
         {/* Loading */}
         {loading && (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <RestaurantCardSkeleton key={i} />
             ))}
           </div>
@@ -193,9 +204,9 @@ function RestaurantsContent() {
           />
         )}
 
-        {/* Restaurant List */}
+        {/* Restaurant Grid */}
         {!loading && filteredRestaurants.length > 0 && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredRestaurants.map((restaurant) => (
               <RestaurantCard key={restaurant.id} restaurant={restaurant} />
             ))}
