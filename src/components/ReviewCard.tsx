@@ -139,7 +139,7 @@ export default function ReviewCard({
   }
 
   return (
-    <article className="bg-white rounded-lg border border-gray-100 overflow-hidden transition-all duration-150 hover:shadow-md">
+    <article className="bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-lg">
       {/* Author bar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-2">
         <Link href={`/profile/${author.id}`} className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -236,6 +236,11 @@ export default function ReviewCard({
           <RatingBadge rating={review.rating} size="sm" />
         </div>
       </Link>
+
+      {/* Gradient accent when no photo */}
+      {!photoUrl && (
+        <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-teal-400" />
+      )}
 
       {/* Photo */}
       {photoUrl && (

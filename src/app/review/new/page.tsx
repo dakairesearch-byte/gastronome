@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StarRating from '@/components/StarRating'
 import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete'
@@ -9,7 +9,8 @@ import { Restaurant } from '@/types/database'
 import { AlertCircle, Loader2, X, Sparkles, Settings } from 'lucide-react'
 import Link from 'next/link'
 
-export default function NewReviewPage() {
+function NewReviewContent() {
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState('')
@@ -44,7 +45,23 @@ export default function NewReviewPage() {
       }
 
       setUser(session.user)
-      fetchRestaurants()
+      fetchRestaurants().then((data) => {
+        // Pre-select restaurant from URL param
+        const restaurantParam = searchParams.get('restaurant')
+        if (restaurantParam && data.length > 0) {
+          setSelectedRestaurant(restaurantParam)
+          const found = data.find((r: Restaurant) => r.id === restaurantParam)
+          if (found) setSelectedRestaurantData(found)
+        }
+        // Pre-fill new restaurant from URL params (from Google Places)
+        const nameParam = searchParams.get('name')
+        if (nameParam && !restaurantParam) {
+          setShowNewRestaurant(true)
+          setNewRestaurantName(nameParam)
+          setNewRestaurantCity(searchParams.get('city') || '')
+          setNewRestaurantAddress(searchParams.get('address') || '')
+        }
+      })
 
       // Check creative mode setting
       const { data: profile } = await supabase
@@ -66,7 +83,9 @@ export default function NewReviewPage() {
     const { data } = await supabase.from('restaurants').select('*').order('name')
     if (data) {
       setRestaurants(data)
+      return data
     }
+    return []
   }
 
   const handleRestaurantSelect = (restaurantId: string) => {
@@ -527,5 +546,13 @@ export default function NewReviewPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function NewReviewPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>}>
+      <NewReviewContent />
+    </Suspense>
   )
 }

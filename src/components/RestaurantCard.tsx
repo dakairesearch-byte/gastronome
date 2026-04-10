@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import RatingBadge from './RatingBadge'
 import { Restaurant } from '@/types/database'
-import { MapPin } from 'lucide-react'
+import { MapPin, UtensilsCrossed } from 'lucide-react'
 
 interface RestaurantCardProps {
   restaurant: Restaurant
@@ -13,27 +13,36 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
 
   return (
     <Link href={`/restaurants/${restaurant.id}`}>
-      <div className="bg-white rounded-lg border border-gray-100 p-4 transition-all duration-150 hover:shadow-md group">
-        <div className="flex items-start gap-3">
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group h-full">
+        {/* Photo placeholder with gradient */}
+        <div className="relative h-32 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center">
+          <UtensilsCrossed size={28} className="text-emerald-300" />
+          {/* Cuisine badge */}
+          <span className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-medium text-gray-700 shadow-sm">
+            {restaurant.cuisine}
+          </span>
           {/* Rating badge */}
-          <RatingBadge rating={avgRating} size="md" />
+          {avgRating > 0 && (
+            <div className="absolute top-3 right-3">
+              <RatingBadge rating={avgRating} size="sm" />
+            </div>
+          )}
+        </div>
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-base truncate group-hover:text-emerald-600 transition-colors">
-              {restaurant.name}
-            </h3>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {restaurant.cuisine} &middot; {priceDisplay} &middot;{' '}
-              <span className="inline-flex items-center gap-0.5">
-                <MapPin size={12} className="text-gray-400" />
-                {restaurant.city}
-              </span>
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {restaurant.review_count} {restaurant.review_count === 1 ? 'review' : 'reviews'}
-            </p>
+        {/* Info */}
+        <div className="p-4">
+          <h3 className="font-semibold text-gray-900 truncate group-hover:text-emerald-600 transition-colors">
+            {restaurant.name}
+          </h3>
+          <div className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-500">
+            <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+            <span className="truncate">{restaurant.city}</span>
+            <span className="text-gray-300">&middot;</span>
+            <span className="text-gray-500">{priceDisplay}</span>
           </div>
+          <p className="text-xs text-gray-400 mt-2">
+            {restaurant.review_count} {restaurant.review_count === 1 ? 'review' : 'reviews'}
+          </p>
         </div>
       </div>
     </Link>

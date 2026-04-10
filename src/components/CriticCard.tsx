@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Profile } from '@/types/database'
+import { ArrowRight } from 'lucide-react'
 
 interface CriticCardProps {
   profile: Profile
@@ -14,8 +15,8 @@ export default function CriticCard({
   followerCount,
 }: CriticCardProps) {
   return (
-    <Link href={`/profile/${profile.id}`}>
-      <div className="bg-white rounded-lg border border-gray-100 p-4 transition-all duration-150 hover:shadow-md group">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 transition-all duration-200 hover:shadow-md group">
+      <Link href={`/profile/${profile.id}`}>
         <div className="flex items-center gap-3">
           {/* Avatar */}
           {profile.avatar_url ? (
@@ -25,8 +26,8 @@ export default function CriticCard({
               className="w-11 h-11 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg font-semibold text-gray-400">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg font-semibold text-emerald-600">
                 {profile.display_name[0]?.toUpperCase()}
               </span>
             </div>
@@ -55,7 +56,18 @@ export default function CriticCard({
             </div>
           </div>
         </div>
+      </Link>
+
+      {/* View Profile CTA */}
+      <div className="pt-3 mt-3 border-t border-gray-100">
+        <Link
+          href={`/profile/${profile.id}`}
+          className="w-full py-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors text-center flex items-center justify-center gap-1"
+        >
+          View Profile
+          <ArrowRight size={14} />
+        </Link>
       </div>
-    </Link>
+    </div>
   )
 }

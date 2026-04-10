@@ -58,9 +58,9 @@ export default function ReviewStats({
                   </span>
                   <Star size={14} className="text-amber-400 fill-amber-400" />
                 </div>
-                <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-amber-400 h-full transition-all duration-300"
+                    className="bg-emerald-400 h-full transition-all duration-300"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>

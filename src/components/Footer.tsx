@@ -1,31 +1,101 @@
 import Link from 'next/link'
+import { Globe, MessageCircle, Camera } from 'lucide-react'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="border-t border-gray-100 pb-20 md:pb-0">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-emerald-500 rounded-md flex items-center justify-center text-white font-bold text-xs">
-              G
+    <footer className="bg-gray-900 text-gray-400 pb-20 md:pb-0">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
+          {/* Brand */}
+          <div className="col-span-2 sm:col-span-1">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                G
+              </div>
+              <span className="font-bold text-white text-sm">Gastronome</span>
             </div>
-            <span className="text-sm text-gray-400">
-              &copy; {currentYear} Gastronome
-            </span>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Real reviews from food critics and enthusiasts.
+            </p>
           </div>
-          <nav className="flex items-center gap-6">
-            <Link href="/restaurants" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Explore
-            </Link>
-            <Link href="/search" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Search
-            </Link>
-            <a href="mailto:hello@gastronome.local" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Contact
-            </a>
-          </nav>
+
+          {/* Explore */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Explore</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/restaurants" className="text-sm hover:text-white transition-colors">
+                  Restaurants
+                </Link>
+              </li>
+              <li>
+                <Link href="/top-rated" className="text-sm hover:text-white transition-colors">
+                  Top Rated
+                </Link>
+              </li>
+              <li>
+                <Link href="/search" className="text-sm hover:text-white transition-colors">
+                  Search
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Community */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Community</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/feed" className="text-sm hover:text-white transition-colors">
+                  Feed
+                </Link>
+              </li>
+              <li>
+                <Link href="/review/new" className="text-sm hover:text-white transition-colors">
+                  Write a Review
+                </Link>
+              </li>
+              <li>
+                <Link href="/auth/signup" className="text-sm hover:text-white transition-colors">
+                  Join Us
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Connect */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Connect</h3>
+            <div className="flex gap-3">
+              <a
+                href="#"
+                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+                aria-label="Website"
+              >
+                <Globe size={14} />
+              </a>
+              <a
+                href="#"
+                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+                aria-label="Community"
+              >
+                <MessageCircle size={14} />
+              </a>
+              <a
+                href="#"
+                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+                aria-label="Photos"
+              >
+                <Camera size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-gray-800 text-center text-xs text-gray-600">
+          &copy; {currentYear} Gastronome. All rights reserved.
         </div>
       </div>
     </footer>
