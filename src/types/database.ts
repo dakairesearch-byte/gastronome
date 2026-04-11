@@ -19,6 +19,7 @@ export type Database = {
           avatar_url: string | null
           is_critic: boolean
           creative_mode_enabled: boolean
+          home_city: string | null
           created_at: string
           updated_at: string
         }
@@ -31,6 +32,7 @@ export type Database = {
           avatar_url?: string | null
           is_critic?: boolean
           creative_mode_enabled?: boolean
+          home_city?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export type Database = {
           avatar_url?: string | null
           is_critic?: boolean
           creative_mode_enabled?: boolean
+          home_city?: string | null
           created_at?: string
           updated_at?: string
         }
