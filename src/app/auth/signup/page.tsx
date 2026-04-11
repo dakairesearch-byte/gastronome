@@ -62,6 +62,9 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
+      // Pass all profile data in metadata so the DB trigger (handle_new_user)
+      // can create the profile row automatically with SECURITY DEFINER privileges.
+      // This avoids RLS issues when email confirmation is enabled.
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
@@ -69,6 +72,8 @@ export default function SignupPage() {
           data: {
             username,
             display_name: displayName,
+            home_city: homeCity || null,
+            is_critic: true,
           },
         },
       })
@@ -78,21 +83,9 @@ export default function SignupPage() {
         return
       }
 
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert([
-          {
-            id: data.user.id,
-            email,
-            username,
-            display_name: displayName,
-            home_city: homeCity || null,
-          },
-        ])
-
-        if (profileError) {
-          setError('Profile creation failed: ' + profileError.message)
-          return
-        }
+      if (!data.user) {
+        setError('Signup failed — no user returned')
+        return
       }
 
       router.push('/')
