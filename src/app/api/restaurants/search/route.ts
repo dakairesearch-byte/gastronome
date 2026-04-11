@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from 'next/server'
+ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { runActor, getDatasetItems } from '@/lib/apify/client'
 
