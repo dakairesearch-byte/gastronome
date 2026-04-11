@@ -17,7 +17,7 @@ export default function Footer() {
               <span className="font-bold text-white text-sm">Gastronome</span>
             </div>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Real reviews from food critics and enthusiasts.
+              Every restaurant rating in one place.
             </p>
           </div>
 
@@ -43,23 +43,18 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Community */}
+          {/* More */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Community</h3>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">More</h3>
             <ul className="space-y-2">
               <li>
+                <Link href="/cities" className="text-sm hover:text-white transition-colors">
+                  Cities
+                </Link>
+              </li>
+              <li>
                 <Link href="/feed" className="text-sm hover:text-white transition-colors">
-                  Feed
-                </Link>
-              </li>
-              <li>
-                <Link href="/review/new" className="text-sm hover:text-white transition-colors">
-                  Write a Review
-                </Link>
-              </li>
-              <li>
-                <Link href="/auth/signup" className="text-sm hover:text-white transition-colors">
-                  Join Us
+                  Recently Updated
                 </Link>
               </li>
             </ul>

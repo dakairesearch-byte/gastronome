@@ -167,13 +167,6 @@ export default async function RestaurantPage({
               </div>
             )}
 
-            {/* Coming Soon — User Reviews */}
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-6 text-center">
-              <p className="text-sm font-semibold text-gray-700 mb-1">User reviews coming soon</p>
-              <p className="text-xs text-gray-500">
-                Stay tuned for the next evolution of food reviews — write your own reviews and join the community.
-              </p>
-            </div>
           </div>
 
           {/* Right sidebar */}

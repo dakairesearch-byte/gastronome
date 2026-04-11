@@ -154,7 +154,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             <div className="flex gap-5 mt-3">
               <div>
                 <span className="text-sm font-bold text-gray-900">{reviews.length}</span>
-                <span className="text-xs text-gray-400 ml-1">reviews</span>
+                <span className="text-xs text-gray-400 ml-1">posts</span>
               </div>
               <Link href={`/profile/${params.id}/followers`} className="hover:text-emerald-600 transition-colors">
                 <span className="text-sm font-bold text-gray-900">{followers}</span>
@@ -171,21 +171,13 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
         {/* Action Buttons */}
         <div className="flex gap-2">
           {isOwnProfile ? (
-            <>
-              <Link
-                href="/profile/edit"
-                className="flex-1 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-center flex items-center justify-center gap-1.5"
-              >
-                <Edit2 size={14} />
-                Edit Profile
-              </Link>
-              <Link
-                href="/review/new"
-                className="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium text-center"
-              >
-                Write Review
-              </Link>
-            </>
+            <Link
+              href="/profile/edit"
+              className="flex-1 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-center flex items-center justify-center gap-1.5"
+            >
+              <Edit2 size={14} />
+              Edit Profile
+            </Link>
           ) : (
             <button
               type="button"
@@ -204,7 +196,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
 
         {/* Reviews */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Reviews</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Activity</h2>
           {reviews.length > 0 ? (
             <div className="space-y-4">
               {reviews.map(({ review, restaurant, author, photos }) => (
@@ -222,10 +214,10 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
           ) : (
             <EmptyState
               icon={Users}
-              title={isOwnProfile ? 'No reviews yet' : 'No reviews'}
-              description={isOwnProfile ? 'Start sharing your dining experiences' : "This user hasn't written any reviews yet"}
-              ctaText={isOwnProfile ? 'Write your first review' : undefined}
-              ctaHref={isOwnProfile ? '/review/new' : undefined}
+              title={isOwnProfile ? 'No activity yet' : 'No activity'}
+              description={isOwnProfile ? 'Start exploring restaurants' : "This user hasn't posted any activity yet"}
+              ctaText={isOwnProfile ? 'Browse restaurants' : undefined}
+              ctaHref={isOwnProfile ? '/restaurants' : undefined}
             />
           )}
         </section>

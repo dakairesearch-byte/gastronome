@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import RestaurantCard from '@/components/RestaurantCard'
 import ComingSoon from '@/components/ComingSoon'
 import CityCard from '@/components/CityCard'
-import { Search, ArrowRight, TrendingUp, MapPin, BarChart3, Video } from 'lucide-react'
+import { Search, ArrowRight, TrendingUp, MapPin, BarChart3, ThumbsUp } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -124,10 +124,10 @@ export default async function Home() {
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-                <Video size={24} className="text-emerald-600" />
+                <ThumbsUp size={24} className="text-emerald-600" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Watch</h3>
-              <p className="text-sm text-gray-500">Watch trending TikTok and Instagram reviews</p>
+              <h3 className="font-semibold text-gray-900 mb-1">Decide</h3>
+              <p className="text-sm text-gray-500">Pick the right restaurant with confidence, every time</p>
             </div>
           </div>
         </div>

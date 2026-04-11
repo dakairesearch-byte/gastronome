@@ -23,11 +23,11 @@ export default function ComingSoon() {
         </div>
 
         <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
-          Stay tuned for the next evolution of food reviews
+          More cities. More ratings. More sources.
         </h2>
 
         <p className="mt-4 text-lg text-emerald-100 leading-relaxed max-w-xl mx-auto">
-          Soon you&apos;ll be able to write your own reviews, follow critics, and join the Gastronome community.
+          We&apos;re expanding to cover every major dining city and adding new rating sources so you always get the full picture.
         </p>
 
         {/* Email signup */}
