@@ -1,4 +1,4 @@
-import apifyClient from './client';
+import { runActor, getDatasetItems } from './client';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const MIN_LIKES = 500;
@@ -10,13 +10,13 @@ export async function fetchTikTokVideos(
 ) {
   const searchQuery = `${name} ${city} restaurant`;
 
-  const run = await apifyClient.actor('apidojo/tiktok-scraper').call({
+  const run = await runActor('apidojo/tiktok-scraper', {
     searchQueries: [searchQuery],
     maxResults: 30,
     shouldDownloadVideos: false,
   });
 
-  const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+  const items = await getDatasetItems(run.defaultDatasetId);
 
   if (!items || items.length === 0) {
     return { success: false, error: 'No TikTok videos found' };
