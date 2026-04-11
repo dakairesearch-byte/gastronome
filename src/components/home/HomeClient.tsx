@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow'
 import GenericHomepage from './GenericHomepage'
 import type { Restaurant, City } from '@/types/database'
+import type { TrendingRestaurant } from '@/lib/placement'
 
 interface HomeClientProps {
   trendingRestaurants: Restaurant[]
+  trending?: TrendingRestaurant[]
   cities: City[]
   totalRestaurants: number
   totalCities: number

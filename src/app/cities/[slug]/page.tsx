@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getPlacedRestaurantsServer } from '@/lib/placement'
 import CityRestaurantGrid from '@/components/CityRestaurantGrid'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -17,17 +18,17 @@ async function getCityData(slug: string) {
 
   if (!city) return null
 
-  const { data: restaurants } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('city', city.name)
-    .order('google_rating', { ascending: false })
+  // Use placement algorithm for restaurant ordering
+  const restaurants = await getPlacedRestaurantsServer(supabase, {
+    city: city.name,
+    limit: 200,
+  })
 
-  const cuisines = [...new Set((restaurants || []).map(r => r.cuisine).filter(Boolean))].sort()
+  const cuisines = [...new Set(restaurants.map(r => r.cuisine).filter(Boolean))].sort()
 
   return {
     city,
-    restaurants: restaurants || [],
+    restaurants,
     cuisines,
   }
 }

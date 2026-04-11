@@ -1,14 +1,17 @@
 import Link from 'next/link'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
+import TrendingBadge from './TrendingBadge'
 import { Restaurant } from '@/types/database'
+import type { TrendingTier } from '@/lib/placement'
 import { MapPin, Star } from 'lucide-react'
 
 interface RestaurantCardProps {
   restaurant: Restaurant
+  trendingTier?: TrendingTier
 }
 
-export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
+export default function RestaurantCard({ restaurant, trendingTier }: RestaurantCardProps) {
   const priceDisplay = '$'.repeat(restaurant.price_range || 1)
   const displayRating = restaurant.google_rating || restaurant.avg_rating || 0
   const hasAccolades =
@@ -33,6 +36,9 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
               )}
             </div>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {trendingTier && trendingTier !== 'none' && (
+                <TrendingBadge tier={trendingTier} />
+              )}
               {restaurant.cuisine && (
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
                   {restaurant.cuisine}

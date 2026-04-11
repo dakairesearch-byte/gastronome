@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import RestaurantCard from '@/components/RestaurantCard'
 import CityCard from '@/components/CityCard'
-import { getCompositeRating } from '@/lib/compositeRating'
 import {
   Search,
   ArrowRight,
@@ -11,9 +10,11 @@ import {
   ThumbsUp,
 } from 'lucide-react'
 import type { Restaurant, City } from '@/types/database'
+import type { TrendingRestaurant } from '@/lib/placement'
 
 interface GenericHomepageProps {
   trendingRestaurants: Restaurant[]
+  trending?: TrendingRestaurant[]
   cities: City[]
   totalRestaurants: number
   totalCities: number
@@ -22,20 +23,13 @@ interface GenericHomepageProps {
 
 export default function GenericHomepage({
   trendingRestaurants,
+  trending = [],
   cities,
   totalRestaurants,
   totalCities,
 }: GenericHomepageProps) {
-  // Sort by composite rating for the top 10 display
-  const topByComposite = [...trendingRestaurants]
-    .map((r) => ({ restaurant: r, composite: getCompositeRating(r) }))
-    .filter((item) => item.composite !== null)
-    .sort((a, b) => b.composite!.rating - a.composite!.rating)
-    .slice(0, 10)
-    .map((item) => item.restaurant)
-
-  const displayRestaurants =
-    topByComposite.length > 0 ? topByComposite : trendingRestaurants.slice(0, 10)
+  // Use placement-ordered restaurants directly
+  const displayRestaurants = trendingRestaurants.slice(0, 8)
 
   return (
     <div className="min-h-screen">
@@ -168,15 +162,15 @@ export default function GenericHomepage({
         </section>
       )}
 
-      {/* Trending Restaurants */}
+      {/* Top Restaurants (placement-ordered) */}
       {displayRestaurants.length > 0 && (
         <section className="py-14 sm:py-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
-                <TrendingUp size={20} className="text-emerald-600" />
+                <BarChart3 size={20} className="text-emerald-600" />
                 <h2 className="text-xl font-bold text-gray-900">
-                  Trending restaurants
+                  Top restaurants
                 </h2>
               </div>
               <Link
@@ -188,8 +182,40 @@ export default function GenericHomepage({
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {displayRestaurants.slice(0, 8).map((restaurant) => (
+              {displayRestaurants.map((restaurant) => (
                 <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Trending Restaurants */}
+      {trending.length > 0 && (
+        <section className="py-14 sm:py-20 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={20} className="text-emerald-600" />
+                <h2 className="text-xl font-bold text-gray-900">
+                  Trending now
+                </h2>
+              </div>
+              <Link
+                href="/restaurants"
+                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+              >
+                View all
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {trending.slice(0, 8).map((restaurant) => (
+                <RestaurantCard
+                  key={restaurant.id}
+                  restaurant={restaurant}
+                  trendingTier={restaurant.trending_tier}
+                />
               ))}
             </div>
           </div>

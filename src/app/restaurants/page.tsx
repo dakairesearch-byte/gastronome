@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getPlacedRestaurants } from '@/lib/placement'
 import RestaurantCard from '@/components/RestaurantCard'
 import FilterChips from '@/components/FilterChips'
 import EmptyState from '@/components/EmptyState'
@@ -29,11 +30,19 @@ function RestaurantsContent() {
     const fetchRestaurants = async () => {
       setLoading(true)
       try {
-        const { data } = await supabase.from('restaurants').select('*')
-        if (data) {
-          setRestaurants(data)
-          const cuisines = [...new Set(data.map((r) => r.cuisine))].sort()
+        // Use placement algorithm for default ordering
+        const placed = await getPlacedRestaurants(supabase, { limit: 500 })
+        if (placed.length > 0) {
+          setRestaurants(placed)
+          const cuisines = [...new Set(placed.map((r) => r.cuisine))].sort()
           setAvailableCuisines(cuisines)
+        } else {
+          const { data } = await supabase.from('restaurants').select('*')
+          if (data) {
+            setRestaurants(data)
+            const cuisines = [...new Set(data.map((r) => r.cuisine))].sort()
+            setAvailableCuisines(cuisines)
+          }
         }
       } finally {
         setLoading(false)
@@ -60,7 +69,8 @@ function RestaurantsContent() {
       )
       break
     default:
-      filtered.sort((a, b) => (b.google_rating || b.avg_rating || 0) - (a.google_rating || a.avg_rating || 0))
+      // "All" tab preserves placement algorithm order from fetch
+      break
   }
 
   const totalFiltered = filtered.length
