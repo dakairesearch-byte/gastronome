@@ -5,13 +5,13 @@ import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
-  title: "Gastronome — Food Reviews by Real People",
-  description: "Discover restaurants through authentic reviews from passionate food critics. Write reviews, follow critics, and find your next favorite restaurant.",
-  keywords: "food reviews, restaurants, dining, food critic, restaurant ratings, food photography",
+  title: "Gastronome — Every Restaurant Rating in One Place",
+  description: "Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.",
+  keywords: "restaurant ratings, restaurant reviews, Google rating, Yelp rating, Michelin stars, Infatuation, dining, food",
   authors: [{ name: "Gastronome" }],
   openGraph: {
-    title: "Gastronome — Food Reviews by Real People",
-    description: "Discover restaurants through authentic reviews from passionate food critics. Write reviews, follow critics, and find your next favorite restaurant.",
+    title: "Gastronome — Every Restaurant Rating in One Place",
+    description: "Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.",
     type: "website",
     locale: "en_US",
   },

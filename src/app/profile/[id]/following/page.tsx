@@ -98,7 +98,7 @@ export default function FollowingPage({ params: paramsPromise }: { params: Promi
           </Link>
           <h1 className="text-xl font-bold text-gray-900">Following</h1>
           <p className="text-sm text-gray-400 mt-1">
-            {following.length} {following.length === 1 ? 'critic' : 'critics'}
+            {following.length} {following.length === 1 ? 'user' : 'users'}
           </p>
         </div>
 

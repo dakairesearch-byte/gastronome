@@ -54,7 +54,6 @@ export default function SignupPage() {
           data: {
             username,
             display_name: displayName,
-            is_critic: true,
           },
         },
       })
@@ -71,7 +70,6 @@ export default function SignupPage() {
             email,
             username,
             display_name: displayName,
-            is_critic: true,
           },
         ])
 
@@ -103,10 +101,10 @@ export default function SignupPage() {
             <span className="text-white font-bold text-xl">Gastronome</span>
           </div>
           <h2 className="text-3xl font-bold text-white leading-snug">
-            Share your dining<br />experiences
+            Discover your next<br />favorite restaurant
           </h2>
           <p className="mt-4 text-emerald-100 text-lg max-w-md">
-            Write reviews, follow food critics, and discover hidden gems in your city.
+            Compare Google, Yelp, Infatuation, and Michelin ratings side by side.
           </p>
         </div>
       </div>
@@ -119,7 +117,7 @@ export default function SignupPage() {
               <span className="text-white font-bold text-lg">G</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
-            <p className="text-sm text-gray-500 mt-1">Join the Gastronome community</p>
+            <p className="text-sm text-gray-500 mt-1">Create your Gastronome account</p>
           </div>
 
           {error && (

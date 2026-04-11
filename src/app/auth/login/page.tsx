@@ -61,7 +61,7 @@ function LoginContent() {
             Discover your next<br />favorite restaurant
           </h2>
           <p className="mt-4 text-emerald-100 text-lg max-w-md">
-            Join a community of food critics sharing honest restaurant reviews.
+            Compare Google, Yelp, Infatuation, and Michelin ratings side by side.
           </p>
         </div>
       </div>

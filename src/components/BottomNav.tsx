@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Plus, Bookmark, User } from 'lucide-react'
+import { Home, Search, Clock, User } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -28,8 +28,7 @@ export default function BottomNav() {
   const tabs = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/restaurants', icon: Search, label: 'Explore' },
-    ...(userId ? [{ href: '/review/new', icon: Plus, label: 'Review', isAction: true }] : []),
-    { href: '/feed', icon: Bookmark, label: 'Feed' },
+    { href: '/feed', icon: Clock, label: 'Recent' },
     { href: userId ? `/profile/${userId}` : '/auth/login', icon: User, label: 'Profile' },
   ]
 
@@ -39,20 +38,6 @@ export default function BottomNav() {
         {tabs.map((tab) => {
           const isActive = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
           const Icon = tab.icon
-
-          if (tab.isAction) {
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="relative flex flex-col items-center justify-center -mt-4 z-10"
-              >
-                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-                  <Icon size={24} className="text-white" strokeWidth={2.5} />
-                </div>
-              </Link>
-            )
-          }
 
           return (
             <Link

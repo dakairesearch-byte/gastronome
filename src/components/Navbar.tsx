@@ -13,7 +13,7 @@ import {
   Search,
   MapPin,
   Settings,
-  Rss,
+  Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -84,7 +84,7 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/restaurants', label: 'Explore', icon: Search },
-    { href: '/feed', label: 'Feed', icon: Rss },
+    { href: '/feed', label: 'Recent', icon: Clock },
     { href: '/cities', label: 'Cities', icon: MapPin },
   ]
 

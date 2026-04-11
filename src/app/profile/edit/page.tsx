@@ -260,9 +260,6 @@ export default function EditProfilePage() {
             <p className="text-sm text-gray-500">
               Member since {new Date(profile.created_at).toLocaleDateString()}
             </p>
-            {profile.is_critic && (
-              <p className="text-sm text-emerald-600 font-medium mt-1">Featured critic</p>
-            )}
           </div>
 
           {/* Creative Mode Toggle */}
