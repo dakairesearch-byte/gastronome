@@ -398,7 +398,7 @@ function DashboardCard({ source }: { source: RatingSource }) {
       ) : (
         <>
           <p className={`text-3xl font-extrabold ${source.accent}`}>
-            {source.rating.toFixed(2)}
+            {source.rating.toFixed(1)}
           </p>
           <p className={`text-xs ${source.text} mt-0.5`}>
             / {source.maxRating}
