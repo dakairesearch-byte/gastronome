@@ -1,4 +1,4 @@
-import apifyClient from './client';
+import { runActor, getDatasetItems } from './client';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const MIN_LIKES = 500;
@@ -10,12 +10,12 @@ export async function fetchInstagramVideos(
 ) {
   const searchQuery = `${name} ${city} restaurant`;
 
-  const run = await apifyClient.actor('apify/instagram-reel-scraper').call({
+  const run = await runActor('apify/instagram-reel-scraper', {
     search: searchQuery,
     resultsLimit: 30,
   });
 
-  const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+  const items = await getDatasetItems(run.defaultDatasetId);
 
   if (!items || items.length === 0) {
     return { success: false, error: 'No Instagram reels found' };
