@@ -1,19 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { City } from '@/types/database'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [homeCity, setHomeCity] = useState('')
+  const [cities, setCities] = useState<City[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    async function loadCities() {
+      const { data } = await supabase
+        .from('cities')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+      setCities(data || [])
+    }
+    loadCities()
+  }, [supabase])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +85,7 @@ export default function SignupPage() {
             email,
             username,
             display_name: displayName,
+            home_city: homeCity || null,
           },
         ])
 
@@ -186,6 +202,25 @@ export default function SignupPage() {
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
                 placeholder="Create a password"
               />
+            </div>
+
+            <div>
+              <label htmlFor="homeCity" className="block text-sm font-medium text-gray-700 mb-1">
+                Home City <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select
+                id="homeCity"
+                value={homeCity}
+                onChange={(e) => setHomeCity(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm text-gray-700"
+              >
+                <option value="">Select a city</option>
+                {cities.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}, {city.state}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button
