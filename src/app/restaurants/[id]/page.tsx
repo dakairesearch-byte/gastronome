@@ -120,7 +120,7 @@ export default async function RestaurantPage({
             {/* Ratings Panel */}
             {sourceRatings.length > 0 && (
               <div>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Ratings</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Ratings Across the Web</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {sourceRatings.map((source) => (
                     <RatingCard key={source.source} source={source} />
@@ -247,7 +247,6 @@ function RatingCard({ source }: { source: import('@/types/database').SourceRatin
   const colorMap: Record<string, { bg: string; accent: string; text: string }> = {
     google: { bg: 'bg-blue-50', accent: 'text-blue-700', text: 'text-blue-500' },
     yelp: { bg: 'bg-red-50', accent: 'text-red-700', text: 'text-red-500' },
-    beli: { bg: 'bg-purple-50', accent: 'text-purple-700', text: 'text-purple-500' },
     infatuation: { bg: 'bg-orange-50', accent: 'text-orange-700', text: 'text-orange-500' },
   }
   const colors = colorMap[source.source] || { bg: 'bg-gray-50', accent: 'text-gray-700', text: 'text-gray-500' }

@@ -13,10 +13,9 @@ import {
   Search,
   MapPin,
   Settings,
+  Rss,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import RestaurantSearchDropdown from './RestaurantSearchDropdown'
-import { Restaurant } from '@/types/database'
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -82,17 +81,10 @@ export default function Navbar() {
     router.push('/')
   }
 
-  const handleSelectLocalRestaurant = (restaurant: Restaurant) => {
-    router.push(`/restaurants/${restaurant.id}`)
-  }
-
-  const handleSelectGooglePlace = (place: any) => {
-    router.push(`/search?q=${encodeURIComponent(place.name)}`)
-  }
-
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/restaurants', label: 'Explore', icon: Search },
+    { href: '/feed', label: 'Feed', icon: Rss },
     { href: '/cities', label: 'Cities', icon: MapPin },
   ]
 
@@ -129,16 +121,6 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-            </div>
-
-            {/* Desktop Search */}
-            <div className="hidden md:flex flex-1 max-w-xs">
-              <RestaurantSearchDropdown
-                onSelectLocal={handleSelectLocalRestaurant}
-                onSelectGoogle={handleSelectGooglePlace}
-                placeholder="Search restaurants..."
-                size="sm"
-              />
             </div>
 
             {/* Desktop Auth */}
@@ -221,16 +203,8 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile: Search + Hamburger */}
-            <div className="md:hidden flex items-center gap-2 flex-1 justify-end">
-              <div className="flex-1 max-w-[200px]">
-                <RestaurantSearchDropdown
-                  onSelectLocal={handleSelectLocalRestaurant}
-                  onSelectGoogle={handleSelectGooglePlace}
-                  placeholder="Search..."
-                  size="sm"
-                />
-              </div>
+            {/* Mobile: Hamburger */}
+            <div className="md:hidden flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
