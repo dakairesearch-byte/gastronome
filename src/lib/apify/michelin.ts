@@ -1,117 +1,67 @@
-import apifyClient from './client';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { runActor, getDatasetItems } from './client'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
-export async function fetchMichelinData(
-  restaurantId: string,
-  name: string,
-  city: string
-) {
-  const searchQuery = encodeURIComponent(`${name} ${city}`);
-  const startUrl = `https://guide.michelin.com/en/search?q=${searchQuery}`;
-
-  const run = await apifyClient.actor('apify/cheerio-scraper').call({
-    startUrls: [{ url: startUrl }],
-    maxRequestsPerCrawl: 3,
-    pseudoUrls: [
-      {
-        purl: 'https://guide.michelin.com/[.*]/restaurant/[.*]',
-        method: 'GET',
-      },
-    ],
-    // pageFunction runs inside the Apify actor, not locally
-    pageFunction: async function pageFunction(context: {
-      $: any;
-      request: { url: string };
-    }) {
+export async function fetchMichelinData(restaurantId: string, name: string, city: string) {
+  const run = await runActor('apify/cheerio-scraper', {
+    startUrls: [{ url: `https://guide.michelin.com/us/en/search?q=${encodeURIComponent(name + ' ' + city)}` }],
+    pageFunction: `async function pageFunction(context) {
       const { $, request } = context;
+      const card = $('[data-restaurant-name], .card__menu-content').first();
+      if (!card.length) return [{ found: false }];
 
-      if (request.url.includes('/restaurant/')) {
-        let stars: number | null = null;
-        let designation: string | null = null;
-        const accolades: string[] = [];
+      const stars = card.find('.michelin-stars, [class*="star"]').length
+        || card.find('img[alt*="star"]').length;
+      const isBib = card.find('[alt*="Bib"], [class*="bib"]').length > 0;
+      const isRecommended = card.find('[alt*="Selected"], [class*="selected"]').length > 0;
+      const link = card.closest('a').attr('href');
 
-        const distinctions = $(
-          '.restaurant-details__classification, .distinction-title, [data-testid="distinction"]'
-        );
-        distinctions.each((_: number, el: any) => {
-          const text = $(el).text().trim();
-          accolades.push(text);
+      let designation = null;
+      if (stars >= 3) designation = 'three_star';
+      else if (stars === 2) designation = 'two_star';
+      else if (stars === 1) designation = 'one_star';
+      else if (isBib) designation = 'bib_gourmand';
+      else if (isRecommended) designation = 'recommended';
 
-          if (/three stars/i.test(text) || /3 stars/i.test(text)) {
-            stars = 3;
-            designation = 'Three MICHELIN Stars';
-          } else if (/two stars/i.test(text) || /2 stars/i.test(text)) {
-            stars = 2;
-            designation = 'Two MICHELIN Stars';
-          } else if (/one star/i.test(text) || /1 star/i.test(text)) {
-            stars = 1;
-            designation = 'One MICHELIN Star';
-          } else if (/bib gourmand/i.test(text)) {
-            stars = 0;
-            designation = 'Bib Gourmand';
-          } else if (/selected/i.test(text) || /recommended/i.test(text)) {
-            stars = 0;
-            designation = 'MICHELIN Selected';
-          }
-        });
+      return [{
+        found: true,
+        stars,
+        designation,
+        url: link ? 'https://guide.michelin.com' + link : null,
+      }];
+    }`,
+    maxPagesPerCrawl: 1,
+  })
 
-        const greenStarEl = $(
-          '.michelin-green-star, [data-testid="green-star"]'
-        );
-        if (greenStarEl.length > 0) {
-          accolades.push('MICHELIN Green Star');
-        }
+  const items = await getDatasetItems(run.defaultDatasetId)
+  if (!items.length || !(items[0] as any).found) return null
 
-        return {
-          url: request.url,
-          stars,
-          designation,
-          accolades,
-          isRestaurantPage: true,
-        };
-      }
+  const result = items[0] as any
+  const supabase = await createServerSupabaseClient()
 
-      return null;
-    },
-  });
-
-  const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
-
-  const restaurantPage = items.find(
-    (item) => (item as Record<string, unknown>).isRestaurantPage
-  ) as Record<string, unknown> | undefined;
-
-  if (!restaurantPage) {
-    return { success: false, error: 'No Michelin listing found' };
+  const accolades: any[] = []
+  if (result.designation) {
+    const labels: Record<string, string> = {
+      three_star: '3 Michelin Stars',
+      two_star: '2 Michelin Stars',
+      one_star: '1 Michelin Star',
+      bib_gourmand: 'Bib Gourmand',
+      recommended: 'Michelin Recommended',
+    }
+    accolades.push({
+      type: 'michelin',
+      label: labels[result.designation] || 'Michelin',
+      url: result.url,
+      icon: result.stars > 0 ? '⭐' : '🍽️',
+    })
   }
 
-  const supabase = await createServerSupabaseClient();
-
-  const accoladesArr = Array.isArray(restaurantPage.accolades)
-    ? restaurantPage.accolades
-    : [];
-
-  const updateData: Record<string, unknown> = {
-    michelin_stars:
-      typeof restaurantPage.stars === 'number' ? restaurantPage.stars : null,
-    michelin_designation:
-      typeof restaurantPage.designation === 'string'
-        ? restaurantPage.designation
-        : null,
-    michelin_url:
-      typeof restaurantPage.url === 'string' ? restaurantPage.url : null,
-    accolades: accoladesArr.length > 0 ? accoladesArr : null,
+  await supabase.from('restaurants').update({
+    michelin_stars: result.stars || 0,
+    michelin_designation: result.designation,
+    michelin_url: result.url,
+    accolades: accolades,
     last_fetched_at: new Date().toISOString(),
-  };
+  }).eq('id', restaurantId)
 
-  const { error } = await supabase
-    .from('restaurants')
-    .update(updateData)
-    .eq('id', restaurantId);
-
-  if (error) {
-    return { success: false, error: `Supabase update failed: ${error.message}` };
-  }
-
-  return { success: true, data: updateData };
+  return result
 }
