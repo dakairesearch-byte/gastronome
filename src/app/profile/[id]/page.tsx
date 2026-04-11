@@ -2,81 +2,34 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { Users, Edit2, MapPin } from 'lucide-react'
+import { Edit2, MapPin, UtensilsCrossed } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
 
 export default function ProfilePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [followers, setFollowers] = useState(0)
-  const [following, setFollowing] = useState(0)
-  const [isFollowing, setIsFollowing] = useState(false)
   const [isOwnProfile, setIsOwnProfile] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [followLoading, setFollowLoading] = useState(false)
   const supabase = createClient()
-  const router = useRouter()
 
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        setCurrentUser(session?.user ?? null)
         setIsOwnProfile(session?.user?.id === params.id)
 
         const { data: profileData } = await supabase
           .from('profiles').select('*').eq('id', params.id).single()
 
         if (profileData) setProfile(profileData)
-
-        const { count: followerCount } = await supabase
-          .from('follows').select('*', { count: 'exact', head: true }).eq('following_id', params.id)
-        const { count: followingCount } = await supabase
-          .from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', params.id)
-
-        setFollowers(followerCount || 0)
-        setFollowing(followingCount || 0)
-
-        if (session?.user?.id && session.user.id !== params.id) {
-          const { data: followData } = await supabase
-            .from('follows').select('*')
-            .eq('follower_id', session.user.id).eq('following_id', params.id).single()
-          setIsFollowing(!!followData)
-        }
       } finally {
         setLoading(false)
       }
     }
     fetchProfileData()
   }, [params.id, supabase])
-
-  const toggleFollow = async () => {
-    if (isOwnProfile) return
-    if (!currentUser) {
-      router.push('/auth/login')
-      return
-    }
-    setFollowLoading(true)
-    try {
-      if (isFollowing) {
-        await supabase.from('follows').delete()
-          .eq('follower_id', currentUser.id).eq('following_id', params.id)
-        setFollowers(Math.max(0, followers - 1))
-      } else {
-        await supabase.from('follows').insert([{ follower_id: currentUser.id, following_id: params.id }])
-        setFollowers(followers + 1)
-      }
-      setIsFollowing(!isFollowing)
-    } catch (error) {
-      console.error('Error toggling follow:', error)
-    } finally {
-      setFollowLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -129,51 +82,26 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
                 {profile.home_city}
               </p>
             )}
-
-            {/* Stats Row */}
-            <div className="flex gap-5 mt-3">
-              <Link href={`/profile/${params.id}/followers`} className="hover:text-emerald-600 transition-colors">
-                <span className="text-sm font-bold text-gray-900">{followers}</span>
-                <span className="text-xs text-gray-400 ml-1">followers</span>
-              </Link>
-              <Link href={`/profile/${params.id}/following`} className="hover:text-emerald-600 transition-colors">
-                <span className="text-sm font-bold text-gray-900">{following}</span>
-                <span className="text-xs text-gray-400 ml-1">following</span>
-              </Link>
-            </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          {isOwnProfile ? (
+        {isOwnProfile && (
+          <div>
             <Link
               href="/profile/edit"
-              className="flex-1 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-center flex items-center justify-center gap-1.5"
+              className="inline-flex items-center justify-center gap-1.5 px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               <Edit2 size={14} />
               Edit Profile
             </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={toggleFollow}
-              disabled={followLoading}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-                isFollowing
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-emerald-500 text-white hover:bg-emerald-600'
-              }`}
-            >
-              {followLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Explore CTA */}
         <section>
           <EmptyState
-            icon={Users}
+            icon={UtensilsCrossed}
             title={isOwnProfile ? 'Start exploring' : `${profile.display_name} is on Gastronome`}
             description={isOwnProfile ? 'Discover and compare restaurant ratings across Google, Yelp, and more' : 'Compare restaurant ratings from every major platform in one place'}
             ctaText={isOwnProfile ? 'Browse restaurants' : undefined}

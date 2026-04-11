@@ -24,7 +24,7 @@ async function getCityData(slug: string) {
     limit: 200,
   })
 
-  const cuisines = [...new Set(restaurants.map(r => r.cuisine).filter(Boolean))].sort()
+  const cuisines = [...new Set(restaurants.map(r => r.cuisine).filter(c => c && c !== 'Restaurant'))].sort()
 
   // Get accurate total count (not limited by placement query)
   const { count: totalCount } = await supabase

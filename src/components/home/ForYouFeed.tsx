@@ -5,7 +5,7 @@ import Link from 'next/link'
 import TopRestaurantCard from './TopRestaurantCard'
 import RestaurantCard from '@/components/RestaurantCard'
 import CityCard from '@/components/CityCard'
-import { ArrowRight, Clock, Flame, MapPin } from 'lucide-react'
+import { ArrowRight, Clock, Flame, MapPin, Settings } from 'lucide-react'
 import type { Restaurant, City, Profile } from '@/types/database'
 import type { TrendingRestaurant } from '@/lib/placement'
 
@@ -38,7 +38,8 @@ export default function ForYouFeed({
   }, [])
 
   const firstName = profile.display_name.split(' ')[0]
-  const cityName = profile.home_city || 'your city'
+  const hasCity = !!profile.home_city
+  const cityName = profile.home_city || null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -49,17 +50,38 @@ export default function ForYouFeed({
             {greeting}, {firstName}
           </h1>
           <p className="text-gray-400 mt-1">
-            Here&apos;s what&apos;s trending in {cityName}
+            {hasCity
+              ? `Here's what's trending in ${cityName}`
+              : "Here's what's trending"}
           </p>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
+        {/* Set home city banner */}
+        {!hasCity && (
+          <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin size={16} className="text-emerald-600 flex-shrink-0" />
+              <p className="text-sm text-emerald-800">
+                Set your home city for personalized recommendations
+              </p>
+            </div>
+            <Link
+              href="/profile/edit"
+              className="flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-800 font-semibold whitespace-nowrap"
+            >
+              <Settings size={14} />
+              Set city
+            </Link>
+          </div>
+        )}
+
         {/* Top 10 */}
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              Top 10 in {cityName}
+              {hasCity ? `Top 10 in ${cityName}` : 'Top Restaurants'}
             </h2>
             <Link
               href="/restaurants"
@@ -82,8 +104,7 @@ export default function ForYouFeed({
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
               <p className="text-sm text-gray-500">
-                We&apos;re still adding restaurants in {cityName}. Check back
-                soon!
+                No restaurants found yet. Check back soon!
               </p>
             </div>
           )}
@@ -95,7 +116,7 @@ export default function ForYouFeed({
             <div className="flex items-center gap-2 mb-6">
               <Clock size={18} className="text-emerald-600" />
               <h2 className="text-xl font-bold text-gray-900">
-                Recently Added in {cityName}
+                {hasCity ? `Recently Added in ${cityName}` : 'Recently Added'}
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -109,14 +130,14 @@ export default function ForYouFeed({
           </section>
         )}
 
-        {/* Explore Other Cities */}
+        {/* Explore Cities */}
         {otherCities.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <MapPin size={18} className="text-emerald-600" />
                 <h2 className="text-xl font-bold text-gray-900">
-                  Explore Other Cities
+                  {hasCity ? 'Explore Other Cities' : 'Explore Cities'}
                 </h2>
               </div>
               <Link
@@ -134,13 +155,13 @@ export default function ForYouFeed({
           </section>
         )}
 
-        {/* Trending Near You */}
+        {/* Trending */}
         {trendingRestaurants.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-6">
               <Flame size={18} className="text-orange-500" />
               <h2 className="text-xl font-bold text-gray-900">
-                Trending in {cityName}
+                {hasCity ? `Trending in ${cityName}` : 'Trending Now'}
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
