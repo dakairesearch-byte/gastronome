@@ -4,7 +4,7 @@ import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBa
 import VideoGallery from '@/components/VideoGallery'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock, PenLine } from 'lucide-react'
+import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -301,22 +301,6 @@ export default async function RestaurantPage({
               </section>
             )}
 
-            {/* Community Reviews CTA */}
-            <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Community Reviews</h2>
-              <div className="bg-white border border-gray-200 border-dashed rounded-xl p-8 text-center">
-                <PenLine size={28} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-sm font-semibold text-gray-700 mb-1">Be the first to review this restaurant!</p>
-                <p className="text-xs text-gray-400 mb-4">Share your experience and help others decide.</p>
-                <Link
-                  href={`/review/new?restaurant=${restaurant.id}`}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <PenLine size={14} />
-                  Write a Review
-                </Link>
-              </div>
-            </section>
           </div>
 
           {/* Right sidebar */}
@@ -414,7 +398,7 @@ function DashboardCard({ source }: { source: RatingSource }) {
       ) : (
         <>
           <p className={`text-3xl font-extrabold ${source.accent}`}>
-            {source.rating}
+            {source.rating.toFixed(2)}
           </p>
           <p className={`text-xs ${source.text} mt-0.5`}>
             / {source.maxRating}

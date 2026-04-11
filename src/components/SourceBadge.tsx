@@ -27,7 +27,7 @@ export default function SourceBadge({ source, compact = false }: SourceBadgeProp
       onMouseLeave={() => setShowTooltip(false)}
     >
       <span className="text-xs font-bold uppercase">{source.icon}</span>
-      <span>{source.rating}{source.maxRating ? `/${source.maxRating}` : ''}</span>
+      <span>{source.rating.toFixed(2)}{source.maxRating ? `/${source.maxRating}` : ''}</span>
 
       {/* Tooltip */}
       {showTooltip && source.reviewCount != null && source.reviewCount > 0 && (
