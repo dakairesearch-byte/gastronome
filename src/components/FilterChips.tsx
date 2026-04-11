@@ -36,7 +36,7 @@ export default function FilterChips({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors min-h-[44px] focus-visible:ring-2 focus-visible:ring-emerald-500 outline-none ${
             hasActiveFilters
               ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
               : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'

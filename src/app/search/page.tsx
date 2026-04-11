@@ -253,7 +253,7 @@ function SearchContent() {
   const hasResults = totalRestaurants > 0 || reviews.length > 0
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         {/* Header */}
         <div>

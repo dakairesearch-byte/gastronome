@@ -1,6 +1,5 @@
 import { fetchGoogleData } from './google';
 import { fetchYelpData } from './yelp';
-import { fetchBeliData } from './beli';
 import { fetchInfatuationData } from './infatuation';
 import { fetchMichelinData } from './michelin';
 import { fetchTikTokVideos } from './tiktok';
@@ -16,7 +15,6 @@ export interface FetchResult {
 export interface FetchAllResults {
   google: FetchResult;
   yelp: FetchResult;
-  beli: FetchResult;
   infatuation: FetchResult;
   michelin: FetchResult;
   tiktok: FetchResult;
@@ -33,7 +31,6 @@ export async function fetchAllSourcesForRestaurant(
   const sources: Record<SourceKey, () => Promise<FetchResult>> = {
     google: () => fetchGoogleData(restaurantId, name, city),
     yelp: () => fetchYelpData(restaurantId, name, city),
-    beli: () => fetchBeliData(restaurantId, name, city),
     infatuation: () => fetchInfatuationData(restaurantId, name, city),
     michelin: () => fetchMichelinData(restaurantId, name, city),
     tiktok: () => fetchTikTokVideos(restaurantId, name, city),

@@ -36,24 +36,25 @@ async function getHomePageData() {
       .from('restaurants')
       .select('*', { count: 'exact', head: true })
 
-    const { count: totalVideos } = await supabase
-      .from('restaurant_videos')
+    const { count: totalCities } = await supabase
+      .from('cities')
       .select('*', { count: 'exact', head: true })
+      .eq('is_active', true)
 
     return {
       featuredRestaurants: featuredRestaurants || [],
       trendingRestaurants: trendingRestaurants || [],
       cities: cities || [],
       totalRestaurants: totalRestaurants || 0,
-      totalVideos: totalVideos || 0,
+      totalCities: totalCities || 0,
     }
   } catch {
-    return { featuredRestaurants: [], trendingRestaurants: [], cities: [], totalRestaurants: 0, totalVideos: 0 }
+    return { featuredRestaurants: [], trendingRestaurants: [], cities: [], totalRestaurants: 0, totalCities: 0 }
   }
 }
 
 export default async function Home() {
-  const { featuredRestaurants, trendingRestaurants, cities, totalRestaurants, totalVideos } = await getHomePageData()
+  const { featuredRestaurants, trendingRestaurants, cities, totalRestaurants, totalCities } = await getHomePageData()
 
   const displayRestaurants = featuredRestaurants.length > 0 ? featuredRestaurants : trendingRestaurants
 
@@ -76,34 +77,27 @@ export default async function Home() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-gray-400 max-w-xl mx-auto">
-              Google, Yelp, Beli, and The Infatuation ratings side by side — plus trending TikTok and Instagram videos. Like Rotten Tomatoes, but for food.
+              Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.
             </p>
-
-            {/* Search Bar */}
-            <div className="mt-10 max-w-lg mx-auto">
-              <Link
-                href="/restaurants"
-                className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl text-gray-400 hover:bg-white/15 transition-colors group"
-              >
-                <Search size={20} className="text-gray-500 group-hover:text-emerald-400 transition-colors" />
-                <span className="text-sm">Search any restaurant across 20 cities...</span>
-              </Link>
-            </div>
 
             {/* Stats */}
             <div className="mt-12 flex justify-center gap-8 sm:gap-16">
-              <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{totalRestaurants.toLocaleString()}</p>
-                <p className="text-sm text-gray-500">Restaurants</p>
-              </div>
+              {totalRestaurants > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{totalRestaurants.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">Restaurants</p>
+                </div>
+              )}
               <div className="text-center">
                 <p className="text-2xl sm:text-3xl font-bold text-white">4</p>
                 <p className="text-sm text-gray-500">Rating Sources</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-white">{totalVideos.toLocaleString()}</p>
-                <p className="text-sm text-gray-500">Videos</p>
-              </div>
+              {totalCities > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{totalCities.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">Cities</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -126,7 +120,7 @@ export default async function Home() {
                 <BarChart3 size={24} className="text-emerald-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">Compare</h3>
-              <p className="text-sm text-gray-500">See Google, Yelp, Beli, and Infatuation scores side by side</p>
+              <p className="text-sm text-gray-500">See Google, Yelp, Infatuation, and Michelin scores side by side</p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">

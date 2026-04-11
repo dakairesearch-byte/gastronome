@@ -30,19 +30,6 @@ export function getSourceRatings(restaurant: Restaurant): SourceRating[] {
     })
   }
 
-  if (restaurant.beli_score != null) {
-    ratings.push({
-      source: 'beli',
-      rating: restaurant.beli_score,
-      reviewCount: undefined,
-      url: restaurant.beli_url,
-      maxRating: 100,
-      color: 'purple',
-      label: 'Beli',
-      icon: 'B',
-    })
-  }
-
   if (restaurant.infatuation_rating != null) {
     ratings.push({
       source: 'infatuation',

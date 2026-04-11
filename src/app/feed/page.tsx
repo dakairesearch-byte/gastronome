@@ -93,28 +93,24 @@ export default function FeedPage() {
       const followingIds = following.map((f) => f.following_id)
 
       const { data: reviews } = await supabase
-        .from('reviews').select('*').in('author_id', followingIds)
-        .order('created_at', { ascending: false }).limit(20)
+        .from('reviews')
+        .select('*, restaurants(*), profiles!reviews_author_id_fkey(*), review_photos(*)')
+        .in('author_id', followingIds)
+        .order('created_at', { ascending: false })
+        .limit(20)
 
       if (!reviews || reviews.length === 0) { setLoading(false); return }
 
-      const feedData = await Promise.all(
-        reviews.map(async (review) => {
-          const [restaurantRes, authorRes, photosRes] = await Promise.all([
-            supabase.from('restaurants').select('*').eq('id', review.restaurant_id).single(),
-            supabase.from('profiles').select('*').eq('id', review.author_id).single(),
-            supabase.from('review_photos').select('*').eq('review_id', review.id),
-          ])
-          return {
-            review,
-            restaurant: restaurantRes.data,
-            author: authorRes.data,
-            photos: photosRes.data || [],
-          }
-        })
-      )
+      const feedData = (reviews as any[])
+        .filter((r) => r.restaurants && r.profiles)
+        .map((r) => ({
+          review: r,
+          restaurant: r.restaurants,
+          author: r.profiles,
+          photos: r.review_photos || [],
+        }))
 
-      setFeedReviews(feedData.filter((item) => item.restaurant && item.author))
+      setFeedReviews(feedData)
       setLoading(false)
     }
     loadFeed()
@@ -122,7 +118,7 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -149,7 +145,7 @@ export default function FeedPage() {
   // Logged-out marketing state
   if (!user) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         {/* Hero banner */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
@@ -201,7 +197,7 @@ export default function FeedPage() {
   // Logged in but following nobody
   if (followingCount === 0) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Feed</h1>
 
@@ -247,7 +243,7 @@ export default function FeedPage() {
   // Logged in, following people, but no reviews
   if (feedReviews.length === 0) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Feed</h1>
           <div className="text-center bg-white rounded-xl border border-gray-100 p-10">
@@ -270,7 +266,7 @@ export default function FeedPage() {
 
   // Main feed with reviews
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Your Feed</h1>

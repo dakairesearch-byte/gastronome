@@ -11,10 +11,11 @@ export default async function CitiesPage() {
     .from('cities')
     .select('*')
     .eq('is_active', true)
+    .gt('restaurant_count', 0)
     .order('name')
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex items-center gap-2 mb-8">
           <MapPin size={24} className="text-emerald-600" />
@@ -30,7 +31,7 @@ export default async function CitiesPage() {
         ) : (
           <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
             <MapPin size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No cities available yet.</p>
+            <p className="text-gray-500">Cities coming soon — we're adding restaurants every day.</p>
           </div>
         )}
       </div>

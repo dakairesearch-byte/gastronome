@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import RestaurantCard from '@/components/RestaurantCard'
+import CityRestaurantGrid from '@/components/CityRestaurantGrid'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { MapPin, ArrowLeft } from 'lucide-react'
@@ -45,7 +45,7 @@ export default async function CityPage({
   const { city, restaurants, cuisines } = data
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* City Header */}
       <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 overflow-hidden">
         {city.photo_url && (
@@ -57,8 +57,8 @@ export default async function CityPage({
         )}
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white font-medium mb-4 transition-colors"
+            href="/cities"
+            className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white font-medium mb-4 transition-colors focus-visible:ring-2 focus-visible:ring-white outline-none rounded"
           >
             <ArrowLeft size={14} />
             All cities
@@ -79,33 +79,11 @@ export default async function CityPage({
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Cuisine filters */}
-        {cuisines.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-6">
-            {cuisines.map((cuisine) => (
-              <span
-                key={cuisine}
-                className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap"
-              >
-                {cuisine}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Restaurant Grid */}
-        {restaurants.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {restaurants.map((restaurant) => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
-            <MapPin size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No restaurants found in {city.name} yet.</p>
-          </div>
-        )}
+        <CityRestaurantGrid
+          restaurants={restaurants}
+          cuisines={cuisines}
+          cityName={city.name}
+        />
       </div>
     </div>
   )
