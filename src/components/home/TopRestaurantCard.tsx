@@ -35,7 +35,7 @@ export default function TopRestaurantCard({
         <div className="flex-1 min-w-0 space-y-2">
           <div>
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
+              <h3 className="font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1 min-w-0">
                 {restaurant.name}
               </h3>
               {composite && (
@@ -45,7 +45,7 @@ export default function TopRestaurantCard({
               )}
             </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {restaurant.cuisine && (
+              {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
                   {restaurant.cuisine}
                 </span>
@@ -61,7 +61,7 @@ export default function TopRestaurantCard({
           </div>
 
           {hasAccolades && (
-            <AccoladesBadges restaurant={restaurant} />
+            <AccoladesBadges restaurant={restaurant} maxBadges={2} />
           )}
 
           <SourceRatingsBar restaurant={restaurant} compact />

@@ -26,10 +26,17 @@ async function getCityData(slug: string) {
 
   const cuisines = [...new Set(restaurants.map(r => r.cuisine).filter(Boolean))].sort()
 
+  // Get accurate total count (not limited by placement query)
+  const { count: totalCount } = await supabase
+    .from('restaurants')
+    .select('*', { count: 'exact', head: true })
+    .eq('city', city.name)
+
   return {
     city,
     restaurants,
     cuisines,
+    totalCount: totalCount || restaurants.length,
   }
 }
 
@@ -43,7 +50,7 @@ export default async function CityPage({
 
   if (!data) notFound()
 
-  const { city, restaurants, cuisines } = data
+  const { city, restaurants, cuisines, totalCount } = data
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,7 +78,7 @@ export default async function CityPage({
                 {city.name}
               </h1>
               <p className="text-emerald-100 mt-1">
-                {city.state} &middot; {restaurants.length} restaurant{restaurants.length !== 1 ? 's' : ''}
+                {city.state} &middot; {totalCount} restaurant{totalCount !== 1 ? 's' : ''}
               </p>
             </div>
           </div>

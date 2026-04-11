@@ -40,7 +40,10 @@ export default function SearchBar({
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            onSearch?.(e.target.value)
+          }}
           placeholder={placeholder}
           className="w-full px-4 py-3 pl-4 pr-12 text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
         />

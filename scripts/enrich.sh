@@ -92,7 +92,7 @@ for ((i=0; i<count; i++)); do
     gsub("_restaurant"; "") |
     gsub("_food"; "") |
     gsub("_"; " ") |
-    split(" ") | map(.[0:1] | ascii_upcase + .[1:]) | join(" ")
+    split(" ") | map( (.[0:1] | ascii_upcase) + .[1:] ) | join(" ")
   ')
 
   # Map price level

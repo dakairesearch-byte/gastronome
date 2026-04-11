@@ -34,7 +34,8 @@ export default async function Home() {
     supabase
       .from('cities')
       .select('*', { count: 'exact', head: true })
-      .eq('is_active', true),
+      .eq('is_active', true)
+      .gt('restaurant_count', 0),
   ])
 
   const commonProps = {

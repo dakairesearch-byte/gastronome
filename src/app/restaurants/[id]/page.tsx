@@ -1,10 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import RestaurantCard from '@/components/RestaurantCard'
-import AccoladesBadges from '@/components/AccoladesBadges'
+import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock } from 'lucide-react'
+import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock, PenLine } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -105,13 +105,16 @@ function buildRatingSources(restaurant: NonNullable<Awaited<ReturnType<typeof ge
   }
 
   if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) {
+    const designationLabel = restaurant.michelin_stars > 0
+      ? `${restaurant.michelin_stars} Star${restaurant.michelin_stars !== 1 ? 's' : ''}`
+      : getDesignationDisplay(restaurant.michelin_designation)
     sources.push({
       key: 'michelin',
       label: 'Michelin',
       rating: restaurant.michelin_stars,
       maxRating: 3,
       reviewCount: null,
-      reviewLabel: restaurant.michelin_designation || `${restaurant.michelin_stars} Star${restaurant.michelin_stars !== 1 ? 's' : ''}`,
+      reviewLabel: designationLabel,
       url: restaurant.michelin_url,
       bg: 'bg-red-50',
       accent: 'text-[#CC0000]',
@@ -297,6 +300,23 @@ export default async function RestaurantPage({
                 <p className="text-sm text-gray-600 leading-relaxed">{restaurant.description}</p>
               </section>
             )}
+
+            {/* Community Reviews CTA */}
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Community Reviews</h2>
+              <div className="bg-white border border-gray-200 border-dashed rounded-xl p-8 text-center">
+                <PenLine size={28} className="mx-auto text-gray-300 mb-3" />
+                <p className="text-sm font-semibold text-gray-700 mb-1">Be the first to review this restaurant!</p>
+                <p className="text-xs text-gray-400 mb-4">Share your experience and help others decide.</p>
+                <Link
+                  href={`/review/new?restaurant=${restaurant.id}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  <PenLine size={14} />
+                  Write a Review
+                </Link>
+              </div>
+            </section>
           </div>
 
           {/* Right sidebar */}
@@ -382,11 +402,15 @@ function DashboardCard({ source }: { source: RatingSource }) {
     >
       <p className="text-xs font-bold uppercase text-gray-400 tracking-wide mb-1.5">{source.label}</p>
       {isMichelin ? (
-        <div className="flex items-center justify-center gap-0.5 mb-1">
-          {Array.from({ length: source.rating }).map((_, i) => (
-            <Star key={i} size={18} className="fill-[#CC0000] text-[#CC0000]" />
-          ))}
-        </div>
+        source.rating > 0 ? (
+          <div className="flex items-center justify-center gap-0.5 mb-1">
+            {Array.from({ length: source.rating }).map((_, i) => (
+              <Star key={i} size={18} className="fill-[#CC0000] text-[#CC0000]" />
+            ))}
+          </div>
+        ) : (
+          <p className={`text-lg font-extrabold ${source.accent} mb-1`}>{source.reviewLabel}</p>
+        )
       ) : (
         <>
           <p className={`text-3xl font-extrabold ${source.accent}`}>
@@ -399,7 +423,7 @@ function DashboardCard({ source }: { source: RatingSource }) {
       )}
       {source.reviewCount != null && source.reviewCount > 0 ? (
         <p className="text-xs text-gray-400 mt-1.5">
-          {source.reviewCount.toLocaleString()} {source.reviewLabel}
+          {source.reviewCount.toLocaleString()} {source.reviewCount === 1 ? 'review' : source.reviewLabel}
         </p>
       ) : (
         <p className="text-xs text-gray-400 mt-1.5">
