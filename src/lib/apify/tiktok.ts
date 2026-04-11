@@ -10,10 +10,11 @@ export async function fetchTikTokVideos(
 ) {
   const searchQuery = `${name} ${city} restaurant`;
 
-  const run = await runActor('apidojo/tiktok-scraper', {
+  const run = await runActor('clockworks/tiktok-scraper', {
     searchQueries: [searchQuery],
-    maxResults: 30,
+    resultsPerPage: 30,
     shouldDownloadVideos: false,
+    shouldDownloadCovers: false,
   });
 
   const items = await getDatasetItems(run.defaultDatasetId);
