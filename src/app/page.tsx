@@ -2,7 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import HomeClient from '@/components/home/HomeClient'
 import ForYouFeed from '@/components/home/ForYouFeed'
 import GenericHomepage from '@/components/home/GenericHomepage'
-import { getCompositeRating } from '@/lib/compositeRating'
+import { getPlacedRestaurantsServer, getTrendingRestaurants } from '@/lib/placement'
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient()
@@ -14,17 +14,14 @@ export default async function Home() {
 
   // Fetch common data in parallel
   const [
-    { data: trendingRestaurants },
+    placedRestaurants,
+    trendingResults,
     { data: cities },
     { count: totalRestaurants },
     { count: totalCities },
   ] = await Promise.all([
-    supabase
-      .from('restaurants')
-      .select('*')
-      .gt('google_rating', 0)
-      .order('google_rating', { ascending: false })
-      .limit(12),
+    getPlacedRestaurantsServer(supabase, { limit: 12 }),
+    getTrendingRestaurants(supabase, { limit: 10 }),
     supabase
       .from('cities')
       .select('*')
@@ -41,7 +38,8 @@ export default async function Home() {
   ])
 
   const commonProps = {
-    trendingRestaurants: trendingRestaurants || [],
+    trendingRestaurants: placedRestaurants,
+    trending: trendingResults,
     cities: cities || [],
     totalRestaurants: totalRestaurants || 0,
     totalCities: totalCities || 0,
@@ -64,10 +62,17 @@ export default async function Home() {
     return <GenericHomepage {...commonProps} />
   }
 
-  // Fetch personalized data for home city
-  const [{ data: cityRestaurants }, { data: recentInCity }] =
+  // Fetch personalized data for home city using placement algorithm
+  const [topRestaurants, trendingInCity, { data: recentInCity }] =
     await Promise.all([
-      supabase.from('restaurants').select('*').ilike('city', profile.home_city),
+      getPlacedRestaurantsServer(supabase, {
+        city: profile.home_city,
+        limit: 10,
+      }),
+      getTrendingRestaurants(supabase, {
+        city: profile.home_city,
+        limit: 6,
+      }),
       supabase
         .from('restaurants')
         .select('*')
@@ -75,14 +80,6 @@ export default async function Home() {
         .order('created_at', { ascending: false })
         .limit(4),
     ])
-
-  // Compute composite ratings and sort for top 10
-  const topRestaurants = (cityRestaurants || [])
-    .map((r) => ({ restaurant: r, composite: getCompositeRating(r) }))
-    .filter((item) => item.composite !== null)
-    .sort((a, b) => b.composite!.rating - a.composite!.rating)
-    .slice(0, 10)
-    .map((item) => item.restaurant)
 
   const otherCities = (cities || []).filter(
     (c) => c.name.toLowerCase() !== profile.home_city!.toLowerCase()
@@ -94,7 +91,7 @@ export default async function Home() {
       topRestaurants={topRestaurants}
       recentRestaurants={recentInCity || []}
       otherCities={otherCities}
-      trendingRestaurants={trendingRestaurants || []}
+      trendingRestaurants={trendingInCity}
     />
   )
 }

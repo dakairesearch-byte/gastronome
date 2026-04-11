@@ -5,15 +5,16 @@ import Link from 'next/link'
 import TopRestaurantCard from './TopRestaurantCard'
 import RestaurantCard from '@/components/RestaurantCard'
 import CityCard from '@/components/CityCard'
-import { ArrowRight, Clock, MapPin } from 'lucide-react'
+import { ArrowRight, Clock, Flame, MapPin } from 'lucide-react'
 import type { Restaurant, City, Profile } from '@/types/database'
+import type { TrendingRestaurant } from '@/lib/placement'
 
 interface ForYouFeedProps {
   profile: Profile
   topRestaurants: Restaurant[]
   recentRestaurants: Restaurant[]
   otherCities: City[]
-  trendingRestaurants: Restaurant[]
+  trendingRestaurants: TrendingRestaurant[]
 }
 
 function getGreeting(): string {
@@ -133,17 +134,21 @@ export default function ForYouFeed({
           </section>
         )}
 
-        {/* Trending across all cities (fallback content) */}
-        {topRestaurants.length === 0 && trendingRestaurants.length > 0 && (
+        {/* Trending Near You */}
+        {trendingRestaurants.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              Trending Restaurants
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {trendingRestaurants.slice(0, 8).map((restaurant) => (
+            <div className="flex items-center gap-2 mb-6">
+              <Flame size={18} className="text-orange-500" />
+              <h2 className="text-xl font-bold text-gray-900">
+                Trending in {cityName}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trendingRestaurants.slice(0, 6).map((restaurant) => (
                 <RestaurantCard
                   key={restaurant.id}
                   restaurant={restaurant}
+                  trendingTier={restaurant.trending_tier}
                 />
               ))}
             </div>
