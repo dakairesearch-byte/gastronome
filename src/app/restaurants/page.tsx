@@ -31,7 +31,7 @@ function RestaurantsContent() {
       setLoading(true)
       try {
         // Use placement algorithm for default ordering
-        const placed = await getPlacedRestaurants(supabase, { limit: 500 })
+        const placed = await getPlacedRestaurants(supabase, { limit: 100 })
         if (placed.length > 0) {
           setRestaurants(placed)
           const cuisines = [...new Set(placed.map((r) => r.cuisine))].sort()

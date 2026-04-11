@@ -18,6 +18,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
 
+    // Require authentication — this triggers expensive external API calls
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     // Fetch the restaurant from DB
     const { data: restaurant, error: fetchError } = await supabase
       .from('restaurants')
@@ -65,7 +74,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'success',
           completed_at: new Date().toISOString(),
-          metadata: results as unknown as Record<string, unknown> as any,
+          metadata: results as Record<string, any>,
         })
         .eq('id', fetchLog.id)
 
@@ -92,8 +101,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('fetch-ratings error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

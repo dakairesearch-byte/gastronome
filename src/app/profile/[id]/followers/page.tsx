@@ -40,21 +40,25 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
             .in('id', followerIds)
 
           if (followerProfiles) {
-            const followersWithCounts = await Promise.all(
-              followerProfiles.map(async (follower) => {
-                const { count: followerCount } = await supabase
-                  .from('follows')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('following_id', follower.id)
+            // Batch query: get all follower counts in one request
+            const { data: countData } = await supabase
+              .from('follows')
+              .select('following_id')
+              .in('following_id', followerIds)
 
-                return {
-                  profile: follower,
-                  followerCount: followerCount || 0,
-                }
-              })
+            const countMap: Record<string, number> = {}
+            if (countData) {
+              for (const row of countData) {
+                countMap[row.following_id] = (countMap[row.following_id] || 0) + 1
+              }
+            }
+
+            setFollowers(
+              followerProfiles.map((follower) => ({
+                profile: follower,
+                followerCount: countMap[follower.id] || 0,
+              }))
             )
-
-            setFollowers(followersWithCounts)
           }
         }
       } catch (err) {

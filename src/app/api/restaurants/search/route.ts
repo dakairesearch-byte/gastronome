@@ -17,11 +17,14 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
 
+    // Sanitize query to prevent PostgREST filter injection
+    const sanitized = q.replace(/[,.()"\\]/g, '')
+
     // Search local DB with ilike on name and cuisine
     let query = supabase
       .from('restaurants')
       .select('*')
-      .or(`name.ilike.%${q}%,cuisine.ilike.%${q}%`)
+      .or(`name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%`)
 
     if (city) {
       query = query.ilike('city', `%${city}%`)
@@ -61,10 +64,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       local: localResults ?? [],
       google: googleResults,
+    }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
     })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('search error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

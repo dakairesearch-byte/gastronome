@@ -44,10 +44,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(videos)
+    return NextResponse.json(videos, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('videos error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
