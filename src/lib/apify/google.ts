@@ -1,57 +1,34 @@
-import apifyClient from './client';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { runActor, getDatasetItems } from './client'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
-export async function fetchGoogleData(
-  restaurantId: string,
-  name: string,
-  city: string
-) {
-  const searchQuery = `${name} ${city}`;
-
-  const run = await apifyClient.actor('compass/crawler-google-places').call({
-    searchStringsArray: [searchQuery],
+export async function fetchGoogleData(restaurantId: string, name: string, city: string) {
+  const run = await runActor('compass/crawler-google-places', {
+    searchStringsArray: [`${name} restaurant ${city}`],
     maxCrawledPlacesPerSearch: 1,
     language: 'en',
     maxReviews: 0,
-  });
+  })
 
-  const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+  const items = await getDatasetItems(run.defaultDatasetId)
+  if (!items.length) return null
 
-  if (!items || items.length === 0) {
-    return { success: false, error: 'No Google Places results found' };
-  }
+  const place = items[0] as any
+  const supabase = await createServerSupabaseClient()
 
-  const place = items[0] as Record<string, unknown>;
-
-  const supabase = await createServerSupabaseClient();
-
-  const updateData: Record<string, unknown> = {
-    google_place_id: place.placeId ?? null,
-    google_rating: typeof place.totalScore === 'number' ? place.totalScore : null,
-    google_review_count: typeof place.reviewsCount === 'number' ? place.reviewsCount : null,
-    google_url: place.url ?? null,
-    google_photo_url: place.imageUrl ?? null,
-    latitude: typeof place.location === 'object' && place.location !== null
-      ? (place.location as Record<string, unknown>).lat ?? null
-      : null,
-    longitude: typeof place.location === 'object' && place.location !== null
-      ? (place.location as Record<string, unknown>).lng ?? null
-      : null,
-    address: place.address ?? null,
-    phone: place.phone ?? null,
-    website: place.website ?? null,
-    photo_url: place.imageUrl ?? null,
+  await supabase.from('restaurants').update({
+    google_place_id: place.placeId,
+    google_rating: place.totalScore,
+    google_review_count: place.reviewsCount,
+    google_url: place.url,
+    google_photo_url: place.imageUrl,
+    latitude: place.location?.lat,
+    longitude: place.location?.lng,
+    address: place.address || undefined,
+    phone: place.phone || undefined,
+    website: place.website || undefined,
+    photo_url: place.imageUrl,
     last_fetched_at: new Date().toISOString(),
-  };
+  }).eq('id', restaurantId)
 
-  const { error } = await supabase
-    .from('restaurants')
-    .update(updateData)
-    .eq('id', restaurantId);
-
-  if (error) {
-    return { success: false, error: `Supabase update failed: ${error.message}` };
-  }
-
-  return { success: true, data: updateData };
+  return place
 }
