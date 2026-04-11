@@ -393,6 +393,47 @@ export type Database = {
           }
         ]
       }
+      restaurant_rating_snapshots: {
+        Row: {
+          id: string
+          restaurant_id: string
+          google_rating: number | null
+          google_review_count: number | null
+          yelp_rating: number | null
+          yelp_review_count: number | null
+          infatuation_rating: number | null
+          snapshot_date: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          google_rating?: number | null
+          google_review_count?: number | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          infatuation_rating?: number | null
+          snapshot_date?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          google_rating?: number | null
+          google_review_count?: number | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          infatuation_rating?: number | null
+          snapshot_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_rating_snapshots_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       follows: {
         Row: {
           id: string

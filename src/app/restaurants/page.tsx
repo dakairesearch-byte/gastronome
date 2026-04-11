@@ -60,8 +60,8 @@ function RestaurantsContent() {
 
   switch (activeTab) {
     case 'top':
-      filtered = filtered.filter((r) => (r.google_rating || r.avg_rating || 0) > 0)
-      filtered.sort((a, b) => (b.google_rating || b.avg_rating || 0) - (a.google_rating || a.avg_rating || 0))
+      filtered = filtered.filter((r) => (r.google_rating || 0) > 0)
+      filtered.sort((a, b) => (b.google_rating || 0) - (a.google_rating || 0))
       break
     case 'new':
       filtered.sort(

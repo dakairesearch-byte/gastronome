@@ -32,7 +32,14 @@ function LoginContent() {
       })
 
       if (error) {
-        setError(error.message)
+        // Map Supabase server errors to user-friendly messages
+        if (error.message.toLowerCase().includes('database error')) {
+          setError('Unable to sign in right now. Please try again in a moment.')
+        } else if (error.message === 'Invalid login credentials') {
+          setError('Invalid email or password. Please try again.')
+        } else {
+          setError(error.message)
+        }
         return
       }
 

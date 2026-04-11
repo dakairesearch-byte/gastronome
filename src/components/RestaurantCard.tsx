@@ -12,7 +12,6 @@ interface RestaurantCardProps {
 }
 
 export default function RestaurantCard({ restaurant, trendingTier }: RestaurantCardProps) {
-  const priceDisplay = '$'.repeat(restaurant.price_range || 1)
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.james_beard_nominated ||
@@ -46,10 +45,6 @@ export default function RestaurantCard({ restaurant, trendingTier }: RestaurantC
               <span className="flex items-center gap-1 text-sm text-gray-500">
                 <MapPin size={14} />
                 {restaurant.neighborhood || restaurant.city}
-              </span>
-              <span className="text-gray-300">&middot;</span>
-              <span className="text-sm font-semibold text-emerald-600 font-mono">
-                {priceDisplay}
               </span>
             </div>
           </div>
