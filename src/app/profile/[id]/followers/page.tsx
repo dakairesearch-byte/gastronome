@@ -5,13 +5,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
 import { Loader2, Users } from 'lucide-react'
-import CriticCard from '@/components/CriticCard'
+import UserCard from '@/components/UserCard'
 import EmptyState from '@/components/EmptyState'
 
 export default function FollowersPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [followers, setFollowers] = useState<{ profile: Profile; reviewCount: number; followerCount: number }[]>([])
+  const [followers, setFollowers] = useState<{ profile: Profile; followerCount: number }[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -42,11 +42,6 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
           if (followerProfiles) {
             const followersWithCounts = await Promise.all(
               followerProfiles.map(async (follower) => {
-                const { count: reviewCount } = await supabase
-                  .from('reviews')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('author_id', follower.id)
-
                 const { count: followerCount } = await supabase
                   .from('follows')
                   .select('*', { count: 'exact', head: true })
@@ -54,7 +49,6 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
 
                 return {
                   profile: follower,
-                  reviewCount: reviewCount || 0,
                   followerCount: followerCount || 0,
                 }
               })
@@ -104,11 +98,10 @@ export default function FollowersPage({ params: paramsPromise }: { params: Promi
 
         {followers.length > 0 ? (
           <div className="space-y-3">
-            {followers.map(({ profile: follower, reviewCount, followerCount }) => (
-              <CriticCard
+            {followers.map(({ profile: follower, followerCount }) => (
+              <UserCard
                 key={follower.id}
                 profile={follower}
-                reviewCount={reviewCount}
                 followerCount={followerCount}
               />
             ))}

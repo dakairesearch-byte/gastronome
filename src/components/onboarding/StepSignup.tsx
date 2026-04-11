@@ -9,21 +9,22 @@ import type { City } from '@/types/database'
 
 interface StepSignupProps {
   cities: City[]
+  prefilledCity?: string | null
 }
 
 const VALUE_ITEMS = [
-  'Personalized top 10 restaurants in your city',
-  'Save your favorites across devices',
-  'Get notified when new restaurants are added near you',
-  'Early access to new features',
+  'See how every restaurant near you stacks up across Google, Yelp, and more',
+  'Save restaurants you want to try',
+  'Get alerts when new spots open in your area',
+  'Access the full analytics dashboard for any restaurant',
 ]
 
-export default function StepSignup({ cities }: StepSignupProps) {
+export default function StepSignup({ cities, prefilledCity }: StepSignupProps) {
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [homeCity, setHomeCity] = useState('')
+  const [homeCity, setHomeCity] = useState(prefilledCity || '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -86,13 +87,15 @@ export default function StepSignup({ cities }: StepSignupProps) {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
-            Your Top 10 Is{' '}
+            Make It{' '}
             <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              Waiting
+              Yours
             </span>
           </h1>
           <p className="text-gray-400 mt-3">
-            Create a free account to unlock:
+            {prefilledCity
+              ? `You just explored ${prefilledCity}. Create a free account to keep going:`
+              : 'Create a free account to unlock:'}
           </p>
         </div>
 
@@ -174,12 +177,12 @@ export default function StepSignup({ cities }: StepSignupProps) {
             disabled={loading}
             className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating account...' : 'Create Free Account'}
+            {loading ? 'Creating account...' : 'Start Exploring Free'}
           </button>
         </form>
 
         <p className="text-center text-xs text-gray-500">
-          Free forever. No spam. Unsubscribe anytime.
+          Free forever &middot; No credit card &middot; Takes 10 seconds
         </p>
 
         <p className="text-center text-sm text-gray-400">

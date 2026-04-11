@@ -14,6 +14,8 @@ interface OnboardingFlowProps {
   onSkip: () => void
 }
 
+const STEP_LABELS = ['Discover', 'Compare', 'Explore', 'Join']
+
 export default function OnboardingFlow({
   totalRestaurants,
   totalCities,
@@ -21,15 +23,30 @@ export default function OnboardingFlow({
   onSkip,
 }: OnboardingFlowProps) {
   const [step, setStep] = useState(0)
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Progress bar */}
-      <div className="fixed top-0 left-0 right-0 z-[60] h-1 bg-gray-800">
-        <div
-          className="h-full bg-emerald-500 transition-all duration-500 ease-out"
-          style={{ width: `${((step + 1) / 4) * 100}%` }}
-        />
+      <div className="fixed top-0 left-0 right-0 z-[60]">
+        <div className="h-1 bg-gray-800">
+          <div
+            className="h-full bg-emerald-500 transition-all duration-500 ease-out"
+            style={{ width: `${((step + 1) / 4) * 100}%` }}
+          />
+        </div>
+        <div className="flex justify-center gap-6 py-2 bg-gray-900/80 backdrop-blur-sm">
+          {STEP_LABELS.map((label, i) => (
+            <span
+              key={label}
+              className={`text-[10px] font-medium tracking-wide uppercase ${
+                i <= step ? 'text-emerald-400' : 'text-gray-600'
+              }`}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Skip button */}
@@ -51,9 +68,17 @@ export default function OnboardingFlow({
         )}
         {step === 1 && <StepCompare onNext={() => setStep(2)} />}
         {step === 2 && (
-          <StepExplore cities={cities} onNext={() => setStep(3)} />
+          <StepExplore
+            cities={cities}
+            onNext={(city) => {
+              setSelectedCity(city)
+              setStep(3)
+            }}
+          />
         )}
-        {step === 3 && <StepSignup cities={cities} />}
+        {step === 3 && (
+          <StepSignup cities={cities} prefilledCity={selectedCity} />
+        )}
       </div>
     </div>
   )

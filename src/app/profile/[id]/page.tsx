@@ -4,22 +4,13 @@ import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import ReviewCard from '@/components/ReviewCard'
-import { Profile, Review, Restaurant, ReviewPhoto } from '@/types/database'
-import { Users, Edit2 } from 'lucide-react'
+import { Profile } from '@/types/database'
+import { Users, Edit2, MapPin } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
-
-interface ReviewWithData {
-  review: Review
-  restaurant: Restaurant
-  author: Profile
-  photos: ReviewPhoto[]
-}
 
 export default function ProfilePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [reviews, setReviews] = useState<ReviewWithData[]>([])
   const [followers, setFollowers] = useState(0)
   const [following, setFollowing] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -41,23 +32,6 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
           .from('profiles').select('*').eq('id', params.id).single()
 
         if (profileData) setProfile(profileData)
-
-        const { data: reviewsData } = await supabase
-          .from('reviews').select('*').eq('author_id', params.id)
-          .order('created_at', { ascending: false })
-
-        if (reviewsData && profileData) {
-          const reviewsWithData = await Promise.all(
-            reviewsData.map(async (review) => {
-              const [restaurant, photos] = await Promise.all([
-                supabase.from('restaurants').select('*').eq('id', review.restaurant_id).single(),
-                supabase.from('review_photos').select('*').eq('review_id', review.id),
-              ])
-              return { review, restaurant: restaurant.data, author: profileData, photos: photos.data || [] }
-            })
-          )
-          setReviews(reviewsWithData.filter((item): item is ReviewWithData => item.restaurant !== null))
-        }
 
         const { count: followerCount } = await supabase
           .from('follows').select('*', { count: 'exact', head: true }).eq('following_id', params.id)
@@ -149,13 +123,15 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             {profile.bio && (
               <p className="text-sm text-gray-600 mt-2 line-clamp-2">{profile.bio}</p>
             )}
+            {profile.home_city && (
+              <p className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                <MapPin size={13} />
+                {profile.home_city}
+              </p>
+            )}
 
             {/* Stats Row */}
             <div className="flex gap-5 mt-3">
-              <div>
-                <span className="text-sm font-bold text-gray-900">{reviews.length}</span>
-                <span className="text-xs text-gray-400 ml-1">posts</span>
-              </div>
               <Link href={`/profile/${params.id}/followers`} className="hover:text-emerald-600 transition-colors">
                 <span className="text-sm font-bold text-gray-900">{followers}</span>
                 <span className="text-xs text-gray-400 ml-1">followers</span>
@@ -194,32 +170,15 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
           )}
         </div>
 
-        {/* Reviews */}
+        {/* Explore CTA */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Activity</h2>
-          {reviews.length > 0 ? (
-            <div className="space-y-4">
-              {reviews.map(({ review, restaurant, author, photos }) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  restaurant={restaurant}
-                  author={author}
-                  photos={photos}
-                  isOwnReview={isOwnProfile}
-                  onDelete={() => setReviews(reviews.filter((r) => r.review.id !== review.id))}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Users}
-              title={isOwnProfile ? 'No activity yet' : 'No activity'}
-              description={isOwnProfile ? 'Start exploring restaurants' : "This user hasn't posted any activity yet"}
-              ctaText={isOwnProfile ? 'Browse restaurants' : undefined}
-              ctaHref={isOwnProfile ? '/restaurants' : undefined}
-            />
-          )}
+          <EmptyState
+            icon={Users}
+            title={isOwnProfile ? 'Start exploring' : `${profile.display_name} is on Gastronome`}
+            description={isOwnProfile ? 'Discover and compare restaurant ratings across Google, Yelp, and more' : 'Compare restaurant ratings from every major platform in one place'}
+            ctaText={isOwnProfile ? 'Browse restaurants' : undefined}
+            ctaHref={isOwnProfile ? '/restaurants' : undefined}
+          />
         </section>
       </div>
     </div>

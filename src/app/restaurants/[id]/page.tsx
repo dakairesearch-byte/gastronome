@@ -1,13 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import RestaurantCard from '@/components/RestaurantCard'
-import SourceRatingsBar from '@/components/SourceRatingsBar'
-import { getSourceRatings } from '@/components/SourceRatingsBar'
 import AccoladesBadges from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
-import ComingSoon from '@/components/ComingSoon'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, UtensilsCrossed, ArrowLeft } from 'lucide-react'
+import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -42,6 +39,90 @@ async function getRestaurantData(restaurantId: string) {
   }
 }
 
+type RatingSource = {
+  key: string
+  label: string
+  rating: number
+  maxRating: number
+  reviewCount?: number | null
+  reviewLabel: string
+  url: string | null
+  bg: string
+  accent: string
+  text: string
+  border: string
+}
+
+function buildRatingSources(restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']): RatingSource[] {
+  const sources: RatingSource[] = []
+
+  if (restaurant.google_rating != null) {
+    sources.push({
+      key: 'google',
+      label: 'Google',
+      rating: restaurant.google_rating,
+      maxRating: 5,
+      reviewCount: restaurant.google_review_count,
+      reviewLabel: 'reviews',
+      url: restaurant.google_url,
+      bg: 'bg-blue-50',
+      accent: 'text-[#4285F4]',
+      text: 'text-blue-500',
+      border: 'hover:border-blue-200',
+    })
+  }
+
+  if (restaurant.yelp_rating != null) {
+    sources.push({
+      key: 'yelp',
+      label: 'Yelp',
+      rating: restaurant.yelp_rating,
+      maxRating: 5,
+      reviewCount: restaurant.yelp_review_count,
+      reviewLabel: 'reviews',
+      url: restaurant.yelp_url,
+      bg: 'bg-red-50',
+      accent: 'text-[#D32323]',
+      text: 'text-red-500',
+      border: 'hover:border-red-200',
+    })
+  }
+
+  if (restaurant.infatuation_rating != null) {
+    sources.push({
+      key: 'infatuation',
+      label: 'The Infatuation',
+      rating: restaurant.infatuation_rating,
+      maxRating: 10,
+      reviewCount: null,
+      reviewLabel: 'Editorial',
+      url: restaurant.infatuation_url,
+      bg: 'bg-gray-50',
+      accent: 'text-gray-900',
+      text: 'text-gray-500',
+      border: 'hover:border-gray-300',
+    })
+  }
+
+  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) {
+    sources.push({
+      key: 'michelin',
+      label: 'Michelin',
+      rating: restaurant.michelin_stars,
+      maxRating: 3,
+      reviewCount: null,
+      reviewLabel: restaurant.michelin_designation || `${restaurant.michelin_stars} Star${restaurant.michelin_stars !== 1 ? 's' : ''}`,
+      url: restaurant.michelin_url,
+      bg: 'bg-red-50',
+      accent: 'text-[#CC0000]',
+      text: 'text-red-600',
+      border: 'hover:border-red-200',
+    })
+  }
+
+  return sources
+}
+
 export default async function RestaurantPage({
   params,
 }: {
@@ -54,16 +135,22 @@ export default async function RestaurantPage({
 
   const { restaurant, relatedRestaurants, videoCount } = data
   const priceDisplay = '$'.repeat(restaurant.price_range || 1)
-  const sourceRatings = getSourceRatings(restaurant)
+  const ratingSources = buildRatingSources(restaurant)
   const hasAccolades = restaurant.michelin_stars > 0 || restaurant.michelin_designation || restaurant.james_beard_winner || restaurant.james_beard_nominated || restaurant.eater_38
+  const photoUrl = restaurant.photo_url || restaurant.google_photo_url
+
+  // Build review links for "What People Are Saying"
+  const reviewLinks: { label: string; url: string }[] = []
+  if (restaurant.google_url) reviewLinks.push({ label: 'Google Maps', url: restaurant.google_url })
+  if (restaurant.yelp_url) reviewLinks.push({ label: 'Yelp', url: restaurant.yelp_url })
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Header */}
       <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
-        {restaurant.photo_url && (
+        {photoUrl && (
           <img
-            src={restaurant.photo_url}
+            src={photoUrl}
             alt={restaurant.name}
             className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
@@ -89,7 +176,7 @@ export default async function RestaurantPage({
                 </span>
               )}
               <span className="text-gray-500">&middot;</span>
-              <span>{priceDisplay}</span>
+              <span className="font-semibold text-emerald-400 font-mono">{priceDisplay}</span>
               <span className="text-gray-500">&middot;</span>
               <span className="inline-flex items-center gap-1">
                 <MapPin size={13} className="text-gray-400" />
@@ -97,7 +184,15 @@ export default async function RestaurantPage({
               </span>
             </div>
             {restaurant.address && (
-              <p className="text-sm text-gray-400 mt-2">{restaurant.address}</p>
+              <p className="text-sm text-gray-400 mt-2">
+                {restaurant.google_url ? (
+                  <a href={restaurant.google_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                    {restaurant.address} <ExternalLink size={11} className="inline -mt-0.5 ml-0.5" />
+                  </a>
+                ) : (
+                  restaurant.address
+                )}
+              </p>
             )}
           </div>
         </div>
@@ -117,56 +212,91 @@ export default async function RestaurantPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Ratings Panel */}
-            {sourceRatings.length > 0 && (
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Ratings Across the Web</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {sourceRatings.map((source) => (
-                    <RatingCard key={source.source} source={source} />
+            {/* Ratings Dashboard */}
+            {ratingSources.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">Ratings Dashboard</h2>
+                  {restaurant.last_fetched_at && (
+                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                      <Clock size={11} />
+                      Updated {new Date(restaurant.last_fetched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+                <div className={`grid gap-3 ${ratingSources.length === 1 ? 'grid-cols-1' : ratingSources.length === 2 ? 'grid-cols-2' : ratingSources.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                  {ratingSources.map((source) => (
+                    <DashboardCard key={source.key} source={source} />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Infatuation Snippet */}
-            {restaurant.infatuation_review_snippet && (
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
-                <p className="text-sm font-semibold text-orange-800 mb-2">The Infatuation says</p>
-                <p className="text-sm text-orange-900 italic leading-relaxed">
-                  &ldquo;{restaurant.infatuation_review_snippet}&rdquo;
+                <p className="text-xs text-gray-400 mt-3">
+                  {ratingSources.length} platform{ratingSources.length !== 1 ? 's' : ''} tracked
                 </p>
-                {restaurant.infatuation_url && (
-                  <a
-                    href={restaurant.infatuation_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mt-2"
-                  >
-                    Read full review <ExternalLink size={11} />
-                  </a>
-                )}
-              </div>
+              </section>
             )}
 
-            {/* Video Gallery */}
+            {/* What People Are Saying */}
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">What People Are Saying</h2>
+
+              {restaurant.infatuation_review_snippet ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3">
+                  <blockquote className="text-sm text-gray-700 italic leading-relaxed">
+                    &ldquo;{restaurant.infatuation_review_snippet}&rdquo;
+                  </blockquote>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500">&mdash; The Infatuation</span>
+                    {restaurant.infatuation_url && (
+                      <a
+                        href={restaurant.infatuation_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                      >
+                        Read full review <ExternalLink size={11} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {reviewLinks.length > 0 && (
+                <div className={`${restaurant.infatuation_review_snippet ? 'mt-3' : ''} bg-white border border-gray-200 rounded-xl p-4`}>
+                  <p className="text-sm text-gray-600">
+                    Read reviews on{' '}
+                    {reviewLinks.map((link, i) => (
+                      <span key={link.label}>
+                        {i > 0 && ' or '}
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 hover:text-emerald-700 font-medium"
+                        >
+                          {link.label} <ExternalLink size={11} className="inline -mt-0.5" />
+                        </a>
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* On Social — TikTok + Instagram Video Gallery */}
             {videoCount > 0 && (
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">
-                  Videos ({videoCount})
-                </h2>
+              <section>
+                <h2 className="text-lg font-bold text-gray-900 mb-4">On Social</h2>
                 <VideoGallery restaurantId={restaurant.id} />
-              </div>
+              </section>
             )}
 
             {/* Description */}
             {restaurant.description && (
-              <div>
+              <section>
                 <h2 className="text-lg font-bold text-gray-900 mb-3">About</h2>
                 <p className="text-sm text-gray-600 leading-relaxed">{restaurant.description}</p>
-              </div>
+              </section>
             )}
-
           </div>
 
           {/* Right sidebar */}
@@ -218,7 +348,7 @@ export default async function RestaurantPage({
               )}
             </div>
 
-            {/* Related Restaurants */}
+            {/* More in City */}
             {relatedRestaurants.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-3">More in {restaurant.city}</h3>
@@ -236,38 +366,50 @@ export default async function RestaurantPage({
   )
 }
 
-function RatingCard({ source }: { source: import('@/types/database').SourceRating }) {
-  const colorMap: Record<string, { bg: string; accent: string; text: string }> = {
-    google: { bg: 'bg-blue-50', accent: 'text-blue-700', text: 'text-blue-500' },
-    yelp: { bg: 'bg-red-50', accent: 'text-red-700', text: 'text-red-500' },
-    infatuation: { bg: 'bg-orange-50', accent: 'text-orange-700', text: 'text-orange-500' },
-  }
-  const colors = colorMap[source.source] || { bg: 'bg-gray-50', accent: 'text-gray-700', text: 'text-gray-500' }
-
+function DashboardCard({ source }: { source: RatingSource }) {
   const Wrapper = source.url ? 'a' : 'div'
   const wrapperProps = source.url
     ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' }
     : {}
 
+  // Michelin uses stars display instead of numeric
+  const isMichelin = source.key === 'michelin'
+
   return (
     <Wrapper
       {...wrapperProps}
-      className={`${colors.bg} rounded-xl p-4 text-center border border-transparent hover:border-gray-200 transition-colors group`}
+      className={`${source.bg} rounded-xl p-4 text-center border border-transparent ${source.border} transition-colors group`}
     >
-      <p className="text-xs font-bold uppercase text-gray-400 mb-1">{source.label}</p>
-      <p className={`text-2xl font-extrabold ${colors.accent}`}>
-        {source.rating}
-      </p>
-      <p className={`text-xs ${colors.text} mt-0.5`}>
-        / {source.maxRating}
-      </p>
-      {source.reviewCount != null && source.reviewCount > 0 && (
-        <p className="text-xs text-gray-400 mt-1">
-          {source.reviewCount.toLocaleString()} reviews
+      <p className="text-xs font-bold uppercase text-gray-400 tracking-wide mb-1.5">{source.label}</p>
+      {isMichelin ? (
+        <div className="flex items-center justify-center gap-0.5 mb-1">
+          {Array.from({ length: source.rating }).map((_, i) => (
+            <Star key={i} size={18} className="fill-[#CC0000] text-[#CC0000]" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <p className={`text-3xl font-extrabold ${source.accent}`}>
+            {source.rating}
+          </p>
+          <p className={`text-xs ${source.text} mt-0.5`}>
+            / {source.maxRating}
+          </p>
+        </>
+      )}
+      {source.reviewCount != null && source.reviewCount > 0 ? (
+        <p className="text-xs text-gray-400 mt-1.5">
+          {source.reviewCount.toLocaleString()} {source.reviewLabel}
+        </p>
+      ) : (
+        <p className="text-xs text-gray-400 mt-1.5">
+          {source.reviewLabel}
         </p>
       )}
       {source.url && (
-        <ExternalLink size={11} className="mx-auto mt-2 text-gray-300 group-hover:text-gray-400 transition-colors" />
+        <span className="inline-flex items-center gap-1 text-[10px] text-gray-300 group-hover:text-gray-500 mt-2 transition-colors">
+          View source <ExternalLink size={9} />
+        </span>
       )}
     </Wrapper>
   )
