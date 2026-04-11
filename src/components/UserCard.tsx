@@ -2,18 +2,15 @@ import Link from 'next/link'
 import { Profile } from '@/types/database'
 import { ArrowRight } from 'lucide-react'
 
-interface CriticCardProps {
+interface UserCardProps {
   profile: Profile
-  reviewCount: number
   followerCount: number
-  isFeatured?: boolean
 }
 
-export default function CriticCard({
+export default function UserCard({
   profile,
-  reviewCount,
   followerCount,
-}: CriticCardProps) {
+}: UserCardProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 transition-all duration-200 hover:shadow-md group">
       <Link href={`/profile/${profile.id}`}>
@@ -45,15 +42,9 @@ export default function CriticCard({
           </div>
 
           {/* Stats */}
-          <div className="flex gap-4 flex-shrink-0">
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-900">{reviewCount}</p>
-              <p className="text-[10px] text-gray-400">reviews</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-900">{followerCount}</p>
-              <p className="text-[10px] text-gray-400">followers</p>
-            </div>
+          <div className="flex-shrink-0 text-center">
+            <p className="text-sm font-bold text-gray-900">{followerCount}</p>
+            <p className="text-[10px] text-gray-400">followers</p>
           </div>
         </div>
       </Link>

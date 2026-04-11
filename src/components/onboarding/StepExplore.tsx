@@ -8,7 +8,7 @@ import type { City, Restaurant } from '@/types/database'
 
 interface StepExploreProps {
   cities: City[]
-  onNext: () => void
+  onNext: (selectedCity: string | null) => void
 }
 
 export default function StepExplore({ cities, onNext }: StepExploreProps) {
@@ -97,10 +97,10 @@ export default function StepExplore({ cities, onNext }: StepExploreProps) {
         </p>
 
         <button
-          onClick={onNext}
+          onClick={() => onNext(selectedCity)}
           className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
         >
-          Get Personalized Picks &rarr;
+          Make It Yours &rarr;
         </button>
       </div>
     </div>

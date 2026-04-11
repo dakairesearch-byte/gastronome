@@ -87,7 +87,7 @@ export default function StepCompare({ onNext }: StepCompareProps) {
           onClick={onNext}
           className="mt-4 px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
         >
-          What Can You Explore? &rarr;
+          See What You Can Explore &rarr;
         </button>
       </div>
     </div>

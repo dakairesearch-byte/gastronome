@@ -4,7 +4,7 @@ import AccoladesBadges from './AccoladesBadges'
 import TrendingBadge from './TrendingBadge'
 import { Restaurant } from '@/types/database'
 import type { TrendingTier } from '@/lib/placement'
-import { MapPin, Star } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 
 interface RestaurantCardProps {
   restaurant: Restaurant
@@ -13,7 +13,6 @@ interface RestaurantCardProps {
 
 export default function RestaurantCard({ restaurant, trendingTier }: RestaurantCardProps) {
   const priceDisplay = '$'.repeat(restaurant.price_range || 1)
-  const displayRating = restaurant.google_rating || restaurant.avg_rating || 0
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.james_beard_nominated ||
@@ -48,36 +47,16 @@ export default function RestaurantCard({ restaurant, trendingTier }: RestaurantC
                 <MapPin size={14} />
                 {restaurant.neighborhood || restaurant.city}
               </span>
+              <span className="text-gray-300">&middot;</span>
+              <span className="text-sm font-semibold text-emerald-600 font-mono">
+                {priceDisplay}
+              </span>
             </div>
           </div>
 
-          {/* Source Ratings Bar */}
+          {/* Source Ratings Bar — the ONLY rating display */}
           <div>
             <SourceRatingsBar restaurant={restaurant} />
-          </div>
-
-          {/* Rating and Price */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              {displayRating > 0 ? (
-                <>
-                  <Star size={16} className="fill-amber-400 text-amber-400" />
-                  <span className="text-sm font-semibold text-gray-900">
-                    {displayRating.toFixed(1)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-sm text-gray-400">No ratings yet</span>
-              )}
-              {restaurant.review_count > 0 && (
-                <span className="text-xs text-gray-500">
-                  ({restaurant.review_count})
-                </span>
-              )}
-            </div>
-            <span className="text-sm font-bold text-emerald-600 font-mono">
-              {priceDisplay}
-            </span>
           </div>
         </div>
       </div>
