@@ -8,11 +8,15 @@ export async function fetchInstagramVideos(
   name: string,
   city: string
 ) {
-  const searchQuery = `${name} ${city} restaurant`;
+  const searchQuery = `${name} ${city}`;
 
-  const run = await runActor('apify/instagram-reel-scraper', {
+  // Use the general Instagram scraper with place search + reels type
+  const run = await runActor('apify/instagram-scraper', {
     search: searchQuery,
+    searchType: 'place',
+    resultsType: 'reels',
     resultsLimit: 30,
+    searchLimit: 3,
   });
 
   const items = await getDatasetItems(run.defaultDatasetId);
