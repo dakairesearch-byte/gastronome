@@ -11,8 +11,7 @@ import {
   X,
   Home,
   Search,
-  Rss,
-  PenSquare,
+  MapPin,
   Settings,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -60,7 +59,6 @@ export default function Navbar() {
     return () => subscription?.unsubscribe()
   }, [supabase])
 
-  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -71,7 +69,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
@@ -90,16 +87,13 @@ export default function Navbar() {
   }
 
   const handleSelectGooglePlace = (place: any) => {
-    router.push(
-      `/review/new?name=${encodeURIComponent(place.name)}&city=${encodeURIComponent(place.city)}&address=${encodeURIComponent(place.address || '')}`
-    )
+    router.push(`/search?q=${encodeURIComponent(place.name)}`)
   }
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/restaurants', label: 'Explore', icon: Search },
-    { href: '/feed', label: 'Feed', icon: Rss, requiresAuth: true },
-    { href: '/review/new', label: 'Write a Review', icon: PenSquare, requiresAuth: true },
+    { href: '/cities', label: 'Cities', icon: MapPin },
   ]
 
   const isActive = (href: string) =>
@@ -122,21 +116,19 @@ export default function Navbar() {
 
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center gap-1">
-              {navLinks
-                .filter((link) => !link.requiresAuth || user)
-                .map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      isActive(link.href)
-                        ? 'text-emerald-700 bg-emerald-50'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? 'text-emerald-700 bg-emerald-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
 
             {/* Desktop Search */}
@@ -144,7 +136,7 @@ export default function Navbar() {
               <RestaurantSearchDropdown
                 onSelectLocal={handleSelectLocalRestaurant}
                 onSelectGoogle={handleSelectGooglePlace}
-                placeholder="Find a restaurant..."
+                placeholder="Search restaurants..."
                 size="sm"
               />
             </div>
@@ -270,7 +262,6 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* User info */}
             {user && profile && (
               <div className="p-4 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-3">
@@ -295,30 +286,26 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Nav Links */}
             <div className="py-2">
-              {navLinks
-                .filter((link) => !link.requiresAuth || user)
-                .map((link) => {
-                  const Icon = link.icon
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                        isActive(link.href)
-                          ? 'text-emerald-700 bg-emerald-50'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <Icon size={18} className={isActive(link.href) ? 'text-emerald-600' : 'text-gray-400'} />
-                      {link.label}
-                    </Link>
-                  )
-                })}
+              {navLinks.map((link) => {
+                const Icon = link.icon
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                      isActive(link.href)
+                        ? 'text-emerald-700 bg-emerald-50'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon size={18} className={isActive(link.href) ? 'text-emerald-600' : 'text-gray-400'} />
+                    {link.label}
+                  </Link>
+                )
+              })}
             </div>
 
-            {/* Profile / Auth links */}
             <div className="border-t border-gray-100 py-2">
               {user ? (
                 <>
