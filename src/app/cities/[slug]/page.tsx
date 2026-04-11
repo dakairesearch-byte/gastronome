@@ -3,7 +3,7 @@ import { getPlacedRestaurantsServer } from '@/lib/placement'
 import CityRestaurantGrid from '@/components/CityRestaurantGrid'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, ArrowLeft } from 'lucide-react'
+import { MapPin, ArrowLeft, Star, Award, TrendingUp } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -21,10 +21,8 @@ async function getCityData(slug: string) {
   // Use placement algorithm for restaurant ordering
   const restaurants = await getPlacedRestaurantsServer(supabase, {
     city: city.name,
-    limit: 200,
+    limit: 500,
   })
-
-  const cuisines = [...new Set(restaurants.map(r => r.cuisine).filter(c => c && c !== 'Restaurant'))].sort()
 
   // Get accurate total count (not limited by placement query)
   const { count: totalCount } = await supabase
@@ -32,11 +30,23 @@ async function getCityData(slug: string) {
     .select('*', { count: 'exact', head: true })
     .eq('city', city.name)
 
+  // Compute city stats
+  const michelinCount = restaurants.filter((r) => r.michelin_stars > 0).length
+  const jamesBeardCount = restaurants.filter((r) => r.james_beard_winner || r.james_beard_nominated).length
+
+  // Average Google rating across restaurants that have one
+  const ratedRestaurants = restaurants.filter((r) => r.google_rating != null && r.google_rating > 0)
+  const avgRating = ratedRestaurants.length > 0
+    ? Math.round((ratedRestaurants.reduce((sum, r) => sum + (r.google_rating || 0), 0) / ratedRestaurants.length) * 10) / 10
+    : null
+
   return {
     city,
     restaurants,
-    cuisines,
     totalCount: totalCount || restaurants.length,
+    michelinCount,
+    jamesBeardCount,
+    avgRating,
   }
 }
 
@@ -50,7 +60,7 @@ export default async function CityPage({
 
   if (!data) notFound()
 
-  const { city, restaurants, cuisines, totalCount } = data
+  const { city, restaurants, totalCount, michelinCount, jamesBeardCount, avgRating } = data
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,6 +92,34 @@ export default async function CityPage({
               </p>
             </div>
           </div>
+
+          {/* Stats Row */}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-6">
+            {michelinCount > 0 && (
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                <Star size={14} className="text-red-300" />
+                <span className="text-sm font-semibold text-white">
+                  {michelinCount} Michelin
+                </span>
+              </div>
+            )}
+            {jamesBeardCount > 0 && (
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                <Award size={14} className="text-amber-300" />
+                <span className="text-sm font-semibold text-white">
+                  {jamesBeardCount} James Beard
+                </span>
+              </div>
+            )}
+            {avgRating && (
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                <TrendingUp size={14} className="text-emerald-200" />
+                <span className="text-sm font-semibold text-white">
+                  {avgRating} avg rating
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -89,7 +127,6 @@ export default async function CityPage({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <CityRestaurantGrid
           restaurants={restaurants}
-          cuisines={cuisines}
           cityName={city.name}
         />
       </div>

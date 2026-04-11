@@ -9,24 +9,42 @@ import { MapPin } from 'lucide-react'
 interface RestaurantCardProps {
   restaurant: Restaurant
   trendingTier?: TrendingTier
+  rank?: number
+  showRank?: boolean
 }
 
-export default function RestaurantCard({ restaurant, trendingTier }: RestaurantCardProps) {
+function getBorderAccent(restaurant: Restaurant): string {
+  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) return 'border-l-4 border-l-red-400'
+  if (restaurant.james_beard_winner || restaurant.james_beard_nominated) return 'border-l-4 border-l-amber-400'
+  if (restaurant.eater_38) return 'border-l-4 border-l-pink-400'
+  return ''
+}
+
+export default function RestaurantCard({ restaurant, trendingTier, rank, showRank }: RestaurantCardProps) {
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.james_beard_nominated ||
     restaurant.eater_38
 
+  const borderAccent = getBorderAccent(restaurant)
+
   return (
     <Link href={`/restaurants/${restaurant.id}`}>
-      <div className="rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group">
+      <div className={`rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group ${borderAccent}`}>
         <div className="p-4 sm:p-5 space-y-2.5">
-          {/* Restaurant Name */}
+          {/* Restaurant Name with optional rank badge */}
           <div>
-            <h3 className="font-semibold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors">
-              {restaurant.name}
-            </h3>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              {showRank && rank != null && (
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center">
+                  {rank}
+                </span>
+              )}
+              <h3 className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors">
+                {restaurant.name}
+              </h3>
+            </div>
+            <div className={`flex items-center gap-2 mt-1 flex-wrap ${showRank && rank != null ? 'ml-[38px]' : ''}`}>
               {trendingTier && trendingTier !== 'none' && (
                 <TrendingBadge tier={trendingTier} />
               )}
@@ -44,11 +62,15 @@ export default function RestaurantCard({ restaurant, trendingTier }: RestaurantC
 
           {/* Accolade badges — own row below name */}
           {hasAccolades && (
-            <AccoladesBadges restaurant={restaurant} maxBadges={3} />
+            <div className={showRank && rank != null ? 'ml-[38px]' : ''}>
+              <AccoladesBadges restaurant={restaurant} maxBadges={3} />
+            </div>
           )}
 
           {/* Source Ratings Bar */}
-          <SourceRatingsBar restaurant={restaurant} />
+          <div className={showRank && rank != null ? 'ml-[38px]' : ''}>
+            <SourceRatingsBar restaurant={restaurant} />
+          </div>
         </div>
       </div>
     </Link>
