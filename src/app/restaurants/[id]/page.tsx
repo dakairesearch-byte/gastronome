@@ -5,7 +5,7 @@ import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBa
 import VideoGallery from '@/components/VideoGallery'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star, Clock } from 'lucide-react'
+import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -222,12 +222,6 @@ export default async function RestaurantPage({
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900">Ratings Dashboard</h2>
-                  {restaurant.last_fetched_at && (
-                    <span className="flex items-center gap-1 text-xs text-gray-400">
-                      <Clock size={11} />
-                      Updated {new Date(restaurant.last_fetched_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  )}
                 </div>
                 <div className={`grid gap-3 ${ratingSources.length === 1 ? 'grid-cols-1' : ratingSources.length === 2 ? 'grid-cols-2' : ratingSources.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
                   {ratingSources.map((source) => (
