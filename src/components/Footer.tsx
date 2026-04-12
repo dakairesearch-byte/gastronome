@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Globe, MessageCircle, Camera } from 'lucide-react'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -7,7 +6,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400 pb-20 md:pb-0">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 mb-8">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 mb-3">
@@ -58,34 +57,6 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
-
-          {/* Connect */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Connect</h3>
-            <div className="flex gap-3">
-              <a
-                href="#"
-                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
-                aria-label="Website"
-              >
-                <Globe size={14} />
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
-                aria-label="Community"
-              >
-                <MessageCircle size={14} />
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
-                aria-label="Photos"
-              >
-                <Camera size={14} />
-              </a>
-            </div>
           </div>
         </div>
 

@@ -23,13 +23,20 @@ const ACCOLADE_FILTERS: { key: AccoladeFilter; label: string; icon: typeof Star;
   { key: 'eater_38', label: 'Eater 38', icon: Utensils, activeColor: 'bg-pink-100 text-pink-700 border-pink-300' },
 ]
 
+function isSortTab(value: string | null): value is SortTab {
+  return value === 'ranked' || value === 'top' || value === 'newest'
+}
+
 function RestaurantsContent() {
   const searchParams = useSearchParams()
+  const initialSort: SortTab = isSortTab(searchParams.get('tab'))
+    ? (searchParams.get('tab') as SortTab)
+    : 'ranked'
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [cities, setCities] = useState<City[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeSort, setActiveSort] = useState<SortTab>('ranked')
+  const [activeSort, setActiveSort] = useState<SortTab>(initialSort)
   const [activeFilters, setActiveFilters] = useState<Set<AccoladeFilter>>(new Set())
   const [selectedCity, setSelectedCity] = useState<string>('all')
   const [page, setPage] = useState(1)
