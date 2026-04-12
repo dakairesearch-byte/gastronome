@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [cities, setCities] = useState<City[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -65,10 +66,16 @@ export default function SignupPage() {
       // Pass all profile data in metadata so the DB trigger (handle_new_user)
       // can create the profile row automatically with SECURITY DEFINER privileges.
       // This avoids RLS issues when email confirmation is enabled.
+      const emailRedirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback?next=/onboarding`
+          : undefined
+
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo,
           data: {
             username,
             display_name: displayName,
@@ -85,6 +92,16 @@ export default function SignupPage() {
 
       if (!data.user) {
         setError('Signup failed — no user returned')
+        return
+      }
+
+      // When email confirmation is enabled, signUp returns a user but no
+      // session. Pushing to /onboarding would bounce to /auth/login because
+      // the server component has no authenticated user to read. Show a
+      // "check your email" screen instead — the confirmation link already
+      // routes through /auth/callback?next=/onboarding.
+      if (!data.session) {
+        setAwaitingConfirmation(true)
         return
       }
 
@@ -121,6 +138,48 @@ export default function SignupPage() {
       {/* Right panel — form */}
       <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-8">
         <div className="w-full max-w-sm">
+          {awaitingConfirmation ? (
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl mb-4">
+                <svg
+                  className="w-6 h-6 text-emerald-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Check your email</h1>
+              <p className="text-sm text-gray-500 mt-2">
+                We sent a confirmation link to <span className="font-semibold text-gray-700">{email}</span>.
+                Click it to verify your account and start the onboarding.
+              </p>
+              <p className="text-xs text-gray-400 mt-6">
+                Didn&rsquo;t get it? Check your spam folder, or{' '}
+                <button
+                  type="button"
+                  onClick={() => setAwaitingConfirmation(false)}
+                  className="text-emerald-600 hover:text-emerald-700 font-semibold"
+                >
+                  try again
+                </button>
+                .
+              </p>
+              <p className="text-center text-sm text-gray-500 mt-8">
+                Already confirmed?{' '}
+                <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-xl mb-4 lg:hidden">
               <span className="text-white font-bold text-lg">G</span>
@@ -231,6 +290,8 @@ export default function SignupPage() {
               Sign in
             </Link>
           </p>
+          </>
+          )}
         </div>
       </div>
     </div>
