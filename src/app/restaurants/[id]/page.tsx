@@ -139,7 +139,6 @@ export default async function RestaurantPage({
   if (!data) notFound()
 
   const { restaurant, relatedRestaurants, videoCount } = data
-  const priceDisplay = '$'.repeat(restaurant.price_range || 1)
   const ratingSources = buildRatingSources(restaurant)
   const hasAccolades = restaurant.michelin_stars > 0 || restaurant.michelin_designation || restaurant.james_beard_winner || restaurant.james_beard_nominated || restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
@@ -180,8 +179,6 @@ export default async function RestaurantPage({
                   {restaurant.cuisine}
                 </span>
               )}
-              <span className="text-gray-500">&middot;</span>
-              <span className="font-semibold text-emerald-400 font-mono">{priceDisplay}</span>
               <span className="text-gray-500">&middot;</span>
               <span className="inline-flex items-center gap-1">
                 <MapPin size={13} className="text-gray-400" />

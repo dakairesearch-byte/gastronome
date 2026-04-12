@@ -14,7 +14,6 @@ export default function TopRestaurantCard({
   restaurant,
   rank,
 }: TopRestaurantCardProps) {
-  const priceDisplay = '$'.repeat(restaurant.price_range || 1)
   const composite = getCompositeRating(restaurant)
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
@@ -53,9 +52,6 @@ export default function TopRestaurantCard({
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <MapPin size={12} />
                 {restaurant.neighborhood || restaurant.city}
-              </span>
-              <span className="text-xs font-bold text-emerald-600 font-mono">
-                {priceDisplay}
               </span>
             </div>
           </div>

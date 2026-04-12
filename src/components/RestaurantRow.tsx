@@ -86,7 +86,6 @@ export default function RestaurantRow({
   buzz,
 }: RestaurantRowProps) {
   const composite = getCompositeRating(restaurant)
-  const price = restaurant.price_range > 0 ? '$'.repeat(Math.min(4, restaurant.price_range)) : null
 
   const hasAnyRating =
     restaurant.google_rating != null ||
@@ -144,9 +143,6 @@ export default function RestaurantRow({
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
-              {price && (
-                <span className="text-sm font-bold text-gray-400 tracking-wider">{price}</span>
-              )}
               {composite && (
                 <div className="flex items-center gap-1 text-gray-900">
                   <Star size={15} className="fill-amber-400 text-amber-400" />
