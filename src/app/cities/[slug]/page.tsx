@@ -30,6 +30,40 @@ async function getCityData(slug: string) {
     .select('*', { count: 'exact', head: true })
     .eq('city', city.name)
 
+  // Aggregate video buzz per restaurant (tiktok + instagram)
+  const restaurantIds = restaurants.map((r) => r.id)
+  const buzzByRestaurant: Record<
+    string,
+    {
+      tiktok: { likes: number; views: number; count: number }
+      instagram: { likes: number; views: number; count: number }
+      totalCount: number
+    }
+  > = {}
+
+  if (restaurantIds.length > 0) {
+    const { data: videoRows } = await supabase
+      .from('restaurant_videos')
+      .select('restaurant_id, platform, like_count, view_count')
+      .in('restaurant_id', restaurantIds)
+
+    for (const row of videoRows ?? []) {
+      const entry =
+        buzzByRestaurant[row.restaurant_id] ??
+        (buzzByRestaurant[row.restaurant_id] = {
+          tiktok: { likes: 0, views: 0, count: 0 },
+          instagram: { likes: 0, views: 0, count: 0 },
+          totalCount: 0,
+        })
+      const platform = row.platform === 'tiktok' ? 'tiktok' : row.platform === 'instagram' ? 'instagram' : null
+      if (!platform) continue
+      entry[platform].likes += row.like_count ?? 0
+      entry[platform].views += row.view_count ?? 0
+      entry[platform].count += 1
+      entry.totalCount += 1
+    }
+  }
+
   // Compute city stats
   const michelinCount = restaurants.filter((r) => r.michelin_stars > 0).length
   const jamesBeardCount = restaurants.filter((r) => r.james_beard_winner || r.james_beard_nominated).length
@@ -47,6 +81,7 @@ async function getCityData(slug: string) {
     michelinCount,
     jamesBeardCount,
     avgRating,
+    buzzByRestaurant,
   }
 }
 
@@ -60,7 +95,7 @@ export default async function CityPage({
 
   if (!data) notFound()
 
-  const { city, restaurants, totalCount, michelinCount, jamesBeardCount, avgRating } = data
+  const { city, restaurants, totalCount, michelinCount, jamesBeardCount, avgRating, buzzByRestaurant } = data
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,10 +159,11 @@ export default async function CityPage({
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <CityRestaurantGrid
           restaurants={restaurants}
           cityName={city.name}
+          buzzByRestaurant={buzzByRestaurant}
         />
       </div>
     </div>
