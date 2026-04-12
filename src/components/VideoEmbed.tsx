@@ -19,7 +19,7 @@ export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
       : `https://www.instagram.com/reel/${video.video_id}/embed/`
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-lg w-full mx-auto">
+    <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-[360px] sm:max-w-[400px] w-full mx-auto">
       {/* Header with close button */}
       {onClose && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">

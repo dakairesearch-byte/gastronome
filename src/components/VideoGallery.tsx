@@ -1,9 +1,53 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Heart, Eye, Play, SlidersHorizontal } from 'lucide-react'
+import { Heart, Eye, Play, SlidersHorizontal, Music2, Camera } from 'lucide-react'
 import type { RestaurantVideo } from '@/types/database'
 import VideoEmbed from './VideoEmbed'
+
+function VideoThumbnail({ video }: { video: RestaurantVideo }) {
+  const [failed, setFailed] = useState(false)
+  const showFallback = !video.thumbnail_url || failed
+
+  if (showFallback) {
+    const isTikTok = video.platform === 'tiktok'
+    const gradient = isTikTok
+      ? 'bg-gradient-to-br from-gray-900 via-gray-900 to-black'
+      : 'bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500'
+    const Icon = isTikTok ? Music2 : Camera
+    return (
+      <div className={`absolute inset-0 ${gradient} flex flex-col justify-between p-3 text-white`}>
+        <div className="flex items-center justify-between">
+          <Icon size={20} className="drop-shadow" />
+          <span className="px-1.5 py-0.5 bg-white/15 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wide">
+            {video.platform}
+          </span>
+        </div>
+        <div className="space-y-1">
+          {video.author_username && (
+            <p className="text-xs font-semibold opacity-90 truncate">
+              @{video.author_username}
+            </p>
+          )}
+          {video.caption && (
+            <p className="text-[11px] opacity-80 line-clamp-2 leading-snug">
+              {video.caption}
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={video.thumbnail_url!}
+      alt={video.caption || 'Video thumbnail'}
+      onError={() => setFailed(true)}
+      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+    />
+  )
+}
 
 type Platform = 'all' | 'tiktok' | 'instagram'
 type SortOption = 'most_liked' | 'most_viewed' | 'newest'
@@ -79,9 +123,9 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
     return (
       <div className="space-y-4">
         <div className="h-8 bg-gray-100 rounded-lg w-48 animate-pulse" />
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="aspect-[9/16] bg-gray-100 rounded-xl animate-pulse" />
+            <div key={i} className="aspect-[9/16] md:aspect-[3/4] lg:aspect-[4/5] max-h-[400px] bg-gray-100 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -156,24 +200,15 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
       </div>
 
       {/* Video grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 max-w-6xl">
         {filteredVideos.map((video) => (
           <button
             key={video.id}
             onClick={() => setSelectedVideo(video)}
-            className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-100 text-left"
+            className="group relative aspect-[9/16] md:aspect-[3/4] lg:aspect-[4/5] max-h-[400px] rounded-xl overflow-hidden bg-gray-100 text-left"
           >
-            {video.thumbnail_url ? (
-              <img
-                src={video.thumbnail_url}
-                alt={video.caption || 'Video thumbnail'}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-                <Play size={32} className="text-emerald-400" />
-              </div>
-            )}
+            <VideoThumbnail video={video} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
             {/* Overlay on hover */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200" />

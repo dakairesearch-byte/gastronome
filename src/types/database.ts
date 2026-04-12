@@ -20,6 +20,9 @@ export type Database = {
           is_critic: boolean
           creative_mode_enabled: boolean
           home_city: string | null
+          onboarding_completed: boolean
+          favorite_cities: Json
+          favorite_cuisines: Json
           created_at: string
           updated_at: string
         }
@@ -33,6 +36,9 @@ export type Database = {
           is_critic?: boolean
           creative_mode_enabled?: boolean
           home_city?: string | null
+          onboarding_completed?: boolean
+          favorite_cities?: Json
+          favorite_cuisines?: Json
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +52,9 @@ export type Database = {
           is_critic?: boolean
           creative_mode_enabled?: boolean
           home_city?: string | null
+          onboarding_completed?: boolean
+          favorite_cities?: Json
+          favorite_cuisines?: Json
           created_at?: string
           updated_at?: string
         }
