@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getPlacedRestaurantsServer } from '@/lib/placement'
 import RestaurantCard from '@/components/RestaurantCard'
 import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
@@ -19,13 +20,14 @@ async function getRestaurantData(restaurantId: string) {
 
   if (error || !restaurant) return null
 
-  const { data: relatedRestaurants } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('city', restaurant.city)
-    .neq('id', restaurantId)
-    .order('google_rating', { ascending: false })
-    .limit(4)
+  // Use placement algorithm for related restaurants in the same city.
+  const placedInCity = await getPlacedRestaurantsServer(supabase, {
+    city: restaurant.city,
+    limit: 8,
+  })
+  const relatedRestaurants = placedInCity
+    .filter((r) => r.id !== restaurantId)
+    .slice(0, 4)
 
   const { count: videoCount } = await supabase
     .from('restaurant_videos')
@@ -34,7 +36,7 @@ async function getRestaurantData(restaurantId: string) {
 
   return {
     restaurant,
-    relatedRestaurants: relatedRestaurants || [],
+    relatedRestaurants,
     videoCount: videoCount || 0,
   }
 }
