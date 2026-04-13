@@ -65,7 +65,10 @@ export default function RestaurantCard({ restaurant, trendingTier, rank, showRan
               )}
               <span className="flex items-center gap-1 text-sm text-gray-500">
                 <MapPin size={14} />
-                {restaurant.neighborhood || restaurant.city}
+                {restaurant.city}
+                {restaurant.neighborhood && (
+                  <span className="text-gray-400">&middot; {restaurant.neighborhood}</span>
+                )}
               </span>
             </div>
           </div>

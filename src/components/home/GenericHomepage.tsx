@@ -79,16 +79,21 @@ export default function GenericHomepage({
       {topRestaurants.length > 0 && (
         <section className="py-10 sm:py-14 bg-gray-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-emerald-600" />
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  Top Restaurants
-                </h2>
+            <div className="flex items-start justify-between mb-6 gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={20} className="text-emerald-600" />
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    Top Restaurants
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Ranked by aggregate rating across Google, Yelp, Beli &amp; The Infatuation
+                </p>
               </div>
               <Link
                 href="/restaurants"
-                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors whitespace-nowrap mt-1"
               >
                 View all
                 <ArrowRight size={14} />

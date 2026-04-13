@@ -11,15 +11,18 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Fetch common data in parallel
+  // Fetch common data in parallel.
+  // Over-fetch placed restaurants so we can drop any that have nothing
+  // to display (no ratings, no accolades) — empty cards make the home
+  // page look broken.
   const [
-    placedRestaurants,
+    rawPlacedRestaurants,
     trendingResults,
     { data: cities },
     { count: totalRestaurants },
     { count: totalCities },
   ] = await Promise.all([
-    getPlacedRestaurantsServer(supabase, { limit: 12 }),
+    getPlacedRestaurantsServer(supabase, { limit: 30 }),
     getTrendingRestaurants(supabase, { limit: 10 }),
     supabase
       .from('cities')
@@ -36,6 +39,20 @@ export default async function Home() {
       .eq('is_active', true)
       .gt('restaurant_count', 0),
   ])
+
+  // Drop restaurants with nothing visible to show (no ratings, no accolades).
+  const hasVisibleData = (r: typeof rawPlacedRestaurants[number]) =>
+    r.google_rating != null ||
+    r.yelp_rating != null ||
+    r.infatuation_rating != null ||
+    r.beli_score != null ||
+    (r.michelin_stars ?? 0) > 0 ||
+    r.james_beard_winner ||
+    r.james_beard_nominated ||
+    r.eater_38
+  const placedRestaurants = rawPlacedRestaurants
+    .filter(hasVisibleData)
+    .slice(0, 12)
 
   // Logged out → marketing homepage
   if (!user) {
