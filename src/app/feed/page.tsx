@@ -11,42 +11,39 @@ export const metadata = {
     'See the latest restaurant additions and rating updates across all cities.',
 }
 
+const PER_CITY = 8
+
 export default async function RecentPage() {
   const supabase = await createServerSupabaseClient()
 
-  const { data: restaurants } = await supabase
-    .from('restaurants')
-    .select('*')
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .limit(60)
+  const { data: cityRows } = await supabase
+    .from('cities')
+    .select('id, name, slug, restaurant_count')
+    .eq('is_active', true)
+    .gt('restaurant_count', 0)
+    .order('restaurant_count', { ascending: false })
 
-  const [{ data: cityRows }] = await Promise.all([
-    supabase.from('cities').select('name, slug').eq('is_active', true),
-  ])
+  const cities = cityRows ?? []
 
-  const slugByCity = new Map<string, string>()
-  for (const c of cityRows ?? []) {
-    if (c.name && c.slug) slugByCity.set(c.name.toLowerCase(), c.slug)
-  }
+  const cityData = await Promise.all(
+    cities.map(async (city) => {
+      const { data: restaurants, count } = await supabase
+        .from('restaurants')
+        .select('*', { count: 'exact' })
+        .ilike('city', city.name)
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(PER_CITY)
 
-  // Group by city, preserving per-city recency
-  const cityGroups = new Map<string, NonNullable<typeof restaurants>>()
-  for (const r of restaurants ?? []) {
-    const city = r.city || 'Unknown'
-    if (!cityGroups.has(city)) cityGroups.set(city, [])
-    cityGroups.get(city)!.push(r)
-  }
+      return {
+        city,
+        restaurants: restaurants ?? [],
+        total: count ?? 0,
+      }
+    })
+  )
 
-  const sortedGroups = [...cityGroups.entries()]
-    .map(([city, rests]) => ({
-      city,
-      restaurants: rests.slice(0, 6),
-      latestUpdate: rests[0]?.updated_at || '',
-    }))
-    .sort(
-      (a, b) =>
-        new Date(b.latestUpdate).getTime() - new Date(a.latestUpdate).getTime()
-    )
+  const activeCityData = cityData.filter((d) => d.restaurants.length > 0)
+  const totalTracked = activeCityData.reduce((sum, d) => sum + d.total, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -61,49 +58,51 @@ export default async function RecentPage() {
           </div>
           <p className="text-gray-400 text-sm">
             Latest restaurant additions and rating updates
+            {activeCityData.length > 0 && totalTracked > 0 && (
+              <>
+                {' '}across {activeCityData.length}{' '}
+                {activeCityData.length === 1 ? 'city' : 'cities'} &middot;{' '}
+                {totalTracked.toLocaleString()} restaurants tracked
+              </>
+            )}
           </p>
         </div>
       </div>
 
       {/* City Sections */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {sortedGroups.length > 0 ? (
-          <div className="space-y-10">
-            {sortedGroups.map((group) => {
-              const slug = slugByCity.get(group.city.toLowerCase())
-              return (
-                <section key={group.city}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <MapPin size={18} className="text-emerald-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
-                        {group.city}
-                      </h2>
-                      <span className="text-sm text-gray-400">
-                        {group.restaurants.length} updated
-                      </span>
-                    </div>
-                    {slug && (
-                      <Link
-                        href={`/cities/${slug}`}
-                        className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                      >
-                        View all <ChevronRight size={14} />
-                      </Link>
-                    )}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {activeCityData.length > 0 ? (
+          <div className="space-y-12">
+            {activeCityData.map(({ city, restaurants, total }) => (
+              <section key={city.id}>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={18} className="text-emerald-600" />
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      {city.name}
+                    </h2>
+                    <span className="text-sm text-gray-400">
+                      {total.toLocaleString()} tracked
+                    </span>
                   </div>
+                  <Link
+                    href={`/cities/${city.slug}`}
+                    className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    View all <ChevronRight size={14} />
+                  </Link>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {group.restaurants.map((restaurant) => (
-                      <RestaurantCard
-                        key={restaurant.id}
-                        restaurant={restaurant}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {restaurants.map((restaurant) => (
+                    <RestaurantCard
+                      key={restaurant.id}
+                      restaurant={restaurant}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         ) : (
           <div className="text-center bg-white rounded-xl border border-gray-100 p-10">
