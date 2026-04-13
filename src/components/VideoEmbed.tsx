@@ -1,4 +1,4 @@
-import { X, Heart, Eye, MessageCircle } from 'lucide-react'
+import { X, Heart, Eye, MessageCircle, ExternalLink } from 'lucide-react'
 import type { RestaurantVideo } from '@/types/database'
 
 interface VideoEmbedProps {
@@ -97,6 +97,15 @@ export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
               {formatCount(video.comment_count)}
             </span>
           )}
+          <a
+            href={video.video_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+          >
+            Watch on {video.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
+            <ExternalLink size={11} />
+          </a>
         </div>
       </div>
     </div>

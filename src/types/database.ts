@@ -85,6 +85,8 @@ export type Database = {
           infatuation_rating: number | null
           infatuation_url: string | null
           infatuation_review_snippet: string | null
+          beli_score: number | null
+          beli_url: string | null
           latitude: number | null
           longitude: number | null
           photo_url: string | null
@@ -126,6 +128,8 @@ export type Database = {
           infatuation_rating?: number | null
           infatuation_url?: string | null
           infatuation_review_snippet?: string | null
+          beli_score?: number | null
+          beli_url?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null
@@ -167,6 +171,8 @@ export type Database = {
           infatuation_rating?: number | null
           infatuation_url?: string | null
           infatuation_review_snippet?: string | null
+          beli_score?: number | null
+          beli_url?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null
@@ -515,7 +521,7 @@ export type Accolade = {
 }
 
 export type SourceRating = {
-  source: 'google' | 'yelp' | 'infatuation'
+  source: 'google' | 'yelp' | 'infatuation' | 'beli'
   rating: number | null
   reviewCount?: number
   url: string | null

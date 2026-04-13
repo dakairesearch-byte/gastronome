@@ -5,7 +5,7 @@ import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBa
 import VideoGallery from '@/components/VideoGallery'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, ArrowLeft, Star } from 'lucide-react'
+import { MapPin, Phone, Globe, ExternalLink, ArrowLeft } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -42,90 +42,81 @@ async function getRestaurantData(restaurantId: string) {
 }
 
 type RatingSource = {
-  key: string
+  key: 'google' | 'yelp' | 'infatuation' | 'beli'
   label: string
-  rating: number
+  icon: string
+  rating: number | null
   maxRating: number
   reviewCount?: number | null
-  reviewLabel: string
   url: string | null
   bg: string
+  border: string
   accent: string
   text: string
-  border: string
+  iconBg: string
 }
 
-function buildRatingSources(restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']): RatingSource[] {
-  const sources: RatingSource[] = []
-
-  if (restaurant.google_rating != null) {
-    sources.push({
+function buildRatingSources(
+  restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']
+): RatingSource[] {
+  return [
+    {
       key: 'google',
       label: 'Google',
+      icon: 'G',
       rating: restaurant.google_rating,
       maxRating: 5,
       reviewCount: restaurant.google_review_count,
-      reviewLabel: 'reviews',
       url: restaurant.google_url,
       bg: 'bg-blue-50',
-      accent: 'text-[#4285F4]',
-      text: 'text-blue-500',
-      border: 'hover:border-blue-200',
-    })
-  }
-
-  if (restaurant.yelp_rating != null) {
-    sources.push({
+      border: 'border-blue-200',
+      accent: 'text-blue-700',
+      text: 'text-blue-600',
+      iconBg: 'bg-blue-100',
+    },
+    {
       key: 'yelp',
       label: 'Yelp',
+      icon: 'Y',
       rating: restaurant.yelp_rating,
       maxRating: 5,
       reviewCount: restaurant.yelp_review_count,
-      reviewLabel: 'reviews',
       url: restaurant.yelp_url,
       bg: 'bg-red-50',
-      accent: 'text-[#D32323]',
-      text: 'text-red-500',
-      border: 'hover:border-red-200',
-    })
-  }
-
-  if (restaurant.infatuation_rating != null) {
-    sources.push({
+      border: 'border-red-200',
+      accent: 'text-red-700',
+      text: 'text-red-600',
+      iconBg: 'bg-red-100',
+    },
+    {
       key: 'infatuation',
-      label: 'The Infatuation',
+      label: 'Infatuation',
+      icon: 'TI',
       rating: restaurant.infatuation_rating,
       maxRating: 10,
       reviewCount: null,
-      reviewLabel: 'Editorial',
       url: restaurant.infatuation_url,
-      bg: 'bg-gray-50',
-      accent: 'text-gray-900',
-      text: 'text-gray-500',
-      border: 'hover:border-gray-300',
-    })
-  }
-
-  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) {
-    const designationLabel = restaurant.michelin_stars > 0
-      ? `${restaurant.michelin_stars} Star${restaurant.michelin_stars !== 1 ? 's' : ''}`
-      : getDesignationDisplay(restaurant.michelin_designation)
-    sources.push({
-      key: 'michelin',
-      label: 'Michelin',
-      rating: restaurant.michelin_stars,
-      maxRating: 3,
+      bg: 'bg-orange-50',
+      border: 'border-orange-200',
+      accent: 'text-orange-700',
+      text: 'text-orange-600',
+      iconBg: 'bg-orange-100',
+    },
+    {
+      key: 'beli',
+      label: 'Beli',
+      icon: 'B',
+      rating: restaurant.beli_score,
+      maxRating: 10,
       reviewCount: null,
-      reviewLabel: designationLabel,
-      url: restaurant.michelin_url,
-      bg: 'bg-red-50',
-      accent: 'text-[#CC0000]',
-      text: 'text-red-600',
-      border: 'hover:border-red-200',
-    })
-  }
-
-  return sources
+      url: restaurant.beli_url,
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      accent: 'text-purple-700',
+      text: 'text-purple-600',
+      iconBg: 'bg-purple-100',
+    },
+  ]
 }
 
 export default async function RestaurantPage({
@@ -142,11 +133,7 @@ export default async function RestaurantPage({
   const ratingSources = buildRatingSources(restaurant)
   const hasAccolades = restaurant.michelin_stars > 0 || restaurant.michelin_designation || restaurant.james_beard_winner || restaurant.james_beard_nominated || restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
-
-  // Build review links for "What People Are Saying"
-  const reviewLinks: { label: string; url: string }[] = []
-  if (restaurant.google_url) reviewLinks.push({ label: 'Google Maps', url: restaurant.google_url })
-  if (restaurant.yelp_url) reviewLinks.push({ label: 'Yelp', url: restaurant.yelp_url })
+  const trackedCount = ratingSources.filter((s) => s.rating != null).length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -215,32 +202,23 @@ export default async function RestaurantPage({
           {/* Left column */}
           <div className="lg:col-span-2 space-y-8">
             {/* Ratings Dashboard */}
-            {ratingSources.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">Ratings Dashboard</h2>
-                </div>
-                <div className={`grid gap-3 ${ratingSources.length === 1 ? 'grid-cols-1' : ratingSources.length === 2 ? 'grid-cols-2' : ratingSources.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
-                  {ratingSources.map((source) => (
-                    <DashboardCard key={source.key} source={source} />
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-3">
-                  {ratingSources.length} platform{ratingSources.length !== 1 ? 's' : ''} tracked
-                </p>
-              </section>
-            )}
-
-            {/* What People Are Saying */}
             <section>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">What People Are Saying</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Ratings Dashboard</h2>
+                <span className="text-xs text-gray-400">{trackedCount} of 4 sources tracked</span>
+              </div>
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+                {ratingSources.map((source) => (
+                  <DashboardCard key={source.key} source={source} />
+                ))}
+              </div>
 
-              {restaurant.infatuation_review_snippet ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3">
+              {restaurant.infatuation_review_snippet && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
                   <blockquote className="text-sm text-gray-700 italic leading-relaxed">
                     &ldquo;{restaurant.infatuation_review_snippet}&rdquo;
                   </blockquote>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-3">
                     <span className="text-xs font-semibold text-gray-500">&mdash; The Infatuation</span>
                     {restaurant.infatuation_url && (
                       <a
@@ -254,34 +232,16 @@ export default async function RestaurantPage({
                     )}
                   </div>
                 </div>
-              ) : null}
-
-              {reviewLinks.length > 0 && (
-                <div className={`${restaurant.infatuation_review_snippet ? 'mt-3' : ''} bg-white border border-gray-200 rounded-xl p-4`}>
-                  <p className="text-sm text-gray-600">
-                    Read reviews on{' '}
-                    {reviewLinks.map((link, i) => (
-                      <span key={link.label}>
-                        {i > 0 && ' or '}
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-600 hover:text-emerald-700 font-medium"
-                        >
-                          {link.label} <ExternalLink size={11} className="inline -mt-0.5" />
-                        </a>
-                      </span>
-                    ))}
-                  </p>
-                </div>
               )}
             </section>
 
             {/* On Social — TikTok + Instagram Video Gallery */}
             {videoCount > 0 && (
               <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-4">On Social</h2>
+                <div className="mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">On Social</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Videos from TikTok &amp; Instagram</p>
+                </div>
                 <VideoGallery restaurantId={restaurant.id} />
               </section>
             )}
@@ -364,51 +324,48 @@ export default async function RestaurantPage({
 }
 
 function DashboardCard({ source }: { source: RatingSource }) {
-  const Wrapper = source.url ? 'a' : 'div'
-  const wrapperProps = source.url
-    ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' }
-    : {}
+  const hasRating = source.rating != null
+  const Wrapper = hasRating && source.url ? 'a' : 'div'
+  const wrapperProps =
+    hasRating && source.url
+      ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' }
+      : {}
 
-  // Michelin uses stars display instead of numeric
-  const isMichelin = source.key === 'michelin'
+  if (!hasRating) {
+    return (
+      <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-100">
+        <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gray-100 flex items-center justify-center">
+          <span className="text-xs font-bold text-gray-400">{source.icon}</span>
+        </div>
+        <p className="text-xs font-bold uppercase text-gray-400 tracking-wide">{source.label}</p>
+        <p className="text-3xl font-extrabold text-gray-300 mt-1">&mdash;</p>
+        <p className="text-xs text-gray-400 mt-1.5">Not yet tracked</p>
+      </div>
+    )
+  }
 
   return (
     <Wrapper
       {...wrapperProps}
-      className={`${source.bg} rounded-xl p-4 text-center border border-transparent ${source.border} transition-colors group`}
+      className={`${source.bg} rounded-xl p-4 text-center border ${source.border} transition-colors group block`}
     >
-      <p className="text-xs font-bold uppercase text-gray-400 tracking-wide mb-1.5">{source.label}</p>
-      {isMichelin ? (
-        source.rating > 0 ? (
-          <div className="flex items-center justify-center gap-0.5 mb-1">
-            {Array.from({ length: source.rating }).map((_, i) => (
-              <Star key={i} size={18} className="fill-[#CC0000] text-[#CC0000]" />
-            ))}
-          </div>
-        ) : (
-          <p className={`text-lg font-extrabold ${source.accent} mb-1`}>{source.reviewLabel}</p>
-        )
-      ) : (
-        <>
-          <p className={`text-3xl font-extrabold ${source.accent}`}>
-            {source.rating.toFixed(1)}
-          </p>
-          <p className={`text-xs ${source.text} mt-0.5`}>
-            / {source.maxRating}
-          </p>
-        </>
-      )}
+      <div className={`w-8 h-8 mx-auto mb-2 rounded-lg ${source.iconBg} flex items-center justify-center`}>
+        <span className={`text-xs font-bold ${source.accent}`}>{source.icon}</span>
+      </div>
+      <p className="text-xs font-bold uppercase text-gray-500 tracking-wide">{source.label}</p>
+      <p className={`text-3xl font-extrabold ${source.accent} mt-1`}>
+        {source.rating!.toFixed(1)}
+      </p>
+      <p className={`text-xs ${source.text} mt-0.5`}>/ {source.maxRating}</p>
       {source.reviewCount != null && source.reviewCount > 0 ? (
         <p className="text-xs text-gray-400 mt-1.5">
-          {source.reviewCount.toLocaleString()} {source.reviewCount === 1 ? 'review' : source.reviewLabel}
+          {source.reviewCount.toLocaleString()} {source.reviewCount === 1 ? 'review' : 'reviews'}
         </p>
       ) : (
-        <p className="text-xs text-gray-400 mt-1.5">
-          {source.reviewLabel}
-        </p>
+        <p className="text-xs text-gray-400 mt-1.5">Rated</p>
       )}
       {source.url && (
-        <span className="inline-flex items-center gap-1 text-[10px] text-gray-300 group-hover:text-gray-500 mt-2 transition-colors">
+        <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-gray-600 mt-2 transition-colors">
           View source <ExternalLink size={9} />
         </span>
       )}

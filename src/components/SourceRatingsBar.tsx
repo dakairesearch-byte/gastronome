@@ -43,6 +43,19 @@ export function getSourceRatings(restaurant: Restaurant): SourceRating[] {
     })
   }
 
+  if (restaurant.beli_score != null) {
+    ratings.push({
+      source: 'beli',
+      rating: restaurant.beli_score,
+      reviewCount: undefined,
+      url: restaurant.beli_url,
+      maxRating: 10,
+      color: 'purple',
+      label: 'Beli',
+      icon: 'B',
+    })
+  }
+
   return ratings
 }
 

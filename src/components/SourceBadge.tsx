@@ -7,6 +7,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
   google: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   yelp: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
   infatuation: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  beli: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
 }
 
 interface SourceBadgeProps {
