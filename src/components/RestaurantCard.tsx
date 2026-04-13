@@ -20,6 +20,14 @@ function getBorderAccent(restaurant: Restaurant): string {
   return ''
 }
 
+function getRankBadgeStyles(rank: number): string {
+  if (rank === 1) return 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white ring-2 ring-amber-200'
+  if (rank === 2) return 'bg-gradient-to-br from-gray-300 to-gray-400 text-white ring-2 ring-gray-200'
+  if (rank === 3) return 'bg-gradient-to-br from-amber-600 to-orange-700 text-white ring-2 ring-orange-200'
+  if (rank <= 10) return 'bg-emerald-600 text-white'
+  return 'bg-gray-400 text-white'
+}
+
 export default function RestaurantCard({ restaurant, trendingTier, rank, showRank }: RestaurantCardProps) {
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
@@ -36,7 +44,9 @@ export default function RestaurantCard({ restaurant, trendingTier, rank, showRan
           <div>
             <div className="flex items-center gap-2.5">
               {showRank && rank != null && (
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center">
+                <span
+                  className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center ${getRankBadgeStyles(rank)}`}
+                >
                   {rank}
                 </span>
               )}
