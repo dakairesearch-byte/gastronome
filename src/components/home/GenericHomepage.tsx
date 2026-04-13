@@ -31,53 +31,47 @@ export default function GenericHomepage({
 
   return (
     <div className="min-h-screen">
-      {/* Compact Hero with Search */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-medium mb-5">
-              <BarChart3 size={12} />
-              Every rating. One place.
+      {/* Compact Welcome Banner with Search */}
+      <section className="bg-gradient-to-r from-gray-900 to-emerald-950 text-white py-8 sm:py-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Gastronome
+              </h1>
+              <p className="text-gray-400 text-sm mt-1">
+                Every rating. One place.
+              </p>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-white leading-tight tracking-tight">
-              The truth about
-              <br />
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                every restaurant
-              </span>
-            </h1>
-            <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-xl mx-auto">
-              Google, Yelp, The Infatuation, and Michelin ratings side by side.
-            </p>
-
-            {/* Inline Search */}
-            <HeroSearchBar variant="dark" />
-
-            {/* Stats */}
-            <div className="mt-8 flex justify-center gap-8 sm:gap-16">
+            <div className="flex items-center gap-3 sm:gap-4 text-sm text-gray-400 flex-wrap">
               {totalRestaurants > 0 && (
-                <div className="text-center">
-                  <p className="text-2xl sm:text-3xl font-bold text-white">
-                    {totalRestaurants.toLocaleString()}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">Restaurants</p>
-                </div>
+                <>
+                  <span>
+                    <span className="font-semibold text-white">
+                      {totalRestaurants.toLocaleString()}
+                    </span>{' '}
+                    restaurants
+                  </span>
+                  <span className="text-gray-600">&middot;</span>
+                </>
               )}
-              <div className="text-center">
-                <p className="text-2xl sm:text-3xl font-bold text-white">4</p>
-                <p className="text-xs sm:text-sm text-gray-500">Rating Sources</p>
-              </div>
               {totalCities > 0 && (
-                <div className="text-center">
-                  <p className="text-2xl sm:text-3xl font-bold text-white">
-                    {totalCities.toLocaleString()}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">Cities</p>
-                </div>
+                <>
+                  <span>
+                    <span className="font-semibold text-white">{totalCities}</span>{' '}
+                    cities
+                  </span>
+                  <span className="text-gray-600">&middot;</span>
+                </>
               )}
+              <span>
+                <span className="font-semibold text-white">4</span> sources
+              </span>
             </div>
           </div>
+
+          {/* Inline Search */}
+          <HeroSearchBar variant="dark" />
         </div>
       </section>
 
