@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import TopRestaurantCard from './TopRestaurantCard'
-import RestaurantCard from '@/components/RestaurantCard'
+import RestaurantRow from '@/components/RestaurantRow'
 import CityCard from '@/components/CityCard'
 import { ArrowRight, Clock, Flame, MapPin, Settings } from 'lucide-react'
 import type { Restaurant, City, Profile } from '@/types/database'
@@ -119,9 +119,9 @@ export default function ForYouFeed({
                 {hasCity ? `Recently Added in ${cityName}` : 'Recently Added'}
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {recentRestaurants.map((restaurant) => (
-                <RestaurantCard
+                <RestaurantRow
                   key={restaurant.id}
                   restaurant={restaurant}
                 />
@@ -164,9 +164,9 @@ export default function ForYouFeed({
                 {hasCity ? `Trending in ${cityName}` : 'Trending Now'}
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {trendingRestaurants.slice(0, 6).map((restaurant) => (
-                <RestaurantCard
+                <RestaurantRow
                   key={restaurant.id}
                   restaurant={restaurant}
                   trendingTier={restaurant.trending_tier}

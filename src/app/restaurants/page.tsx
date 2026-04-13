@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import RestaurantCard from '@/components/RestaurantCard'
+import RestaurantRow from '@/components/RestaurantRow'
 import EmptyState from '@/components/EmptyState'
 import ExploreFilters, {
   type SortTab,
@@ -172,9 +172,9 @@ export default async function RestaurantsPage({
             }
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             {restaurants.map((restaurant, i) => (
-              <RestaurantCard
+              <RestaurantRow
                 key={restaurant.id}
                 restaurant={restaurant}
                 rank={tab === 'ranked' ? (page - 1) * PAGE_SIZE + i + 1 : undefined}

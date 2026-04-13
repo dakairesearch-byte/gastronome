@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import RestaurantCard from '@/components/RestaurantCard'
+import RestaurantRow from '@/components/RestaurantRow'
 import { Clock, MapPin, ChevronRight } from 'lucide-react'
 
 export const revalidate = 60
@@ -93,9 +93,9 @@ export default async function RecentPage() {
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                   {restaurants.map((restaurant) => (
-                    <RestaurantCard
+                    <RestaurantRow
                       key={restaurant.id}
                       restaurant={restaurant}
                     />

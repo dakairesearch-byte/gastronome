@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import RestaurantCard from '@/components/RestaurantCard'
+import RestaurantRow from '@/components/RestaurantRow'
 import CityCard from '@/components/CityCard'
 import HeroSearchBar from '@/components/HeroSearchBar'
 import {
@@ -65,7 +65,7 @@ export default function GenericHomepage({
                 </>
               )}
               <span>
-                <span className="font-semibold text-white">4</span> sources
+                <span className="font-semibold text-white">5</span> sources
               </span>
             </div>
           </div>
@@ -99,9 +99,9 @@ export default function GenericHomepage({
                 <ArrowRight size={14} />
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {topRestaurants.map((restaurant, i) => (
-                <RestaurantCard
+                <RestaurantRow
                   key={restaurant.id}
                   restaurant={restaurant}
                   rank={i + 1}
@@ -153,9 +153,9 @@ export default function GenericHomepage({
                 <ArrowRight size={14} />
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {trending.slice(0, 8).map((restaurant) => (
-                <RestaurantCard
+                <RestaurantRow
                   key={restaurant.id}
                   restaurant={restaurant}
                   trendingTier={restaurant.trending_tier}
