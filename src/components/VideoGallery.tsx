@@ -142,9 +142,16 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
 
   if (videos.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
-        <Play size={32} className="mx-auto mb-2 text-gray-300" />
-        <p className="text-sm">No videos yet</p>
+      <div className="py-10 text-center border border-dashed border-gray-200 rounded-xl bg-gray-50">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-4">
+          <Play className="h-6 w-6 text-gray-400" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-700 mb-1">
+          No social videos yet
+        </h3>
+        <p className="text-sm text-gray-500 max-w-xs mx-auto">
+          We&apos;re tracking TikTok and Instagram for this restaurant. Videos will appear here as they&apos;re discovered.
+        </p>
       </div>
     )
   }

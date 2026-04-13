@@ -236,15 +236,20 @@ export default async function RestaurantPage({
             </section>
 
             {/* On Social — TikTok + Instagram Video Gallery */}
-            {videoCount > 0 && (
-              <section>
-                <div className="mb-4">
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div>
                   <h2 className="text-lg font-bold text-gray-900">On Social</h2>
                   <p className="text-xs text-gray-500 mt-0.5">Videos from TikTok &amp; Instagram</p>
                 </div>
-                <VideoGallery restaurantId={restaurant.id} />
-              </section>
-            )}
+                <span className="text-xs text-gray-400">
+                  {videoCount > 0
+                    ? `${videoCount} video${videoCount !== 1 ? 's' : ''}`
+                    : 'TikTok & Instagram'}
+                </span>
+              </div>
+              <VideoGallery restaurantId={restaurant.id} />
+            </section>
 
             {/* Description */}
             {restaurant.description && (
