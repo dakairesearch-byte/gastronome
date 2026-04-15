@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { runActor, getDatasetItems } from '@/lib/apify/client'
+import { searchPlaces } from '@/lib/google/places'
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,23 +39,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Search Google Places via Apify
+    // Search Google Places via the native Places API
     let googleResults: unknown[] = []
     try {
       const searchQuery = city ? `${q} restaurants in ${city}` : `${q} restaurant`
-
-      const run = await runActor('compass/crawler-google-places', {
-        searchStringsArray: [searchQuery],
-        maxCrawledPlacesPerSearch: 10,
-        language: 'en',
-        maxReviews: 0,
-      })
-
-      const items = await getDatasetItems(run.defaultDatasetId)
-      googleResults = items ?? []
+      googleResults = await searchPlaces(searchQuery, 10)
     } catch {
       // If Google search fails, still return local results
-      console.error('Google Places search via Apify failed')
+      console.error('Google Places search failed')
     }
 
     return NextResponse.json({

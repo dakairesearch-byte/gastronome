@@ -1,5 +1,5 @@
 -- Rating snapshot table: stores daily rating snapshots for trend detection
--- Populate via a daily cron job or Apify post-fetch hook
+-- Populate via a daily cron job or post-fetch hook
 -- Used by trending algorithm's rating_momentum component (future)
 
 CREATE TABLE IF NOT EXISTS restaurant_rating_snapshots (

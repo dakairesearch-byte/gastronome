@@ -1,6 +1,5 @@
 /**
- * Google Places API (New) client
- * Uses the Places API directly instead of Apify for fetching restaurant data and reviews.
+ * Google Places API (New) client for fetching restaurant data and reviews.
  *
  * Endpoints used:
  * - Text Search: POST https://places.googleapis.com/v1/places:searchText
@@ -44,9 +43,9 @@ const DETAIL_FIELDS = [
 ].join(',')
 
 /**
- * Search for a restaurant using Google Places Text Search
+ * Search for restaurants using Google Places Text Search
  */
-export async function searchPlace(query: string): Promise<GooglePlace | null> {
+export async function searchPlaces(query: string, maxResultCount = 10): Promise<GooglePlace[]> {
   const res = await fetch(`${PLACES_BASE}/places:searchText`, {
     method: 'POST',
     headers: {
@@ -56,7 +55,7 @@ export async function searchPlace(query: string): Promise<GooglePlace | null> {
     },
     body: JSON.stringify({
       textQuery: query,
-      maxResultCount: 1,
+      maxResultCount,
     }),
   })
 
@@ -66,7 +65,15 @@ export async function searchPlace(query: string): Promise<GooglePlace | null> {
   }
 
   const data = await res.json()
-  return data.places?.[0] || null
+  return data.places ?? []
+}
+
+/**
+ * Search for a single restaurant using Google Places Text Search
+ */
+export async function searchPlace(query: string): Promise<GooglePlace | null> {
+  const results = await searchPlaces(query, 1)
+  return results[0] ?? null
 }
 
 /**
@@ -97,7 +104,6 @@ export function getPhotoUrl(photoName: string, maxWidth = 800): string {
 
 /**
  * Fetch Google data for a restaurant and update Supabase
- * Drop-in replacement for the Apify-based fetchGoogleData
  */
 export async function fetchGoogleData(restaurantId: string, name: string, city: string) {
   // Step 1: Search for the place
