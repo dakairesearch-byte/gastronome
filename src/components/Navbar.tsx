@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import type { Profile } from '@/types/database'
 import {
   User,
   LogOut,
@@ -18,8 +20,8 @@ import {
 import { useRouter } from 'next/navigation'
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
@@ -68,9 +70,16 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    setMobileMenuOpen(false)
-  }, [pathname])
+  // Close the mobile menu whenever the route changes. The documented React
+  // pattern for "adjust state during rendering" uses a companion state to
+  // detect the change — this avoids setState inside an effect (which the
+  // React 19 lint rule disallows) while still reacting synchronously to
+  // navigation.
+  const [trackedPathname, setTrackedPathname] = useState(pathname)
+  if (trackedPathname !== pathname) {
+    setTrackedPathname(pathname)
+    if (mobileMenuOpen) setMobileMenuOpen(false)
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

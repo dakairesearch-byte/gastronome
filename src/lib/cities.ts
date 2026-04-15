@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { City, Database } from '@/types/database'
+import { paginateSelect } from '@/lib/supabase/paginate'
 
 type Supabase = SupabaseClient<Database>
 
@@ -23,14 +24,18 @@ export type CityWithLiveCount = City & { live_restaurant_count: number }
 export async function getCitiesWithLiveCounts(
   supabase: Supabase
 ): Promise<CityWithLiveCount[]> {
-  const [citiesRes, restaurantsRes] = await Promise.all([
+  const [citiesRes, restaurantRows] = await Promise.all([
     supabase.from('cities').select('*').eq('is_active', true),
-    supabase.from('restaurants').select('city'),
+    // Paginated: the restaurants table can easily cross PostgREST's 1000-row
+    // cap, which would silently under-count busy cities like NYC.
+    paginateSelect<{ city: string | null }>((from, to) =>
+      supabase.from('restaurants').select('city').range(from, to)
+    ),
   ])
 
   const cities = (citiesRes.data ?? []) as City[]
   const counts = new Map<string, number>()
-  for (const row of restaurantsRes.data ?? []) {
+  for (const row of restaurantRows) {
     if (!row.city) continue
     const key = row.city.toLowerCase()
     counts.set(key, (counts.get(key) ?? 0) + 1)

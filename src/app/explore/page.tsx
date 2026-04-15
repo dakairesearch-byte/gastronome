@@ -5,6 +5,7 @@ import {
   topTrendingRestaurants,
   type TrendingRestaurant,
 } from '@/lib/ranking/trending'
+import { paginateSelect } from '@/lib/supabase/paginate'
 import CollectionCard from '@/components/cards/CollectionCard'
 import HiddenGemCard from '@/components/cards/HiddenGemCard'
 import NewOpeningTile from '@/components/cards/NewOpeningTile'
@@ -65,19 +66,24 @@ export default async function ExplorePage({
   // ----- Hub mode -----
 
   const [
-    eaterByCityRes,
+    eaterRows,
     jamesBeardRes,
     michelinRes,
     bibRes,
     infatuationRes,
-    cuisineStatsRes,
+    cuisineRows,
     newOpeningsRes,
     trendingSeed,
   ] = await Promise.all([
-    supabase
-      .from('restaurants')
-      .select('city', { count: 'exact' })
-      .eq('eater_38', true),
+    // Paginated: hub aggregates a per-city histogram client-side, so a
+    // 1000-row cap would quietly drop cities once Eater 38 coverage grows.
+    paginateSelect<{ city: string | null }>((from, to) =>
+      supabase
+        .from('restaurants')
+        .select('city')
+        .eq('eater_38', true)
+        .range(from, to)
+    ),
     supabase
       .from('restaurants')
       .select('id', { count: 'exact', head: true })
@@ -94,7 +100,10 @@ export default async function ExplorePage({
       .from('restaurants')
       .select('id', { count: 'exact', head: true })
       .not('infatuation_url', 'is', null),
-    supabase.from('restaurants').select('cuisine'),
+    // Paginated: same reason — we bucket cuisines across the full table.
+    paginateSelect<{ cuisine: string | null }>((from, to) =>
+      supabase.from('restaurants').select('cuisine').range(from, to)
+    ),
     supabase
       .from('restaurants')
       .select('*')
@@ -109,7 +118,7 @@ export default async function ExplorePage({
 
   // Eater 38 per city
   const eaterCountsByCity = new Map<string, number>()
-  for (const row of eaterByCityRes.data ?? []) {
+  for (const row of eaterRows) {
     if (!row.city) continue
     eaterCountsByCity.set(
       row.city,
@@ -119,7 +128,7 @@ export default async function ExplorePage({
 
   // Top 5 cuisines by raw restaurant count
   const cuisineCounts = new Map<string, number>()
-  for (const row of cuisineStatsRes.data ?? []) {
+  for (const row of cuisineRows) {
     const c = row.cuisine
     if (!c || c === 'Restaurant') continue
     cuisineCounts.set(c, (cuisineCounts.get(c) ?? 0) + 1)
@@ -379,7 +388,9 @@ async function FilteredExploreView({
   // If trending produced nothing (no events anywhere), fall back to raw
   // restaurants so the collection isn't mysteriously empty.
   let rows: Array<Restaurant & { trending_rank?: number }> = filtered
+  let usedFallback = false
   if (rows.length === 0) {
+    usedFallback = true
     const fallback = await supabase
       .from('restaurants')
       .select('*')
@@ -428,8 +439,10 @@ async function FilteredExploreView({
             {title}
           </h1>
           <p className="mt-1 text-gray-400 text-sm">
-            {rows.length} {rows.length === 1 ? 'restaurant' : 'restaurants'} ·
-            ranked by trending engagement (30-day window)
+            {rows.length} {rows.length === 1 ? 'restaurant' : 'restaurants'} ·{' '}
+            {usedFallback
+              ? 'sorted alphabetically (no recent engagement to rank on)'
+              : 'ranked by trending engagement (30-day window)'}
           </p>
         </div>
       </section>

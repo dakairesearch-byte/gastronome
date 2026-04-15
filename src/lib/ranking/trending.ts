@@ -18,8 +18,10 @@
  * All weights live in `./weights.ts`. Tune ranking there, not here.
  */
 
+import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Restaurant } from '@/types/database'
+import { paginateSelect } from '@/lib/supabase/paginate'
 import {
   DEFAULT_WINDOW,
   WEIGHTS,
@@ -222,34 +224,49 @@ export async function fetchRawData(
 ): Promise<RawData> {
   const cutoff = cutoffForWindow(window, now)
 
-  const [restaurantRes, videoRes, reviewRes, photoRes] = await Promise.all([
-    supabase.from('restaurants').select('id, city, cuisine'),
-    supabase
-      .from('restaurant_videos')
-      .select('restaurant_id')
-      .gt('created_at', cutoff),
-    supabase
-      .from('reviews')
-      .select('restaurant_id')
-      .gt('created_at', cutoff),
+  // All four queries are paginated: PostgREST caps un-ranged responses at
+  // 1000 rows, and the restaurants table, any 30d review window, and the
+  // 30d photos window can all cross that cap silently.
+  const [restaurantRows, videoRows, reviewRows, photoRows] = await Promise.all([
+    paginateSelect<{ id: string; city: string | null; cuisine: string | null }>(
+      (from, to) =>
+        supabase.from('restaurants').select('id, city, cuisine').range(from, to)
+    ),
+    paginateSelect<{ restaurant_id: string }>((from, to) =>
+      supabase
+        .from('restaurant_videos')
+        .select('restaurant_id')
+        .gt('created_at', cutoff)
+        .range(from, to)
+    ),
+    paginateSelect<{ restaurant_id: string }>((from, to) =>
+      supabase
+        .from('reviews')
+        .select('restaurant_id')
+        .gt('created_at', cutoff)
+        .range(from, to)
+    ),
     // review_photos.created_at + inner join to reviews for restaurant_id
-    supabase
-      .from('review_photos')
-      .select('reviews!inner(restaurant_id)')
-      .gt('created_at', cutoff),
+    paginateSelect<{ reviews: unknown }>((from, to) =>
+      supabase
+        .from('review_photos')
+        .select('reviews!inner(restaurant_id)')
+        .gt('created_at', cutoff)
+        .range(from, to)
+    ),
   ])
 
-  const restaurants = (restaurantRes.data ?? []).map((r) => ({
+  const restaurants = restaurantRows.map((r) => ({
     id: r.id,
     city: r.city,
     cuisine: r.cuisine,
   }))
 
-  const videoEvents = (videoRes.data ?? []).map((v) => ({
+  const videoEvents = videoRows.map((v) => ({
     restaurant_id: v.restaurant_id,
   }))
 
-  const reviewEvents = (reviewRes.data ?? []).map((r) => ({
+  const reviewEvents = reviewRows.map((r) => ({
     restaurant_id: r.restaurant_id,
   }))
 
@@ -258,7 +275,7 @@ export async function fetchRawData(
   // reviews it's many-to-one, so the expected shape is an object, but we
   // defensively handle both.
   const photoEvents: Array<{ restaurant_id: string }> = []
-  for (const row of photoRes.data ?? []) {
+  for (const row of photoRows) {
     const rel = (row as unknown as { reviews: unknown }).reviews
     if (!rel) continue
     if (Array.isArray(rel)) {
@@ -277,14 +294,20 @@ export async function fetchRawData(
 
 /**
  * Full pipeline: fetch raw data and compute scores.
+ *
+ * Memoized per-request via `React.cache` so that a single page rendering
+ * multiple trending rails (e.g. global + city-scoped) doesn't recompute
+ * the score map. The memoization key is (supabase, window); because the
+ * supabase client is typically the same instance within a request, the
+ * second call for the same window is a hash-map hit.
  */
-export async function computeAllScores(
+export const computeAllScores = cache(async function computeAllScores(
   supabase: Supabase,
   window: Window = DEFAULT_WINDOW
 ): Promise<Map<string, ScoreData>> {
   const data = await fetchRawData(supabase, window)
   return computeScoresFromData(data)
-}
+})
 
 // ---------- Public API ----------
 
