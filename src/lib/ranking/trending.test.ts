@@ -37,9 +37,6 @@ function nVideos(restaurantId: string, n: number) {
 function nReviews(restaurantId: string, n: number) {
   return Array.from({ length: n }, () => ({ restaurant_id: restaurantId }))
 }
-function nPhotos(restaurantId: string, n: number) {
-  return Array.from({ length: n }, () => ({ restaurant_id: restaurantId }))
-}
 
 // ---------- pure helpers ----------
 

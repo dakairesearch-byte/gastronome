@@ -25,13 +25,8 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-300 mb-3">Explore</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/restaurants" className="text-sm hover:text-white transition-colors">
-                  Restaurants
-                </Link>
-              </li>
-              <li>
-                <Link href="/top-rated" className="text-sm hover:text-white transition-colors">
-                  Top Rated
+                <Link href="/explore" className="text-sm hover:text-white transition-colors">
+                  Discover
                 </Link>
               </li>
               <li>
@@ -52,8 +47,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/feed" className="text-sm hover:text-white transition-colors">
-                  Recently Updated
+                <Link href="/recent" className="text-sm hover:text-white transition-colors">
+                  What&apos;s new
                 </Link>
               </li>
             </ul>

@@ -83,8 +83,8 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/restaurants', label: 'Explore', icon: Search },
-    { href: '/feed', label: 'Recent', icon: Clock },
+    { href: '/explore', label: 'Explore', icon: Search },
+    { href: '/recent', label: 'Recent', icon: Clock },
     { href: '/cities', label: 'Cities', icon: MapPin },
   ]
 

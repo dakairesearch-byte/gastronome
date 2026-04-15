@@ -78,9 +78,9 @@ export default function CitySelector({ availableCities = [] }: CitySelectorProps
 
   const handleExplore = () => {
     if (selectedCity) {
-      router.push(`/restaurants?city=${encodeURIComponent(selectedCity)}`)
+      router.push(`/explore?city=${encodeURIComponent(selectedCity)}`)
     } else {
-      router.push('/restaurants')
+      router.push('/explore')
     }
   }
 

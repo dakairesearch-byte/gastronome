@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getPlacedRestaurantsServer } from '@/lib/placement'
+import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import RestaurantCard from '@/components/RestaurantCard'
+import type { Restaurant } from '@/types/database'
 import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
 import Link from 'next/link'
@@ -20,14 +21,26 @@ async function getRestaurantData(restaurantId: string) {
 
   if (error || !restaurant) return null
 
-  // Use placement algorithm for related restaurants in the same city.
-  const placedInCity = await getPlacedRestaurantsServer(supabase, {
-    city: restaurant.city,
+  // Related: top trending in the same city, excluding the current
+  // restaurant. Falls back to alphabetical if nothing's trending yet.
+  const trending = await topTrendingRestaurants(supabase, {
+    city: restaurant.city ?? undefined,
+    window: '30d',
     limit: 8,
   })
-  const relatedRestaurants = placedInCity
+  let relatedRestaurants: Restaurant[] = trending
     .filter((r) => r.id !== restaurantId)
     .slice(0, 4)
+  if (relatedRestaurants.length === 0 && restaurant.city) {
+    const { data: fallback } = await supabase
+      .from('restaurants')
+      .select('*')
+      .ilike('city', restaurant.city)
+      .neq('id', restaurantId)
+      .order('name')
+      .limit(4)
+    relatedRestaurants = (fallback ?? []) as Restaurant[]
+  }
 
   const { count: videoCount } = await supabase
     .from('restaurant_videos')
@@ -149,11 +162,11 @@ export default async function RestaurantPage({
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent" />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
           <Link
-            href="/restaurants"
+            href="/explore"
             className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white font-medium mb-6 transition-colors"
           >
             <ArrowLeft size={14} />
-            All restaurants
+            Discover
           </Link>
 
           <div className="max-w-3xl">

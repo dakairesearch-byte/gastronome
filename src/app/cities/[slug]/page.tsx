@@ -1,11 +1,37 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getPlacedRestaurantsServer } from '@/lib/placement'
-import CityRestaurantGrid from '@/components/CityRestaurantGrid'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, ArrowLeft, Star, Award, TrendingUp } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { ArrowLeft, Award, MapPin, Star } from 'lucide-react'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { topTrendingRestaurants } from '@/lib/ranking/trending'
+import AccoladesBadges from '@/components/AccoladesBadges'
+import EmptyState from '@/components/EmptyState'
+import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
+
+interface SearchParamsInput {
+  cuisine?: string
+  accolade?: string
+}
+
+function applyAccoladeFilter(
+  rows: Restaurant[],
+  accolade: string | null
+): Restaurant[] {
+  if (!accolade) return rows
+  if (accolade === 'michelin_star') return rows.filter((r) => (r.michelin_stars ?? 0) > 0)
+  if (accolade === 'bib_gourmand')
+    return rows.filter((r) => r.michelin_designation === 'bib_gourmand')
+  if (accolade === 'james_beard')
+    return rows.filter((r) => r.james_beard_nominated || r.james_beard_winner)
+  if (accolade === 'eater_38') return rows.filter((r) => r.eater_38)
+  return rows
+}
+
+function applyCuisineFilter(rows: Restaurant[], cuisine: string | null): Restaurant[] {
+  if (!cuisine) return rows
+  return rows.filter((r) => r.cuisine?.toLowerCase() === cuisine.toLowerCase())
+}
 
 async function getCityData(slug: string) {
   const supabase = await createServerSupabaseClient()
@@ -18,100 +44,109 @@ async function getCityData(slug: string) {
 
   if (!city) return null
 
-  // Use placement algorithm for restaurant ordering
-  const restaurants = await getPlacedRestaurantsServer(supabase, {
-    city: city.name,
-    limit: 500,
-  })
+  // Live count (never trust cities.restaurant_count — it's denormalized
+  // and goes stale with every ingestion).
+  const [{ count: totalCount }, { data: allRestaurants }, trending] =
+    await Promise.all([
+      supabase
+        .from('restaurants')
+        .select('*', { count: 'exact', head: true })
+        .ilike('city', city.name),
+      supabase
+        .from('restaurants')
+        .select('*')
+        .ilike('city', city.name)
+        .order('name', { ascending: true })
+        .limit(500),
+      topTrendingRestaurants(supabase, {
+        window: '30d',
+        city: city.name,
+        limit: 500,
+      }),
+    ])
 
-  // Get accurate total count (not limited by placement query)
-  const { count: totalCount } = await supabase
-    .from('restaurants')
-    .select('*', { count: 'exact', head: true })
-    .eq('city', city.name)
-
-  // Aggregate video buzz per restaurant (tiktok + instagram)
-  const restaurantIds = restaurants.map((r) => r.id)
-  const buzzByRestaurant: Record<
-    string,
-    {
-      tiktok: { likes: number; views: number; count: number }
-      instagram: { likes: number; views: number; count: number }
-      totalCount: number
-    }
-  > = {}
-
-  if (restaurantIds.length > 0) {
-    const { data: videoRows } = await supabase
-      .from('restaurant_videos')
-      .select('restaurant_id, platform, like_count, view_count')
-      .in('restaurant_id', restaurantIds)
-
-    for (const row of videoRows ?? []) {
-      const entry =
-        buzzByRestaurant[row.restaurant_id] ??
-        (buzzByRestaurant[row.restaurant_id] = {
-          tiktok: { likes: 0, views: 0, count: 0 },
-          instagram: { likes: 0, views: 0, count: 0 },
-          totalCount: 0,
-        })
-      const platform = row.platform === 'tiktok' ? 'tiktok' : row.platform === 'instagram' ? 'instagram' : null
-      if (!platform) continue
-      entry[platform].likes += row.like_count ?? 0
-      entry[platform].views += row.view_count ?? 0
-      entry[platform].count += 1
-      entry.totalCount += 1
-    }
+  const all = (allRestaurants ?? []) as Restaurant[]
+  const michelinCount = all.filter(
+    (r) => (r.michelin_stars ?? 0) > 0 || !!r.michelin_designation
+  ).length
+  const jamesBeardCount = all.filter(
+    (r) => r.james_beard_winner || r.james_beard_nominated
+  ).length
+  const cuisineCounts = new Map<string, number>()
+  for (const r of all) {
+    if (!r.cuisine || r.cuisine === 'Restaurant') continue
+    cuisineCounts.set(r.cuisine, (cuisineCounts.get(r.cuisine) ?? 0) + 1)
   }
-
-  // Compute city stats
-  const michelinCount = restaurants.filter((r) => r.michelin_stars > 0).length
-  const jamesBeardCount = restaurants.filter((r) => r.james_beard_winner || r.james_beard_nominated).length
-
-  // Average Google rating across restaurants that have one
-  const ratedRestaurants = restaurants.filter((r) => r.google_rating != null && r.google_rating > 0)
-  const avgRating = ratedRestaurants.length > 0
-    ? Math.round((ratedRestaurants.reduce((sum, r) => sum + (r.google_rating || 0), 0) / ratedRestaurants.length) * 10) / 10
-    : null
+  const topCuisines = [...cuisineCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([name]) => name)
 
   return {
     city,
-    restaurants,
-    totalCount: totalCount || restaurants.length,
+    all,
+    trending,
+    totalCount: totalCount ?? all.length,
     michelinCount,
     jamesBeardCount,
-    avgRating,
-    buzzByRestaurant,
+    topCuisines,
   }
 }
 
 export default async function CityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<SearchParamsInput>
 }) {
   const { slug } = await params
+  const raw = await searchParams
+  const activeCuisine = raw.cuisine?.trim() || null
+  const activeAccolade = raw.accolade?.trim() || null
+
   const data = await getCityData(slug)
-
   if (!data) notFound()
+  const {
+    city,
+    all,
+    trending,
+    totalCount,
+    michelinCount,
+    jamesBeardCount,
+    topCuisines,
+  } = data
 
-  const { city, restaurants, totalCount, michelinCount, jamesBeardCount, avgRating, buzzByRestaurant } = data
+  // Use trending order when available, fall back to alphabetical on empty.
+  const trendingById = new Map(trending.map((t) => [t.id, t]))
+  const ordered: Restaurant[] =
+    trending.length > 0
+      ? (trending as Restaurant[]).concat(
+          all.filter((r) => !trendingById.has(r.id))
+        )
+      : all
+
+  const filtered = applyCuisineFilter(
+    applyAccoladeFilter(ordered, activeAccolade),
+    activeCuisine
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* City Header */}
       <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 overflow-hidden">
         {city.photo_url && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={city.photo_url}
             alt={city.name}
             className="absolute inset-0 w-full h-full object-cover opacity-20"
           />
         )}
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
           <Link
             href="/cities"
-            className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white font-medium mb-4 transition-colors focus-visible:ring-2 focus-visible:ring-white outline-none rounded"
+            className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white font-medium mb-4 transition-colors"
           >
             <ArrowLeft size={14} />
             All cities
@@ -128,8 +163,7 @@ export default async function CityPage({
             </div>
           </div>
 
-          {/* Stats Row */}
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-6">
+          <div className="flex flex-wrap items-center gap-3 mt-6">
             {michelinCount > 0 && (
               <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5">
                 <Star size={14} className="text-red-300" />
@@ -146,25 +180,113 @@ export default async function CityPage({
                 </span>
               </div>
             )}
-            {avgRating && (
-              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5">
-                <TrendingUp size={14} className="text-emerald-200" />
-                <span className="text-sm font-semibold text-white">
-                  {avgRating} avg rating
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <CityRestaurantGrid
-          restaurants={restaurants}
-          cityName={city.name}
-          buzzByRestaurant={buzzByRestaurant}
-        />
+      {/* Filters */}
+      <div className="sticky top-14 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 space-y-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            {[
+              { key: 'michelin_star', label: 'Michelin' },
+              { key: 'bib_gourmand', label: 'Bib Gourmand' },
+              { key: 'james_beard', label: 'James Beard' },
+              { key: 'eater_38', label: 'Eater 38' },
+            ].map(({ key, label }) => {
+              const active = activeAccolade === key
+              const params = new URLSearchParams()
+              if (!active) params.set('accolade', key)
+              if (activeCuisine) params.set('cuisine', activeCuisine)
+              const qs = params.toString()
+              return (
+                <Link
+                  key={key}
+                  href={qs ? `/cities/${city.slug}?${qs}` : `/cities/${city.slug}`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${
+                    active
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </div>
+          {topCuisines.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              {topCuisines.map((cuisineName) => {
+                const active =
+                  activeCuisine?.toLowerCase() === cuisineName.toLowerCase()
+                const params = new URLSearchParams()
+                if (activeAccolade) params.set('accolade', activeAccolade)
+                if (!active) params.set('cuisine', cuisineName)
+                const qs = params.toString()
+                return (
+                  <Link
+                    key={cuisineName}
+                    href={qs ? `/cities/${city.slug}?${qs}` : `/cities/${city.slug}`}
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-colors ${
+                      active
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {cuisineName}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <p className="text-xs text-gray-500 mb-4">
+          {filtered.length} showing ·
+          {trending.length > 0
+            ? ' ranked by trending engagement (30-day window)'
+            : ' alphabetical'}
+        </p>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={MapPin}
+            title="No matches"
+            description="Clear a filter to see all restaurants in this city."
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((r, i) => {
+              const trendingRank =
+                trending.length > 0 && trendingById.get(r.id)?.trending_rank
+              return (
+                <Link
+                  key={r.id}
+                  href={`/restaurants/${r.id}`}
+                  className="group block rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-300 hover:shadow-sm transition-all"
+                >
+                  <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                    {r.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500 truncate">
+                    {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                    {r.neighborhood ? ` • ${r.neighborhood}` : ''}
+                  </p>
+                  {trendingRank ? (
+                    <p className="mt-2 text-[11px] font-semibold text-orange-600">
+                      🔥 #{trendingRank} trending in {city.name}
+                    </p>
+                  ) : i < trending.length === false ? null : null}
+                  <div className="mt-2">
+                    <AccoladesBadges restaurant={r} maxBadges={3} />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

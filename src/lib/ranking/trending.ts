@@ -19,7 +19,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
+import type { Database, Restaurant } from '@/types/database'
 import {
   DEFAULT_WINDOW,
   WEIGHTS,
@@ -28,6 +28,13 @@ import {
 } from './weights'
 
 type Supabase = SupabaseClient<Database>
+
+/** A restaurant with the trending rank and score attached. */
+export type TrendingRestaurant = Restaurant & {
+  trending_rank: number
+  trending_score: number
+  trending_counts: EventCounts
+}
 
 export interface TrendingOptions {
   city?: string
@@ -313,6 +320,44 @@ export async function topTrending(
     cuisine: options.cuisine,
     limit: options.limit,
   })
+}
+
+/**
+ * Like `topTrending`, but joins each entry back to the full restaurant row
+ * so the caller can render cards without a second query. Entries with a
+ * score of 0 are dropped — the caller shouldn't have to filter them out.
+ */
+export async function topTrendingRestaurants(
+  supabase: Supabase,
+  options: TrendingOptions & { limit?: number } = {}
+): Promise<TrendingRestaurant[]> {
+  const ranked = await topTrending(supabase, options)
+  const nonZero = ranked.filter((r) => r.score > 0)
+  if (nonZero.length === 0) return []
+
+  const { data: rows } = await supabase
+    .from('restaurants')
+    .select('*')
+    .in(
+      'id',
+      nonZero.map((r) => r.restaurant_id)
+    )
+
+  const byId = new Map<string, Restaurant>()
+  for (const row of rows ?? []) byId.set(row.id, row as Restaurant)
+
+  const out: TrendingRestaurant[] = []
+  for (const entry of nonZero) {
+    const row = byId.get(entry.restaurant_id)
+    if (!row) continue
+    out.push({
+      ...row,
+      trending_rank: entry.rank,
+      trending_score: entry.score,
+      trending_counts: entry.counts,
+    })
+  }
+  return out
 }
 
 /**

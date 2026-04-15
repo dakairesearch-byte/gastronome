@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getPlacedRestaurants } from '@/lib/placement'
 import SearchBar from '@/components/SearchBar'
 import RestaurantCard from '@/components/RestaurantCard'
 import FilterChips from '@/components/FilterChips'
@@ -177,24 +176,14 @@ function SearchContent() {
           restaurantQuery = restaurantQuery.in('cuisine', selectedCuisines)
         }
 
-        const { data: restaurantData } = await restaurantQuery.limit(50)
+        const { data: restaurantData } = await restaurantQuery
+          .order('name', { ascending: true })
+          .limit(20)
 
-        // Re-sort matched results using the placement algorithm.
-        // Text search still controls matching; placement controls display order.
-        let orderedRestaurants: Restaurant[] = restaurantData || []
-        if (orderedRestaurants.length > 0) {
-          const placed = await getPlacedRestaurants(supabase, { limit: 500 })
-          const placementRank = new Map<string, number>()
-          placed.forEach((r, i) => placementRank.set(r.id, i))
-          orderedRestaurants = [...orderedRestaurants].sort((a, b) => {
-            const ra = placementRank.has(a.id) ? placementRank.get(a.id)! : Number.MAX_SAFE_INTEGER
-            const rb = placementRank.has(b.id) ? placementRank.get(b.id)! : Number.MAX_SAFE_INTEGER
-            if (ra !== rb) return ra - rb
-            return (b.google_rating ?? 0) - (a.google_rating ?? 0)
-          })
-          orderedRestaurants = orderedRestaurants.slice(0, 20)
-        }
-
+        // Search returns results in text-match + alphabetical order. No
+        // ranking here — discovery lives on /explore, which uses the
+        // project's single trending function.
+        const orderedRestaurants: Restaurant[] = restaurantData || []
         setRestaurants(orderedRestaurants)
 
         // Search Google Places in parallel
@@ -276,8 +265,8 @@ function SearchContent() {
                 ? 'Try adjusting your filters or search terms'
                 : 'Enter a restaurant name, cuisine, or city to get started'
             }
-            ctaText="Browse All Restaurants"
-            ctaHref="/restaurants"
+            ctaText="Discover"
+            ctaHref="/explore"
           />
         )}
 

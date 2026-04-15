@@ -105,7 +105,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             title={isOwnProfile ? 'Start exploring' : `${profile.display_name} is on Gastronome`}
             description={isOwnProfile ? 'Discover and compare restaurant ratings across Google, Yelp, and more' : 'Compare restaurant ratings from every major platform in one place'}
             ctaText={isOwnProfile ? 'Browse restaurants' : undefined}
-            ctaHref={isOwnProfile ? '/restaurants' : undefined}
+            ctaHref={isOwnProfile ? '/explore' : undefined}
           />
         </section>
       </div>
