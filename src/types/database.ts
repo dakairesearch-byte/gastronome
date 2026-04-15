@@ -87,6 +87,10 @@ export type Database = {
           infatuation_review_snippet: string | null
           beli_score: number | null
           beli_url: string | null
+          instagram_handle: string | null
+          instagram_url: string | null
+          instagram_follower_count: number | null
+          instagram_last_fetched_at: string | null
           latitude: number | null
           longitude: number | null
           photo_url: string | null
@@ -130,6 +134,10 @@ export type Database = {
           infatuation_review_snippet?: string | null
           beli_score?: number | null
           beli_url?: string | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          instagram_follower_count?: number | null
+          instagram_last_fetched_at?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null
@@ -173,6 +181,10 @@ export type Database = {
           infatuation_review_snippet?: string | null
           beli_score?: number | null
           beli_url?: string | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          instagram_follower_count?: number | null
+          instagram_last_fetched_at?: string | null
           latitude?: number | null
           longitude?: number | null
           photo_url?: string | null

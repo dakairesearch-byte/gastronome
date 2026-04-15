@@ -308,6 +308,26 @@ export default async function RestaurantPage({
                   <ExternalLink size={11} />
                 </a>
               )}
+              {restaurant.instagram_handle && (
+                <a
+                  href={
+                    restaurant.instagram_url ??
+                    `https://www.instagram.com/${restaurant.instagram_handle}/`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-pink-600 hover:text-pink-700 transition-colors"
+                >
+                  <span
+                    aria-hidden
+                    className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-sm bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 text-white text-[9px] font-bold flex-shrink-0"
+                  >
+                    IG
+                  </span>
+                  View on Instagram
+                  <ExternalLink size={11} />
+                </a>
+              )}
             </div>
 
             {/* More in City */}
