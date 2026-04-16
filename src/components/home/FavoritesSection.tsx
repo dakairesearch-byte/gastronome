@@ -108,10 +108,10 @@ export default function FavoritesSection() {
           >
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo} alt="" className="w-12 h-12 object-cover rounded-sm" />
+              <img src={photo} alt="" className="w-20 h-20 object-cover rounded-sm" />
             ) : (
               <div
-                className="w-12 h-12 rounded-sm flex items-center justify-center text-lg font-bold"
+                className="w-20 h-20 rounded-sm flex items-center justify-center text-2xl font-bold"
                 style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
               >
                 {r.name.charAt(0)}

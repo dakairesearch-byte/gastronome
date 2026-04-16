@@ -26,7 +26,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
       className="group block rounded-sm shadow-md overflow-hidden transition-all hover:shadow-2xl cursor-pointer"
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
-      <div className="overflow-hidden relative rounded-sm" style={{ height: '180px' }}>
+      <div className="overflow-hidden relative rounded-sm aspect-[3/4]">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

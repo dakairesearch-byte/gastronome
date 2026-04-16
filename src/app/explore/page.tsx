@@ -1,26 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
+import { getCitiesWithLiveCounts } from '@/lib/cities'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
-import CityTrendingList from '@/components/explore/CityTrendingList'
-import ExploreAccoladeCard from '@/components/cards/ExploreAccoladeCard'
+import FeaturedCityShowcase from '@/components/explore/FeaturedCityShowcase'
 import ExploreCollectionCard from '@/components/cards/ExploreCollectionCard'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
-
-const CITIES = ['New York', 'Los Angeles', 'Miami', 'Chicago', 'San Francisco']
-
-/** Accolade card images (Unsplash). */
-const ACCOLADE_IMAGES: Record<string, string> = {
-  michelin:
-    'https://images.unsplash.com/photo-1675729378170-dff874aaaa24?w=600&q=80',
-  bib: 'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
-  jamesBeard:
-    'https://images.unsplash.com/photo-1627378378955-a3f4e406c5de?w=600&q=80',
-  eater:
-    'https://images.unsplash.com/photo-1774635800472-41eaa93c1453?w=600&q=80',
-}
 
 /** Curated collection definitions. */
 const COLLECTIONS = [
@@ -74,113 +61,75 @@ const COLLECTIONS = [
   },
 ]
 
+/** Compact display labels matching the Figma city tabs. */
+function shortLabelFor(name: string): string {
+  if (name === 'New York') return 'NYC'
+  if (name === 'Los Angeles') return 'LA'
+  if (name === 'San Francisco') return 'SF'
+  return name
+}
+
 export default async function ExplorePage() {
   const supabase = await createServerSupabaseClient()
 
-  // Parallel data fetches
-  const [
-    cityResults,
-    michelinRes,
-    bibRes,
-    jamesBeardRes,
-    eaterRes,
-  ] = await Promise.all([
-    // Top 10 per city
-    Promise.all(
-      CITIES.map(async (city) => {
-        const restaurants = await topTrendingRestaurants(supabase, {
-          window: '30d',
-          limit: 10,
-          city,
-        })
-        // Fallback: if trending is empty, use google_rating
-        let list: Restaurant[] = restaurants
-        if (list.length === 0) {
-          const { data } = await supabase
-            .from('restaurants')
-            .select('*')
-            .eq('city', city)
-            .order('google_rating', { ascending: false, nullsFirst: false })
-            .limit(10)
-          list = (data ?? []) as Restaurant[]
-        }
-        return { city, restaurants: list }
+  // Get live city list (only cities with restaurants in the DB).
+  const cities = await getCitiesWithLiveCounts(supabase)
+
+  // For each live city, fetch the single top-trending restaurant.
+  const cityFeatures = await Promise.all(
+    cities.map(async (city) => {
+      const trending = await topTrendingRestaurants(supabase, {
+        window: '30d',
+        limit: 1,
+        city: city.name,
       })
-    ),
-    // Accolade counts
-    supabase
-      .from('restaurants')
-      .select('id', { count: 'exact', head: true })
-      .gt('michelin_stars', 0),
-    supabase
-      .from('restaurants')
-      .select('id', { count: 'exact', head: true })
-      .eq('michelin_designation', 'bib_gourmand'),
-    supabase
-      .from('restaurants')
-      .select('id', { count: 'exact', head: true })
-      .or('james_beard_nominated.eq.true,james_beard_winner.eq.true'),
-    supabase
-      .from('restaurants')
-      .select('id', { count: 'exact', head: true })
-      .eq('eater_38', true),
-  ])
 
-  const accolades = [
-    {
-      title: 'Michelin Starred',
-      description: "The world's most prestigious culinary distinction, recognizing exceptional cuisine",
-      image: ACCOLADE_IMAGES.michelin,
-      count: michelinRes.count ?? 0,
-      href: '/explore?accolade=michelin_star',
-    },
-    {
-      title: 'Bib Gourmand',
-      description: "Michelin's recognition of exceptional value and quality dining experiences",
-      image: ACCOLADE_IMAGES.bib,
-      count: bibRes.count ?? 0,
-      href: '/explore?accolade=bib_gourmand',
-    },
-    {
-      title: 'James Beard Awards',
-      description: "America's most coveted culinary honor celebrating excellence in gastronomy",
-      image: ACCOLADE_IMAGES.jamesBeard,
-      count: jamesBeardRes.count ?? 0,
-      href: '/explore?accolade=james_beard',
-    },
-    {
-      title: 'Eater 38',
-      description: 'The essential restaurants list, curated by Eater editors for every city',
-      image: ACCOLADE_IMAGES.eater,
-      count: eaterRes.count ?? 0,
-      href: '/explore?accolade=eater_38',
-    },
-  ]
+      let featured: Restaurant | null = trending[0] ?? null
+      // Fallback: top-rated restaurant in the city.
+      if (!featured) {
+        const { data } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('city', city.name)
+          .order('google_rating', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle()
+        featured = (data as Restaurant | null) ?? null
+      }
 
-  // Count per collection (rough)
-  const collectionCounts = COLLECTIONS.map((c) => ({
+      return {
+        city: city.name,
+        shortLabel: shortLabelFor(city.name),
+        restaurant: featured,
+        locationLabel: `${city.name}, ${city.state}`,
+        cityCount: city.live_restaurant_count,
+      }
+    })
+  )
+
+  // Default to NYC if available, otherwise first city.
+  const defaultCity =
+    cityFeatures.find((c) => c.city === 'New York')?.city ??
+    cityFeatures[0]?.city ??
+    ''
+
+  // Light per-collection placeholder counts. The COLLECTIONS list is curated,
+  // not derived from a join — until the Saved Collections feature is wired
+  // to a real table, deterministic dummy counts keep the layout honest.
+  const collectionCounts = COLLECTIONS.map((c, i) => ({
     ...c,
-    count: Math.floor(Math.random() * 12) + 8, // placeholder until wired
+    count: 8 + ((i * 7) % 14),
   }))
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
-      {/* Search Bar */}
       <ExploreSearchBar />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-        {/* Trending by City */}
-        <CityTrendingList cityGroups={cityResults} defaultCity="New York" />
-
-        {/* Accolades */}
-        <section className="mb-24">
-          <SectionHeader label="Prestige & Excellence" title="Acclaimed Dining" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {accolades.map((a) => (
-              <ExploreAccoladeCard key={a.title} {...a} />
-            ))}
-          </div>
-        </section>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+        {/* Iconic Dining — city tabs + featured city card */}
+        {cityFeatures.length > 0 && (
+          <FeaturedCityShowcase cities={cityFeatures} defaultCity={defaultCity} />
+        )}
 
         {/* Editorial Collections */}
         <section>
