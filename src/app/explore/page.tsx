@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { topTrendingRestaurants } from '@/lib/ranking/trending'
+import { computeAllScores, rankScores } from '@/lib/ranking/trending'
 import { getCitiesWithLiveCounts } from '@/lib/cities'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
@@ -75,37 +75,73 @@ export default async function ExplorePage() {
   // Get live city list (only cities with restaurants in the DB).
   const cities = await getCitiesWithLiveCounts(supabase)
 
-  // For each live city, fetch the single top-trending restaurant.
-  const cityFeatures = await Promise.all(
-    cities.map(async (city) => {
-      const trending = await topTrendingRestaurants(supabase, {
-        window: '30d',
-        limit: 1,
-        city: city.name,
-      })
+  // --- Batched trending lookup ---
+  // `computeAllScores` is memoized per-request by React.cache, but more
+  // importantly we derive the per-city top ranker purely in memory and
+  // do a single `.in('id', [...])` fetch for all the trending-winner
+  // restaurant rows instead of the previous N queries (one per city).
+  // Cities with no trending activity still need a per-city fallback
+  // lookup, but those run in parallel.
+  const scoreMap = await computeAllScores(supabase, '30d')
 
-      let featured: Restaurant | null = trending[0] ?? null
-      // Fallback: top-rated restaurant in the city.
-      if (!featured) {
-        const { data } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('city', city.name)
-          .order('google_rating', { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle()
-        featured = (data as Restaurant | null) ?? null
-      }
+  // Top-trending entry per city (null if no activity in the window).
+  const trendingByCity = new Map<
+    string,
+    { restaurant_id: string } | null
+  >()
+  for (const city of cities) {
+    const [top] = rankScores(scoreMap, { city: city.name, limit: 1 })
+    trendingByCity.set(city.name, top && top.score > 0 ? top : null)
+  }
 
-      return {
-        city: city.name,
-        shortLabel: shortLabelFor(city.name),
-        restaurant: featured,
-        locationLabel: `${city.name}, ${city.state}`,
-        cityCount: city.live_restaurant_count,
-      }
+  const trendingIds = Array.from(trendingByCity.values())
+    .filter((e): e is { restaurant_id: string } => e != null)
+    .map((e) => e.restaurant_id)
+
+  // Single batched fetch for all the trending-winner rows.
+  const trendingById = new Map<string, Restaurant>()
+  if (trendingIds.length > 0) {
+    const { data } = await supabase
+      .from('restaurants')
+      .select('*')
+      .in('id', trendingIds)
+    for (const row of data ?? []) {
+      trendingById.set(row.id, row as Restaurant)
+    }
+  }
+
+  // Fallback: parallel per-city top-rated lookups for cities with no
+  // trending activity in the window. One round-trip per fallback city,
+  // but all fired concurrently.
+  const fallbackCities = cities.filter((c) => trendingByCity.get(c.name) == null)
+  const fallbackEntries = await Promise.all(
+    fallbackCities.map(async (city) => {
+      const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('city', city.name)
+        .order('google_rating', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle()
+      return [city.name, (data as Restaurant | null) ?? null] as const
     })
   )
+  const fallbackByCity = new Map(fallbackEntries)
+
+  const cityFeatures = cities.map((city) => {
+    const trendingEntry = trendingByCity.get(city.name)
+    const featured: Restaurant | null =
+      (trendingEntry && trendingById.get(trendingEntry.restaurant_id)) ||
+      fallbackByCity.get(city.name) ||
+      null
+    return {
+      city: city.name,
+      shortLabel: shortLabelFor(city.name),
+      restaurant: featured,
+      locationLabel: `${city.name}, ${city.state}`,
+      cityCount: city.live_restaurant_count,
+    }
+  })
 
   // Default to NYC if available, otherwise first city.
   const defaultCity =

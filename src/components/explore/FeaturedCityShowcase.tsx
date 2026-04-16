@@ -55,7 +55,7 @@ export default function FeaturedCityShowcase({
             className="text-xs uppercase"
             style={{
               color: 'var(--color-accent)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               letterSpacing: '0.18em',
               fontWeight: 500,
             }}
@@ -67,7 +67,7 @@ export default function FeaturedCityShowcase({
           className="text-3xl sm:text-4xl lg:text-5xl mb-4"
           style={{
             color: 'var(--color-text)',
-            fontFamily: "'Spectral', serif",
+            fontFamily: 'var(--font-heading)',
             fontWeight: 400,
             letterSpacing: '-0.01em',
             lineHeight: 1.15,
@@ -92,7 +92,7 @@ export default function FeaturedCityShowcase({
               onClick={() => setSelected(c.city)}
               className="px-5 py-2 text-xs uppercase rounded-full transition-all"
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.16em',
                 fontWeight: active ? 500 : 400,
                 backgroundColor: active ? 'var(--color-primary)' : 'transparent',
@@ -128,7 +128,7 @@ export default function FeaturedCityShowcase({
                   style={{
                     backgroundColor: 'var(--color-border)',
                     color: 'var(--color-text-secondary)',
-                    fontFamily: "'Spectral', serif",
+                    fontFamily: 'var(--font-heading)',
                   }}
                 >
                   {r.name.charAt(0)}
@@ -142,7 +142,7 @@ export default function FeaturedCityShowcase({
                   className="text-xs uppercase"
                   style={{
                     color: 'var(--color-accent)',
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--font-body)',
                     letterSpacing: '0.18em',
                     fontWeight: 500,
                   }}
@@ -155,7 +155,7 @@ export default function FeaturedCityShowcase({
                 className="text-3xl sm:text-4xl mb-5"
                 style={{
                   color: 'var(--color-text)',
-                  fontFamily: "'Spectral', serif",
+                  fontFamily: 'var(--font-heading)',
                   fontWeight: 500,
                   letterSpacing: '-0.01em',
                 }}
@@ -171,7 +171,7 @@ export default function FeaturedCityShowcase({
                   className="text-sm uppercase"
                   style={{
                     color: 'var(--color-accent)',
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--font-body)',
                     letterSpacing: '0.12em',
                     fontWeight: 500,
                   }}
@@ -179,7 +179,7 @@ export default function FeaturedCityShowcase({
                   {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
                 </span>
                 {r.neighborhood && (
-                  <span className="flex items-center gap-1.5 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                  <span className="flex items-center gap-1.5 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
                     <MapPin className="h-3.5 w-3.5" />
                     {r.neighborhood}
                   </span>
@@ -191,7 +191,7 @@ export default function FeaturedCityShowcase({
                   className="text-base mb-8"
                   style={{
                     color: 'var(--color-text-secondary)',
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--font-body)',
                     fontWeight: 300,
                     lineHeight: 1.7,
                   }}
@@ -214,7 +214,7 @@ export default function FeaturedCityShowcase({
                       className="text-base"
                       style={{
                         color: 'var(--color-text)',
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: 'var(--font-body)',
                         fontWeight: 500,
                       }}
                     >
@@ -226,7 +226,7 @@ export default function FeaturedCityShowcase({
                     className="text-xs"
                     style={{
                       color: 'var(--color-text-secondary)',
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     No rating yet
@@ -236,7 +236,7 @@ export default function FeaturedCityShowcase({
                   className="text-xs uppercase"
                   style={{
                     color: 'var(--color-text-secondary)',
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--font-body)',
                     letterSpacing: '0.16em',
                   }}
                 >
@@ -255,7 +255,7 @@ export default function FeaturedCityShowcase({
             className="text-sm"
             style={{
               color: 'var(--color-text-secondary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
             }}
           >
             No featured restaurant for {current.shortLabel} yet.

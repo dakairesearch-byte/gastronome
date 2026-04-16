@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -9,9 +9,15 @@ import type { Restaurant } from '@/types/database'
 /**
  * "Your Favorites" section — client component.
  * Reads from localStorage favorites list for now (no DB table).
+ *
+ * The `useSyncExternalStore` read avoids the classic `useEffect(() =>
+ * setState(load()))` hydration flash: server and first client render
+ * both emit an empty list, and real data flows in only after the store
+ * subscription fires.
  */
 
 const STORAGE_KEY = 'gastronome_favorites'
+const EVENT = 'gastronome:favorites'
 
 export function getFavorites(): string[] {
   if (typeof window === 'undefined') return []
@@ -25,37 +31,110 @@ export function getFavorites(): string[] {
 export function toggleFavorite(id: string): boolean {
   const favs = getFavorites()
   const idx = favs.indexOf(id)
+  let next: string[]
+  let isFav: boolean
   if (idx >= 0) {
     favs.splice(idx, 1)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(favs))
-    return false
+    next = favs
+    isFav = false
+  } else {
+    favs.unshift(id)
+    next = favs.slice(0, 50)
+    isFav = true
   }
-  favs.unshift(id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(favs.slice(0, 50)))
-  return true
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  try {
+    window.dispatchEvent(new Event(EVENT))
+  } catch {
+    // Best-effort cross-component notification.
+  }
+  return isFav
+}
+
+// ---- useSyncExternalStore plumbing for the favorites id list ----
+
+function subscribe(listener: () => void): () => void {
+  window.addEventListener('storage', listener)
+  window.addEventListener(EVENT, listener)
+  return () => {
+    window.removeEventListener('storage', listener)
+    window.removeEventListener(EVENT, listener)
+  }
+}
+
+let cachedRaw: string | null = null
+let cachedIds: string[] = []
+
+function getClientSnapshot(): string[] {
+  const raw = localStorage.getItem(STORAGE_KEY) ?? '[]'
+  if (raw === cachedRaw) return cachedIds
+  cachedRaw = raw
+  try {
+    cachedIds = JSON.parse(raw)
+  } catch {
+    cachedIds = []
+  }
+  return cachedIds
+}
+
+const EMPTY: string[] = []
+function getServerSnapshot(): string[] {
+  return EMPTY
 }
 
 export default function FavoritesSection() {
+  const ids = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
 
+  // `ids` is a stable reference from the store until favorites change,
+  // so keying the effect on the JSON form avoids re-fetching on every
+  // re-render while still reacting when the list actually changes.
+  const key = ids.slice(0, 6).join(',')
+
   useEffect(() => {
+    let cancelled = false
     async function load() {
-      const ids = getFavorites()
-      if (ids.length === 0) {
+      const sliceIds = ids.slice(0, 6)
+      if (sliceIds.length === 0) {
+        if (!cancelled) {
+          setRestaurants([])
+          setLoading(false)
+        }
+        return
+      }
+      setLoading(true)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select(
+          'id, name, cuisine, photo_url, google_photo_url, yelp_photo_url, google_rating, yelp_rating'
+        )
+        .in('id', sliceIds)
+      if (cancelled) return
+      if (error) {
+        console.error('FavoritesSection load failed:', error)
+        setRestaurants([])
         setLoading(false)
         return
       }
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .in('id', ids.slice(0, 6))
-      setRestaurants((data ?? []) as Restaurant[])
+      // Supabase returns rows in arbitrary order; re-order to match the
+      // stored favorite sequence so the user's most-recent favorite
+      // renders first.
+      const byId = new Map((data ?? []).map((r) => [r.id, r as Restaurant]))
+      const ordered: Restaurant[] = []
+      for (const id of sliceIds) {
+        const row = byId.get(id)
+        if (row) ordered.push(row)
+      }
+      setRestaurants(ordered)
       setLoading(false)
     }
     load()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [key, ids])
 
   if (loading) {
     return (
@@ -75,7 +154,7 @@ export default function FavoritesSection() {
       >
         <p
           className="text-sm mb-3"
-          style={{ color: 'var(--color-text-secondary)', fontFamily: "'DM Sans', sans-serif" }}
+          style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
         >
           No favorites yet. Explore restaurants and tap the heart to save them.
         </p>
@@ -83,7 +162,7 @@ export default function FavoritesSection() {
           href="/explore"
           className="inline-block px-6 py-2.5 text-xs uppercase tracking-wider font-medium rounded-sm text-white transition-all hover:opacity-90"
           style={{
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
             letterSpacing: '0.1em',
             backgroundColor: 'var(--color-primary)',
           }}
@@ -122,7 +201,7 @@ export default function FavoritesSection() {
                 className="text-xs uppercase tracking-wider mb-1"
                 style={{
                   color: 'var(--color-accent)',
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: 'var(--font-body)',
                   letterSpacing: '0.12em',
                   fontWeight: 500,
                 }}
@@ -133,7 +212,7 @@ export default function FavoritesSection() {
                 className="text-lg truncate"
                 style={{
                   color: 'var(--color-text)',
-                  fontFamily: "'Spectral', serif",
+                  fontFamily: 'var(--font-heading)',
                   fontWeight: 500,
                 }}
               >
@@ -144,7 +223,7 @@ export default function FavoritesSection() {
                   <Star className="h-4 w-4 fill-current" style={{ color: 'var(--color-primary)' }} />
                   <span
                     className="text-sm"
-                    style={{ color: 'var(--color-text)', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+                    style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
                   >
                     {rating.toFixed(1)}
                   </span>

@@ -38,7 +38,7 @@ export default async function ProfilePage() {
             className="text-4xl mb-3"
             style={{
               color: 'var(--color-text)',
-              fontFamily: "'Spectral', serif",
+              fontFamily: 'var(--font-heading)',
               fontWeight: 400,
             }}
           >
@@ -48,7 +48,7 @@ export default async function ProfilePage() {
             className="text-base"
             style={{
               color: 'var(--color-text-secondary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontWeight: 300,
             }}
           >
@@ -63,7 +63,7 @@ export default async function ProfilePage() {
             className="block w-full py-4 text-center transition-all hover:opacity-90 rounded-sm text-white"
             style={{
               backgroundColor: 'var(--color-primary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontWeight: 500,
               fontSize: '16px',
             }}
@@ -75,7 +75,7 @@ export default async function ProfilePage() {
             className="text-center text-sm"
             style={{
               color: 'var(--color-text-secondary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
             }}
           >
             Don&apos;t have an account?{' '}

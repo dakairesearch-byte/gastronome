@@ -124,7 +124,7 @@ export default async function HomePage() {
                     className="text-base mb-1"
                     style={{
                       color: 'var(--color-text)',
-                      fontFamily: "'Spectral', serif",
+                      fontFamily: 'var(--font-heading)',
                       fontWeight: 500,
                     }}
                   >
@@ -134,7 +134,7 @@ export default async function HomePage() {
                     className="text-xs uppercase"
                     style={{
                       color: 'var(--color-text-secondary)',
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: 'var(--font-body)',
                       letterSpacing: '0.12em',
                     }}
                   >

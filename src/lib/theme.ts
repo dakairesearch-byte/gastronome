@@ -20,8 +20,13 @@ export const gastronomeTheme = {
     border: '#EBEBEB',        // subtle borders
   },
   fonts: {
-    heading: "'Spectral', serif",
-    body: "'DM Sans', sans-serif",
+    // Fonts are self-hosted via next/font/google; the CSS variables
+    // `--font-spectral` / `--font-dm-sans` are declared in
+    // `src/app/layout.tsx`, and the `--font-heading` / `--font-body`
+    // aliases live in globals.css. Inline styles should reference the
+    // aliases so the design tokens here stay design-facing.
+    heading: 'var(--font-heading)',
+    body: 'var(--font-body)',
   },
   styles: {
     card: 'rounded-sm shadow-md border-0',

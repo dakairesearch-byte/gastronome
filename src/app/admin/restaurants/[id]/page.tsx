@@ -1,11 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import AdminInstagramForm from '@/components/admin/AdminInstagramForm'
+import { requireAdminUser } from '@/lib/auth/admin'
 
-// TODO: once an is_admin column exists, gate this on role rather than
-// authentication alone. For now any signed-in user can reach it.
+// Admin-only: gated on the ADMIN_USER_IDS allowlist. We deliberately
+// 404 rather than redirect to login so non-admins don't learn the
+// route exists.
 export default async function RestaurantAdminPage({
   params,
 }: {
@@ -14,12 +16,8 @@ export default async function RestaurantAdminPage({
   const { id } = await params
   const supabase = await createServerSupabaseClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect(`/auth/login?next=${encodeURIComponent(`/admin/restaurants/${id}`)}`)
-  }
+  const admin = await requireAdminUser(supabase)
+  if (!admin) notFound()
 
   const { data: restaurant, error } = await supabase
     .from('restaurants')

@@ -40,7 +40,7 @@ export default function ExploreCollectionCard({
           className="text-2xl mb-3"
           style={{
             color: 'var(--color-text)',
-            fontFamily: "'Spectral', serif",
+            fontFamily: 'var(--font-heading)',
             fontWeight: 500,
           }}
         >
@@ -50,7 +50,7 @@ export default function ExploreCollectionCard({
           className="text-sm leading-relaxed mb-5"
           style={{
             color: 'var(--color-text-secondary)',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
             lineHeight: '1.6',
           }}
         >
@@ -64,7 +64,7 @@ export default function ExploreCollectionCard({
             className="text-xs uppercase tracking-wider"
             style={{
               color: 'var(--color-text-secondary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               letterSpacing: '0.08em',
             }}
           >
@@ -74,7 +74,7 @@ export default function ExploreCollectionCard({
             className="text-sm"
             style={{
               color: 'var(--color-accent)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontWeight: 500,
             }}
           >

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Menu, User, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navItems = [
   { path: '/', label: 'Home' },
@@ -11,9 +13,38 @@ const navItems = [
   { path: '/community', label: 'Community' },
 ]
 
+/**
+ * Exact-prefix match: `/exploreXYZ` must NOT activate `/explore`. We
+ * match either the exact path or an immediate child segment.
+ */
+function isActivePath(pathname: string, path: string): boolean {
+  if (path === '/') return pathname === '/'
+  return pathname === path || pathname.startsWith(path + '/')
+}
+
 export default function Navigation() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+
+  // Lightweight auth check so the right-side icon links to /profile for
+  // signed-in users or /auth/login for everyone else. No profile
+  // dropdown; the Figma design keeps the header minimal.
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setUser(data.session?.user ?? null)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (active) setUser(session?.user ?? null)
+    })
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   // Close mobile menu on route change (React-safe derived-state pattern)
   const [tracked, setTracked] = useState(pathname)
@@ -22,8 +53,13 @@ export default function Navigation() {
     if (mobileOpen) setMobileOpen(false)
   }
 
-  const isActive = (path: string) =>
-    path === '/' ? pathname === '/' : pathname.startsWith(path)
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setUser(null)
+    setMobileOpen(false)
+    router.push('/')
+  }
 
   return (
     <>
@@ -42,7 +78,7 @@ export default function Navigation() {
                 className="h-12 w-12 rounded-full flex items-center justify-center text-white shadow-sm"
                 style={{
                   backgroundColor: 'var(--color-primary)',
-                  fontFamily: "'Spectral', serif",
+                  fontFamily: 'var(--font-heading)',
                   fontWeight: 500,
                   fontSize: '20px',
                   letterSpacing: '-0.02em',
@@ -55,7 +91,7 @@ export default function Navigation() {
             {/* Desktop nav — centered cluster */}
             <nav className="hidden md:flex items-center gap-10">
               {navItems.map((item) => {
-                const active = isActive(item.path)
+                const active = isActivePath(pathname, item.path)
                 return (
                   <Link
                     key={item.path}
@@ -68,7 +104,7 @@ export default function Navigation() {
                     <span
                       className="text-xs uppercase"
                       style={{
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: 'var(--font-body)',
                         letterSpacing: '0.16em',
                         fontWeight: active ? 500 : 400,
                       }}
@@ -86,8 +122,19 @@ export default function Navigation() {
               })}
             </nav>
 
-            {/* Right-side spacer keeps centered nav balanced; matches Figma */}
-            <div className="hidden md:block w-12" aria-hidden="true" />
+            {/* Minimal profile/sign-in affordance — the Figma design
+                doesn't show an avatar cluster, but users still need a
+                reachable entry point for auth. */}
+            <div className="hidden md:flex items-center">
+              <Link
+                href={user ? '/profile' : '/auth/login'}
+                aria-label={user ? 'Profile' : 'Sign in'}
+                className="p-2 rounded-full transition-colors hover:bg-gray-100"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                <User size={20} strokeWidth={1.5} />
+              </Link>
+            </div>
 
             {/* Mobile hamburger */}
             <button
@@ -123,7 +170,7 @@ export default function Navigation() {
             >
               <span
                 className="text-sm font-medium"
-                style={{ fontFamily: "'DM Sans', sans-serif", color: 'var(--color-text)' }}
+                style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}
               >
                 Menu
               </span>
@@ -139,14 +186,14 @@ export default function Navigation() {
 
             <div className="py-2">
               {navItems.map((item) => {
-                const active = isActive(item.path)
+                const active = isActivePath(pathname, item.path)
                 return (
                   <Link
                     key={item.path}
                     href={item.path}
                     className="flex items-center px-5 py-3.5 text-xs uppercase transition-colors"
                     style={{
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: 'var(--font-body)',
                       letterSpacing: '0.16em',
                       fontWeight: active ? 500 : 400,
                       color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
@@ -158,6 +205,59 @@ export default function Navigation() {
                   </Link>
                 )
               })}
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--color-border)' }} className="py-3 px-5 space-y-2">
+              {user ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="block w-full text-center py-2.5 border rounded-sm text-xs uppercase tracking-wider font-medium transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.1em',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    My Profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full py-2.5 text-xs uppercase tracking-wider font-medium text-red-600 hover:bg-red-50 rounded-sm transition-colors"
+                    style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.1em' }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="block w-full text-center py-2.5 border rounded-sm text-xs uppercase tracking-wider font-medium transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.1em',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="block w-full text-center py-2.5 rounded-sm text-xs uppercase tracking-wider font-medium text-white transition-all hover:opacity-90"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.1em',
+                      backgroundColor: 'var(--color-primary)',
+                    }}
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

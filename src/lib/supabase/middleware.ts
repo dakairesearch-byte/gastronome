@@ -16,8 +16,11 @@ const ONBOARDING_EXEMPT_PREFIXES = [
 ]
 
 function isExempt(pathname: string): boolean {
+  // Exact match OR immediate child only. A bare `startsWith(p)` would
+  // incorrectly exempt routes like `/authors`, `/apiary`, or
+  // `/onboardingfoo` from the onboarding gate.
   return ONBOARDING_EXEMPT_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p)
+    (p) => pathname === p || pathname.startsWith(p + '/')
   )
 }
 

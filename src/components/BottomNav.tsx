@@ -2,7 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Compass, Users } from 'lucide-react'
+import { Home, Compass, Users, User } from 'lucide-react'
+
+/**
+ * Exact-prefix match: `/exploreXYZ` must NOT activate `/explore`. Match
+ * either the exact path or an immediate child segment.
+ */
+function isActivePath(pathname: string, path: string): boolean {
+  if (path === '/') return pathname === '/'
+  return pathname === path || pathname.startsWith(path + '/')
+}
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -11,6 +20,7 @@ export default function BottomNav() {
     { href: '/', icon: Home, label: 'Home' },
     { href: '/explore', icon: Compass, label: 'Explore' },
     { href: '/community', icon: Users, label: 'Community' },
+    { href: '/profile', icon: User, label: 'Profile' },
   ]
 
   return (
@@ -24,8 +34,7 @@ export default function BottomNav() {
     >
       <div className="flex items-center justify-around h-16 px-2">
         {tabs.map((tab) => {
-          const isActive =
-            tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
+          const active = isActivePath(pathname, tab.href)
           const Icon = tab.icon
 
           return (
@@ -34,15 +43,15 @@ export default function BottomNav() {
               href={tab.href}
               className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
               style={{
-                color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                color: active ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               }}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
+              <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
               <span
                 className="text-[10px]"
                 style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: isActive ? 500 : 400,
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: active ? 500 : 400,
                 }}
               >
                 {tab.label}

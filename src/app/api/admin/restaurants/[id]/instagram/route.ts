@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requireAdminUser } from '@/lib/auth/admin'
 import {
   buildProfileUrl,
   buildReelEmbedUrl,
@@ -8,8 +9,10 @@ import {
   normalizeHandle,
 } from '@/lib/instagram'
 
-// TODO: gate behind a proper is_admin role once that column exists.
-// Today this only checks authentication — any signed-in user can edit.
+// Admin-only: accepts an Instagram handle + optional list of reel URLs
+// and upserts them onto the restaurant. Gated on the ADMIN_USER_IDS
+// env allowlist (see src/lib/auth/admin.ts). Returns 404 — not 403 — to
+// avoid leaking the route's existence to non-admins.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,11 +21,9 @@ export async function POST(
     const { id: restaurantId } = await params
     const supabase = await createServerSupabaseClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    const admin = await requireAdminUser(supabase)
+    if (!admin) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
     const body = await request.json().catch(() => null)
@@ -32,6 +33,17 @@ export async function POST(
 
     const rawHandle = typeof body.handle === 'string' ? body.handle : null
     const rawReelUrls = Array.isArray(body.reelUrls) ? body.reelUrls : []
+
+    // Upper-bound the per-request payload. 50 reels is comfortably above
+    // what a human curator would paste in one go; it just stops someone
+    // from using this route as an unbounded insert pipe.
+    const MAX_REELS_PER_REQUEST = 50
+    if (rawReelUrls.length > MAX_REELS_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `Too many reel URLs (max ${MAX_REELS_PER_REQUEST})` },
+        { status: 400 }
+      )
+    }
 
     if (!rawHandle && rawReelUrls.length === 0) {
       return NextResponse.json(
@@ -71,8 +83,9 @@ export async function POST(
         .eq('id', restaurantId)
 
       if (updateError) {
+        console.error('admin/instagram handle update failed:', updateError)
         return NextResponse.json(
-          { error: `Failed to update handle: ${updateError.message}` },
+          { error: 'Failed to update handle' },
           { status: 500 }
         )
       }
@@ -117,8 +130,9 @@ export async function POST(
         })
 
       if (upsertError) {
+        console.error('admin/instagram reel upsert failed:', upsertError)
         return NextResponse.json(
-          { error: `Failed to upsert reels: ${upsertError.message}` },
+          { error: 'Failed to upsert reels' },
           { status: 500 }
         )
       }

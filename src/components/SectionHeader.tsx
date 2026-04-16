@@ -29,7 +29,7 @@ export default function SectionHeader({
             className="text-xs uppercase"
             style={{
               color: 'var(--color-accent)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               letterSpacing: '0.18em',
               fontWeight: 500,
             }}
@@ -42,7 +42,7 @@ export default function SectionHeader({
         className="text-3xl sm:text-4xl lg:text-5xl mb-4"
         style={{
           color: 'var(--color-text)',
-          fontFamily: "'Spectral', serif",
+          fontFamily: 'var(--font-heading)',
           fontWeight: 400,
           letterSpacing: '-0.01em',
           lineHeight: 1.15,

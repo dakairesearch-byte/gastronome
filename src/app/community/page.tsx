@@ -31,7 +31,7 @@ export default function CommunityPage() {
               className="text-xs uppercase"
               style={{
                 color: 'var(--color-accent)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.18em',
                 fontWeight: 500,
               }}
@@ -44,7 +44,7 @@ export default function CommunityPage() {
             className="text-6xl md:text-7xl mb-6"
             style={{
               color: 'var(--color-text)',
-              fontFamily: "'Spectral', serif",
+              fontFamily: 'var(--font-heading)',
               fontWeight: 400,
               letterSpacing: '-0.02em',
               lineHeight: 1.05,
@@ -62,7 +62,7 @@ export default function CommunityPage() {
             className="text-lg leading-relaxed"
             style={{
               color: 'var(--color-text-secondary)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontWeight: 300,
               lineHeight: 1.7,
             }}

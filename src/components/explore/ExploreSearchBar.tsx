@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
+import { recordSearch } from '@/components/home/RecentSearches'
 
 export default function ExploreSearchBar() {
   const router = useRouter()
@@ -12,6 +13,7 @@ export default function ExploreSearchBar() {
     e.preventDefault()
     const q = query.trim()
     if (!q) return
+    recordSearch(q)
     router.push(`/search?q=${encodeURIComponent(q)}`)
   }
 
@@ -40,7 +42,7 @@ export default function ExploreSearchBar() {
             className="flex-1 bg-transparent outline-none rounded-sm"
             style={{
               color: 'var(--color-text)',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontSize: '15px',
             }}
           />
@@ -51,7 +53,7 @@ export default function ExploreSearchBar() {
               backgroundColor: 'var(--color-primary)',
               color: 'var(--color-surface)',
               letterSpacing: '0.12em',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontWeight: 500,
             }}
           >

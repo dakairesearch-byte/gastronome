@@ -48,7 +48,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
           className="text-xs uppercase tracking-widest mb-2"
           style={{
             color: 'var(--color-accent)',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
             letterSpacing: '0.12em',
             fontWeight: 500,
           }}
@@ -61,7 +61,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
           className="text-xl mb-3"
           style={{
             color: 'var(--color-text)',
-            fontFamily: "'Spectral', serif",
+            fontFamily: 'var(--font-heading)',
             fontWeight: 500,
           }}
         >
@@ -78,7 +78,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
                 className="text-sm"
                 style={{
                   color: 'var(--color-text)',
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: 'var(--font-body)',
                   fontWeight: 500,
                 }}
               >
@@ -86,14 +86,14 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
               </span>
             </div>
           ) : (
-            <span className="text-xs" style={{ color: 'var(--color-text-secondary)', fontFamily: "'DM Sans', sans-serif" }}>
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
               No rating yet
             </span>
           )}
           {reviewCount != null && (
             <span
               className="text-xs"
-              style={{ color: 'var(--color-text-secondary)', fontFamily: "'DM Sans', sans-serif" }}
+              style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
             >
               {reviewCount.toLocaleString()} reviews
             </span>

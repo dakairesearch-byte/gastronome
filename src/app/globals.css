@@ -1,7 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ── Gastronome "Luxe Moderne" design tokens ── */
+/*
+ * Fonts are self-hosted via `next/font/google` in `src/app/layout.tsx`;
+ * the generated `--font-dm-sans` / `--font-spectral` CSS variables come
+ * from the `<html>` className. We alias them into the legacy
+ * `--font-heading` / `--font-body` names that components already use so
+ * the inline `fontFamily: var(--font-body)` references across the tree
+ * don't need per-site updates.
+ */
 :root {
   --color-primary: #D4A574;
   --color-primary-hover: #C4955F;
@@ -12,8 +19,8 @@
   --color-text: #1C1C1C;
   --color-text-secondary: #757575;
   --color-border: #EBEBEB;
-  --font-heading: 'Spectral', serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-heading: var(--font-spectral), serif;
+  --font-body: var(--font-dm-sans), sans-serif;
 }
 
 @theme inline {

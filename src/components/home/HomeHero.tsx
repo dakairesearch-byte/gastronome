@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
+import { recordSearch } from '@/components/home/RecentSearches'
 
 /**
  * Homepage hero — Figma "Culinary Excellence" block.
@@ -30,6 +31,7 @@ export default function HomeHero() {
       router.push('/explore')
       return
     }
+    recordSearch(q)
     router.push(`/search?q=${encodeURIComponent(q)}`)
   }
 
@@ -57,7 +59,7 @@ export default function HomeHero() {
           className="text-5xl sm:text-6xl lg:text-7xl mb-6"
           style={{
             color: 'var(--color-text)',
-            fontFamily: "'Spectral', serif",
+            fontFamily: 'var(--font-heading)',
             fontWeight: 400,
             letterSpacing: '-0.02em',
             lineHeight: 1.05,
@@ -69,7 +71,7 @@ export default function HomeHero() {
           className="text-base sm:text-lg max-w-2xl mx-auto mb-12"
           style={{
             color: 'var(--color-text-secondary)',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
             fontWeight: 300,
             lineHeight: 1.6,
           }}
@@ -97,7 +99,7 @@ export default function HomeHero() {
               className="flex-1 bg-transparent outline-none"
               style={{
                 color: 'var(--color-text)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 fontSize: '15px',
               }}
             />
@@ -106,7 +108,7 @@ export default function HomeHero() {
               className="px-6 py-2.5 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90"
               style={{
                 backgroundColor: 'var(--color-primary)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.16em',
                 fontWeight: 500,
               }}
@@ -124,7 +126,7 @@ export default function HomeHero() {
               onClick={() => router.push(chip.href)}
               className="px-5 py-2 text-xs uppercase border rounded-full transition-colors hover:bg-white"
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.14em',
                 fontWeight: 400,
                 color: 'var(--color-text-secondary)',

@@ -1,8 +1,30 @@
 import type { Metadata } from 'next'
+import { DM_Sans, Spectral } from 'next/font/google'
 import './globals.css'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import BottomNav from '@/components/BottomNav'
+
+/**
+ * Fonts are loaded via `next/font/google` so they're self-hosted and
+ * preloaded rather than pulled in via a render-blocking CSS @import.
+ * The `variable` CSS custom properties are referenced from inline
+ * `fontFamily` styles across the tree (see globals.css + the numerous
+ * `var(--font-dm-sans)` / `var(--font-spectral)` references).
+ */
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
+
+const spectral = Spectral({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-spectral',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Gastronome — Every Restaurant Rating in One Place',
@@ -26,9 +48,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="h-full antialiased scroll-smooth">
+    <html
+      lang="en"
+      className={`h-full antialiased scroll-smooth ${dmSans.variable} ${spectral.variable}`}
+    >
       <body
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        style={{ fontFamily: 'var(--font-body)' }}
         className="min-h-screen flex flex-col"
       >
         <Navigation />

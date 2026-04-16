@@ -23,7 +23,7 @@ export default function Footer() {
               </div>
               <span
                 className="text-sm text-white"
-                style={{ fontFamily: "'Spectral', serif", fontWeight: 500 }}
+                style={{ fontFamily: 'var(--font-heading)', fontWeight: 500 }}
               >
                 Gastronome
               </span>
@@ -32,7 +32,7 @@ export default function Footer() {
               className="text-sm leading-relaxed"
               style={{
                 color: 'rgba(255,255,255,0.4)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
               }}
             >
               Every restaurant rating in one place.
@@ -45,7 +45,7 @@ export default function Footer() {
               className="text-xs uppercase tracking-wider mb-3"
               style={{
                 color: 'rgba(255,255,255,0.6)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.1em',
                 fontWeight: 500,
               }}
@@ -57,7 +57,7 @@ export default function Footer() {
                 <Link
                   href="/explore"
                   className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   Discover
                 </Link>
@@ -66,7 +66,7 @@ export default function Footer() {
                 <Link
                   href="/search"
                   className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   Search
                 </Link>
@@ -75,7 +75,7 @@ export default function Footer() {
                 <Link
                   href="/community"
                   className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   Community
                 </Link>
@@ -89,7 +89,7 @@ export default function Footer() {
               className="text-xs uppercase tracking-wider mb-3"
               style={{
                 color: 'rgba(255,255,255,0.6)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 letterSpacing: '0.1em',
                 fontWeight: 500,
               }}
@@ -101,7 +101,7 @@ export default function Footer() {
                 <Link
                   href="/cities"
                   className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   Cities
                 </Link>
@@ -110,7 +110,7 @@ export default function Footer() {
                 <Link
                   href="/recent"
                   className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.4)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   What&apos;s new
                 </Link>
@@ -124,7 +124,7 @@ export default function Footer() {
           style={{
             borderTop: '1px solid rgba(255,255,255,0.1)',
             color: 'rgba(255,255,255,0.3)',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
           }}
         >
           &copy; {currentYear} Gastronome. All rights reserved.

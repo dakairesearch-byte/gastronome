@@ -21,13 +21,23 @@ async function getRestaurantData(restaurantId: string) {
 
   if (error || !restaurant) return null
 
-  // Related: top trending in the same city, excluding the current
-  // restaurant. Falls back to alphabetical if nothing's trending yet.
-  const trending = await topTrendingRestaurants(supabase, {
-    city: restaurant.city ?? undefined,
-    window: '30d',
-    limit: 8,
-  })
+  // Related + videoCount don't depend on each other — run them in
+  // parallel. Previously the page waterfalled three sequential
+  // round-trips (restaurant, trending, videoCount); collapsing the
+  // last two into a `Promise.all` shaves ~one round-trip of TTFB on
+  // every detail render.
+  const [trending, videoCountResult] = await Promise.all([
+    topTrendingRestaurants(supabase, {
+      city: restaurant.city ?? undefined,
+      window: '30d',
+      limit: 8,
+    }),
+    supabase
+      .from('restaurant_videos')
+      .select('*', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId),
+  ])
+
   let relatedRestaurants: Restaurant[] = trending
     .filter((r) => r.id !== restaurantId)
     .slice(0, 4)
@@ -42,15 +52,10 @@ async function getRestaurantData(restaurantId: string) {
     relatedRestaurants = (fallback ?? []) as Restaurant[]
   }
 
-  const { count: videoCount } = await supabase
-    .from('restaurant_videos')
-    .select('*', { count: 'exact', head: true })
-    .eq('restaurant_id', restaurantId)
-
   return {
     restaurant,
     relatedRestaurants,
-    videoCount: videoCount || 0,
+    videoCount: videoCountResult.count ?? 0,
   }
 }
 
