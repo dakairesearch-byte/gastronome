@@ -4,6 +4,7 @@ import RestaurantCard from '@/components/RestaurantCard'
 import type { Restaurant } from '@/types/database'
 import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
+import ShareButton from '@/components/ShareButton'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, ExternalLink, ArrowLeft } from 'lucide-react'
@@ -166,13 +167,25 @@ export default async function RestaurantPage({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent" />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
-          <Link
-            href="/explore"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white font-medium mb-6 transition-colors"
-          >
-            <ArrowLeft size={14} />
-            Discover
-          </Link>
+          <div className="flex items-center justify-between mb-6">
+            <Link
+              href="/explore"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white font-medium transition-colors"
+            >
+              <ArrowLeft size={14} />
+              Discover
+            </Link>
+            <ShareButton
+              title={restaurant.name}
+              text={
+                restaurant.cuisine && restaurant.cuisine !== 'Restaurant'
+                  ? `${restaurant.name} — ${restaurant.cuisine}${
+                      restaurant.neighborhood ? ` in ${restaurant.neighborhood}` : ''
+                    }`
+                  : restaurant.name
+              }
+            />
+          </div>
 
           <div className="max-w-3xl">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
