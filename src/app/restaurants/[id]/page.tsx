@@ -5,6 +5,7 @@ import type { Restaurant } from '@/types/database'
 import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
 import ShareButton from '@/components/ShareButton'
+import BookmarkButton from '@/components/BookmarkButton'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, ExternalLink, ArrowLeft } from 'lucide-react'
@@ -175,16 +176,19 @@ export default async function RestaurantPage({
               <ArrowLeft size={14} />
               Discover
             </Link>
-            <ShareButton
-              title={restaurant.name}
-              text={
-                restaurant.cuisine && restaurant.cuisine !== 'Restaurant'
-                  ? `${restaurant.name} — ${restaurant.cuisine}${
-                      restaurant.neighborhood ? ` in ${restaurant.neighborhood}` : ''
-                    }`
-                  : restaurant.name
-              }
-            />
+            <div className="flex items-center gap-2">
+              <BookmarkButton restaurantId={restaurant.id} />
+              <ShareButton
+                title={restaurant.name}
+                text={
+                  restaurant.cuisine && restaurant.cuisine !== 'Restaurant'
+                    ? `${restaurant.name} — ${restaurant.cuisine}${
+                        restaurant.neighborhood ? ` in ${restaurant.neighborhood}` : ''
+                      }`
+                    : restaurant.name
+                }
+              />
+            </div>
           </div>
 
           <div className="max-w-3xl">

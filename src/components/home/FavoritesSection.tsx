@@ -1,89 +1,27 @@
 'use client'
 
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useFavorites } from '@/lib/collections'
 import type { Restaurant } from '@/types/database'
 
 /**
  * "Your Favorites" section — client component.
- * Reads from localStorage favorites list for now (no DB table).
  *
- * The `useSyncExternalStore` read avoids the classic `useEffect(() =>
- * setState(load()))` hydration flash: server and first client render
- * both emit an empty list, and real data flows in only after the store
- * subscription fires.
+ * The favorites list itself lives in `src/lib/collections.ts` so the
+ * detail page's `BookmarkButton` and this rail share one store. The
+ * `useFavorites` hook wraps `useSyncExternalStore` so SSR and the
+ * first client render agree on an empty list — real data flows in
+ * after the store subscription fires, avoiding the hydration flash.
  */
 
-const STORAGE_KEY = 'gastronome_favorites'
-const EVENT = 'gastronome:favorites'
-
-export function getFavorites(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
-
-export function toggleFavorite(id: string): boolean {
-  const favs = getFavorites()
-  const idx = favs.indexOf(id)
-  let next: string[]
-  let isFav: boolean
-  if (idx >= 0) {
-    favs.splice(idx, 1)
-    next = favs
-    isFav = false
-  } else {
-    favs.unshift(id)
-    next = favs.slice(0, 50)
-    isFav = true
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  try {
-    window.dispatchEvent(new Event(EVENT))
-  } catch {
-    // Best-effort cross-component notification.
-  }
-  return isFav
-}
-
-// ---- useSyncExternalStore plumbing for the favorites id list ----
-
-function subscribe(listener: () => void): () => void {
-  window.addEventListener('storage', listener)
-  window.addEventListener(EVENT, listener)
-  return () => {
-    window.removeEventListener('storage', listener)
-    window.removeEventListener(EVENT, listener)
-  }
-}
-
-let cachedRaw: string | null = null
-let cachedIds: string[] = []
-
-function getClientSnapshot(): string[] {
-  const raw = localStorage.getItem(STORAGE_KEY) ?? '[]'
-  if (raw === cachedRaw) return cachedIds
-  cachedRaw = raw
-  try {
-    cachedIds = JSON.parse(raw)
-  } catch {
-    cachedIds = []
-  }
-  return cachedIds
-}
-
-const EMPTY: string[] = []
-function getServerSnapshot(): string[] {
-  return EMPTY
-}
+// Re-export for callers that used to import from this module.
+export { toggleFavorite, getFavorites } from '@/lib/collections'
 
 export default function FavoritesSection() {
-  const ids = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)
+  const ids = useFavorites()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
 
