@@ -1,15 +1,13 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
-import { recordSearch } from '@/components/home/RecentSearches'
+import SearchAutocomplete from '@/components/search/SearchAutocomplete'
 
 /**
  * Homepage hero — Figma "Culinary Excellence" block.
  *
- * Editorial title + subtitle on a dot-pattern background, centered search
- * with the gold "Explore" CTA, and a row of filter chips that route to
+ * Editorial title + subtitle on a dot-pattern background, live
+ * autocomplete search, and a row of filter chips that route to
  * /explore with the appropriate query param.
  */
 
@@ -22,18 +20,6 @@ const FILTER_CHIPS = [
 
 export default function HomeHero() {
   const router = useRouter()
-  const [query, setQuery] = useState('')
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const q = query.trim()
-    if (!q) {
-      router.push('/explore')
-      return
-    }
-    recordSearch(q)
-    router.push(`/search?q=${encodeURIComponent(q)}`)
-  }
 
   return (
     <section
@@ -79,44 +65,12 @@ export default function HomeHero() {
           Where discerning palates discover extraordinary dining experiences
         </p>
 
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-          <div
-            className="flex items-center gap-3 px-5 py-3 border rounded-sm shadow-sm transition-shadow hover:shadow-lg"
-            style={{
-              backgroundColor: 'var(--color-background)',
-              borderColor: 'var(--color-border)',
-            }}
-          >
-            <Search
-              className="h-5 w-5 flex-shrink-0"
-              style={{ color: 'var(--color-accent)' }}
-            />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search exceptional dining..."
-              className="flex-1 bg-transparent outline-none"
-              style={{
-                color: 'var(--color-text)',
-                fontFamily: 'var(--font-body)',
-                fontSize: '15px',
-              }}
-            />
-            <button
-              type="submit"
-              className="px-6 py-2.5 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90"
-              style={{
-                backgroundColor: 'var(--color-primary)',
-                fontFamily: 'var(--font-body)',
-                letterSpacing: '0.16em',
-                fontWeight: 500,
-              }}
-            >
-              Explore
-            </button>
-          </div>
-        </form>
+        <div className="max-w-2xl mx-auto text-left">
+          <SearchAutocomplete
+            variant="hero"
+            placeholder="Search exceptional dining..."
+          />
+        </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
           {FILTER_CHIPS.map((chip) => (
