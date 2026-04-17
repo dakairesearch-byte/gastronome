@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Footer() {
@@ -15,18 +16,13 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2.5 mb-3">
-              <div
-                className="w-7 h-7 rounded-sm flex items-center justify-center text-white font-bold text-sm"
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              >
-                G
-              </div>
-              <span
-                className="text-sm text-white"
-                style={{ fontFamily: 'var(--font-heading)', fontWeight: 500 }}
-              >
-                Gastronome
-              </span>
+              <Image
+                src="/Logo.jpg"
+                alt="Gastronome"
+                width={120}
+                height={32}
+                className="h-8 w-auto bg-white rounded-sm p-0.5"
+              />
             </div>
             <p
               className="text-sm leading-relaxed"
