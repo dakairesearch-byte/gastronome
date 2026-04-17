@@ -26,7 +26,11 @@ export default function OnboardingRestaurantPreview({
   return (
     <div
       role="presentation"
-      className="rounded-xl border border-emerald-100 bg-white overflow-hidden shadow-sm"
+      className="rounded-sm overflow-hidden shadow-sm"
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+      }}
     >
       {photoUrl && (
         <div className="relative aspect-video bg-gray-100">
@@ -35,23 +39,40 @@ export default function OnboardingRestaurantPreview({
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <span className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wide rounded-md">
+          <span
+            className="absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wide rounded-sm"
+            style={{ backgroundColor: 'var(--color-primary)', opacity: 0.9, letterSpacing: '0.1em' }}
+          >
             Preview
           </span>
         </div>
       )}
       <div className="p-4 space-y-2">
-        <h4 className="font-bold text-gray-900 text-sm line-clamp-1">
+        <h4
+          className="text-sm line-clamp-1"
+          style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
+        >
           {restaurant.name}
         </h4>
 
         <div className="flex items-center gap-1.5 flex-wrap">
           {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
-            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">
+            <span
+              className="px-1.5 py-0.5 rounded-sm text-[10px]"
+              style={{
+                backgroundColor: 'var(--color-background)',
+                color: 'var(--color-accent)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 500,
+              }}
+            >
               {restaurant.cuisine}
             </span>
           )}
-          <span className="flex items-center gap-0.5 text-[11px] text-gray-500">
+          <span
+            className="flex items-center gap-0.5 text-[11px]"
+            style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+          >
             <MapPin size={10} />
             {restaurant.neighborhood || restaurant.city}
           </span>

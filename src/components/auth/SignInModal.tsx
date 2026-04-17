@@ -5,28 +5,29 @@ import { useRouter } from 'next/navigation'
 import { X, Loader2, MailCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { City } from '@/types/database'
+import OnboardingSteps from './OnboardingSteps'
 
 interface SignInModalProps {
   open: boolean
   onClose: () => void
   initialMode?: 'signin' | 'signup'
-  /**
-   * Where to send the user after a successful sign-in. Defaults to the
-   * home page. Signup always routes through the confirm-email screen /
-   * onboarding flow regardless.
-   */
   redirectTo?: string
 }
 
 /**
- * Popup sign-in / sign-up dialog.
+ * Popup sign-in / sign-up + onboarding dialog.
  *
- * Centered card on a dimmed backdrop, editorial palette (Spectral
- * heading + primary gold CTA). Toggles between Sign in and Create
- * account inline so the user never loses context. Signup triggers
- * Supabase email confirmation and shows a "check your email" success
- * screen; the confirm link routes through `/auth/callback` into
- * `/onboarding`.
+ * Two phases:
+ *   1. `auth`  — sign-in or sign-up form.
+ *   2. `onboarding` — inline city / cuisine picker (first-time users).
+ *
+ * After a successful signup with an active session the dialog
+ * transitions directly into the onboarding steps — no page navigation,
+ * no flash. Returning users who sign in skip straight to `redirectTo`.
+ *
+ * The middleware guard in `src/lib/supabase/middleware.ts` still forces
+ * unonboarded users to `/onboarding` on hard navigation, so the
+ * standalone page acts as a fallback for the email-confirm flow.
  */
 export default function SignInModal({
   open,
@@ -39,6 +40,7 @@ export default function SignInModal({
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const firstFieldRef = useRef<HTMLInputElement | null>(null)
 
+  const [phase, setPhase] = useState<'auth' | 'onboarding'>('auth')
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -50,18 +52,15 @@ export default function SignInModal({
   const [error, setError] = useState('')
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
 
-  // Reset state whenever the dialog opens so a re-open never shows stale
-  // errors or a stranded "check your email" screen.
   useEffect(() => {
     if (!open) return
+    setPhase('auth')
     setMode(initialMode)
     setError('')
     setAwaitingConfirmation(false)
     setLoading(false)
   }, [open, initialMode])
 
-  // Lazy-load cities only when switching into the signup form — skips a
-  // request for users who only ever hit Sign in.
   useEffect(() => {
     if (!open || mode !== 'signup' || cities.length > 0) return
     let active = true
@@ -78,7 +77,6 @@ export default function SignInModal({
     }
   }, [open, mode, cities.length, supabase])
 
-  // Autofocus + Escape-to-close + scroll lock while the dialog is open.
   useEffect(() => {
     if (!open) return
     const prevOverflow = document.body.style.overflow
@@ -158,16 +156,14 @@ export default function SignInModal({
       if (signupError) return setError(signupError.message)
       if (!data.user) return setError('Signup failed — no user returned')
 
-      // Email confirmation on → stay in the dialog and render the
-      // "check your email" state. Confirmation off (dev) → route to
-      // onboarding as normal.
       if (!data.session) {
         setAwaitingConfirmation(true)
         return
       }
-      onClose()
-      router.push('/onboarding')
-      router.refresh()
+
+      // Session exists → transition straight into the onboarding steps
+      // inside this same dialog. No route change, no flash.
+      setPhase('onboarding')
     } catch {
       setError('An unexpected error occurred')
     } finally {
@@ -175,9 +171,21 @@ export default function SignInModal({
     }
   }
 
+  const handleOnboardingComplete = () => {
+    onClose()
+    router.push('/')
+    router.refresh()
+  }
+
   const handleBackdrop = (e: React.MouseEvent) => {
+    // Don't let the user dismiss the modal during onboarding — they
+    // need to finish it. The middleware would redirect them back anyway.
+    if (phase === 'onboarding') return
     if (e.target === e.currentTarget) onClose()
   }
+
+  // Wider container for the onboarding steps (city grid + previews).
+  const maxW = phase === 'onboarding' ? 'max-w-xl' : 'max-w-md'
 
   return (
     <div
@@ -190,283 +198,298 @@ export default function SignInModal({
     >
       <div
         ref={dialogRef}
-        className="relative w-full max-w-md rounded-sm shadow-2xl overflow-hidden"
+        className={`relative w-full ${maxW} rounded-sm shadow-2xl overflow-hidden transition-all`}
         style={{
           backgroundColor: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
+          maxHeight: '90vh',
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 p-1.5 rounded-sm transition-colors hover:bg-gray-100 z-10"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          <X size={18} />
-        </button>
+        {/* Close button — hidden during onboarding so users finish the flow. */}
+        {phase === 'auth' && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute top-4 right-4 p-1.5 rounded-sm transition-colors hover:bg-gray-100 z-10"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <X size={18} />
+          </button>
+        )}
 
-        {/* Dot-pattern header mirrors the HomeHero brand aesthetic. */}
-        <div
-          className="relative px-8 pt-12 pb-6 text-center"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderBottom: '1px solid var(--color-border)',
-          }}
-        >
-          <div
-            aria-hidden
-            className="absolute inset-0 opacity-[0.14] pointer-events-none"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle, var(--color-accent) 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-            }}
-          />
-          <div className="relative">
+        {/* ── Auth phase ── */}
+        {phase === 'auth' && (
+          <>
             <div
-              className="w-12 h-12 mx-auto rounded-sm flex items-center justify-center text-white shadow-sm mb-4"
+              className="relative px-8 pt-12 pb-6 text-center"
               style={{
-                backgroundColor: 'var(--color-primary)',
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 500,
-                fontSize: '20px',
+                backgroundColor: 'var(--color-surface)',
+                borderBottom: '1px solid var(--color-border)',
               }}
             >
-              G
-            </div>
-            <h2
-              id="signin-modal-title"
-              className="text-3xl"
-              style={{
-                color: 'var(--color-text)',
-                fontFamily: 'var(--font-heading)',
-                fontWeight: 400,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {awaitingConfirmation
-                ? 'Check your email'
-                : mode === 'signin'
-                ? 'Welcome back'
-                : 'Join Gastronome'}
-            </h2>
-            <p
-              className="mt-2 text-sm"
-              style={{
-                color: 'var(--color-text-secondary)',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 300,
-              }}
-            >
-              {awaitingConfirmation
-                ? 'Confirm your email to finish setting up'
-                : mode === 'signin'
-                ? 'Sign in to save restaurants and write reviews'
-                : 'Create an account to save and share favorites'}
-            </p>
-          </div>
-        </div>
-
-        <div className="px-8 py-7">
-          {awaitingConfirmation ? (
-            <div className="text-center">
               <div
-                className="inline-flex items-center justify-center w-12 h-12 rounded-sm mb-4"
-                style={{ backgroundColor: 'var(--color-background)' }}
-              >
-                <MailCheck size={22} style={{ color: 'var(--color-primary)' }} />
-              </div>
-              <p
-                className="text-sm"
+                aria-hidden
+                className="absolute inset-0 opacity-[0.14] pointer-events-none"
                 style={{
-                  color: 'var(--color-text-secondary)',
-                  fontFamily: 'var(--font-body)',
+                  backgroundImage:
+                    'radial-gradient(circle, var(--color-accent) 1px, transparent 1px)',
+                  backgroundSize: '22px 22px',
                 }}
-              >
-                We sent a confirmation link to{' '}
-                <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>{email}</span>.
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-6 inline-block px-6 py-2.5 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90"
-                style={{
-                  backgroundColor: 'var(--color-primary)',
-                  fontFamily: 'var(--font-body)',
-                  letterSpacing: '0.12em',
-                  fontWeight: 500,
-                }}
-              >
-                Got it
-              </button>
-            </div>
-          ) : (
-            <>
-              {error && (
+              />
+              <div className="relative">
                 <div
-                  className="mb-4 p-3 text-sm rounded-sm border"
-                  style={{
-                    backgroundColor: '#fdf2f2',
-                    borderColor: '#f5c2c2',
-                    color: '#9c2a2a',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              <form
-                onSubmit={mode === 'signin' ? handleSignIn : handleSignUp}
-                className="space-y-4"
-              >
-                {mode === 'signup' && (
-                  <>
-                    <Field label="Display Name">
-                      <input
-                        ref={firstFieldRef}
-                        type="text"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        required
-                        placeholder="Your Name"
-                        style={inputStyle}
-                        className="w-full px-4 py-2.5 outline-none transition-colors"
-                      />
-                    </Field>
-                    <Field label="Username">
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) =>
-                          setUsername(e.target.value.toLowerCase().replace(/\s/g, '_'))
-                        }
-                        required
-                        placeholder="your_username"
-                        style={inputStyle}
-                        className="w-full px-4 py-2.5 outline-none transition-colors"
-                      />
-                    </Field>
-                  </>
-                )}
-                <Field label="Email">
-                  <input
-                    ref={mode === 'signin' ? firstFieldRef : undefined}
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="you@example.com"
-                    style={inputStyle}
-                    className="w-full px-4 py-2.5 outline-none transition-colors"
-                  />
-                </Field>
-                <Field label="Password">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={mode === 'signup' ? 6 : undefined}
-                    placeholder={mode === 'signup' ? 'Create a password' : 'Your password'}
-                    style={inputStyle}
-                    className="w-full px-4 py-2.5 outline-none transition-colors"
-                  />
-                </Field>
-
-                {mode === 'signup' && (
-                  <Field
-                    label={
-                      <>
-                        Home City{' '}
-                        <span style={{ color: 'var(--color-text-secondary)', fontWeight: 300 }}>
-                          (optional)
-                        </span>
-                      </>
-                    }
-                  >
-                    <select
-                      value={homeCity}
-                      onChange={(e) => setHomeCity(e.target.value)}
-                      style={inputStyle}
-                      className="w-full px-4 py-2.5 outline-none transition-colors"
-                    >
-                      <option value="">Select a city</option>
-                      {cities.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          {c.name}
-                          {c.state ? `, ${c.state}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-12 h-12 mx-auto rounded-sm flex items-center justify-center text-white shadow-sm mb-4"
                   style={{
                     backgroundColor: 'var(--color-primary)',
-                    fontFamily: 'var(--font-body)',
-                    letterSpacing: '0.16em',
+                    fontFamily: 'var(--font-heading)',
                     fontWeight: 500,
+                    fontSize: '20px',
                   }}
                 >
-                  {loading && <Loader2 size={14} className="animate-spin" />}
-                  {loading
-                    ? mode === 'signin'
-                      ? 'Signing in…'
-                      : 'Creating…'
+                  G
+                </div>
+                <h2
+                  id="signin-modal-title"
+                  className="text-3xl"
+                  style={{
+                    color: 'var(--color-text)',
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 400,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {awaitingConfirmation
+                    ? 'Check your email'
                     : mode === 'signin'
-                    ? 'Sign in'
-                    : 'Create account'}
-                </button>
-              </form>
+                    ? 'Welcome back'
+                    : 'Join Gastronome'}
+                </h2>
+                <p
+                  className="mt-2 text-sm"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 300,
+                  }}
+                >
+                  {awaitingConfirmation
+                    ? 'Confirm your email to finish setting up'
+                    : mode === 'signin'
+                    ? 'Sign in to save restaurants and write reviews'
+                    : 'Create an account to save and share favorites'}
+                </p>
+              </div>
+            </div>
 
-              <p
-                className="text-center text-sm mt-6"
-                style={{
-                  color: 'var(--color-text-secondary)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                {mode === 'signin' ? (
-                  <>
-                    Don&rsquo;t have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('signup')
-                        setError('')
+            <div className="px-8 py-7 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+              {awaitingConfirmation ? (
+                <div className="text-center">
+                  <div
+                    className="inline-flex items-center justify-center w-12 h-12 rounded-sm mb-4"
+                    style={{ backgroundColor: 'var(--color-background)' }}
+                  >
+                    <MailCheck size={22} style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                  <p
+                    className="text-sm"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    We sent a confirmation link to{' '}
+                    <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>{email}</span>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-6 inline-block px-6 py-2.5 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90"
+                    style={{
+                      backgroundColor: 'var(--color-primary)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.12em',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Got it
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {error && (
+                    <div
+                      className="mb-4 p-3 text-sm rounded-sm border"
+                      style={{
+                        backgroundColor: '#fdf2f2',
+                        borderColor: '#f5c2c2',
+                        color: '#9c2a2a',
+                        fontFamily: 'var(--font-body)',
                       }}
-                      style={{ color: 'var(--color-primary)', fontWeight: 500 }}
-                      className="hover:opacity-80 transition-opacity"
                     >
-                      Create one
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
+                      {error}
+                    </div>
+                  )}
+
+                  <form
+                    onSubmit={mode === 'signin' ? handleSignIn : handleSignUp}
+                    className="space-y-4"
+                  >
+                    {mode === 'signup' && (
+                      <>
+                        <Field label="Display Name">
+                          <input
+                            ref={firstFieldRef}
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            required
+                            placeholder="Your Name"
+                            style={inputStyle}
+                            className="w-full px-4 py-2.5 outline-none transition-colors"
+                          />
+                        </Field>
+                        <Field label="Username">
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={(e) =>
+                              setUsername(e.target.value.toLowerCase().replace(/\s/g, '_'))
+                            }
+                            required
+                            placeholder="your_username"
+                            style={inputStyle}
+                            className="w-full px-4 py-2.5 outline-none transition-colors"
+                          />
+                        </Field>
+                      </>
+                    )}
+                    <Field label="Email">
+                      <input
+                        ref={mode === 'signin' ? firstFieldRef : undefined}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder="you@example.com"
+                        style={inputStyle}
+                        className="w-full px-4 py-2.5 outline-none transition-colors"
+                      />
+                    </Field>
+                    <Field label="Password">
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={mode === 'signup' ? 6 : undefined}
+                        placeholder={mode === 'signup' ? 'Create a password' : 'Your password'}
+                        style={inputStyle}
+                        className="w-full px-4 py-2.5 outline-none transition-colors"
+                      />
+                    </Field>
+
+                    {mode === 'signup' && (
+                      <Field
+                        label={
+                          <>
+                            Home City{' '}
+                            <span style={{ color: 'var(--color-text-secondary)', fontWeight: 300 }}>
+                              (optional)
+                            </span>
+                          </>
+                        }
+                      >
+                        <select
+                          value={homeCity}
+                          onChange={(e) => setHomeCity(e.target.value)}
+                          style={inputStyle}
+                          className="w-full px-4 py-2.5 outline-none transition-colors"
+                        >
+                          <option value="">Select a city</option>
+                          {cities.map((c) => (
+                            <option key={c.id} value={c.name}>
+                              {c.name}
+                              {c.state ? `, ${c.state}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    )}
+
                     <button
-                      type="button"
-                      onClick={() => {
-                        setMode('signin')
-                        setError('')
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3 text-xs uppercase rounded-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      style={{
+                        backgroundColor: 'var(--color-primary)',
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.16em',
+                        fontWeight: 500,
                       }}
-                      style={{ color: 'var(--color-primary)', fontWeight: 500 }}
-                      className="hover:opacity-80 transition-opacity"
                     >
-                      Sign in
+                      {loading && <Loader2 size={14} className="animate-spin" />}
+                      {loading
+                        ? mode === 'signin'
+                          ? 'Signing in…'
+                          : 'Creating…'
+                        : mode === 'signin'
+                        ? 'Sign in'
+                        : 'Create account'}
                     </button>
-                  </>
-                )}
-              </p>
-            </>
-          )}
-        </div>
+                  </form>
+
+                  <p
+                    className="text-center text-sm mt-6"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {mode === 'signin' ? (
+                      <>
+                        Don&rsquo;t have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode('signup')
+                            setError('')
+                          }}
+                          style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+                          className="hover:opacity-80 transition-opacity"
+                        >
+                          Create one
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode('signin')
+                            setError('')
+                          }}
+                          style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+                          className="hover:opacity-80 transition-opacity"
+                        >
+                          Sign in
+                        </button>
+                      </>
+                    )}
+                  </p>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── Onboarding phase ── */}
+        {phase === 'onboarding' && (
+          <div className="px-8 py-8 overflow-y-auto" style={{ maxHeight: '90vh' }}>
+            <OnboardingSteps onComplete={handleOnboardingComplete} />
+          </div>
+        )}
       </div>
 
       <style jsx>{`

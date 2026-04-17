@@ -25,5 +25,12 @@ export default async function OnboardingPage() {
     redirect('/')
   }
 
-  return <OnboardingFlow />
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4 sm:p-6"
+      style={{ backgroundColor: 'var(--color-background)' }}
+    >
+      <OnboardingFlow />
+    </div>
+  )
 }
