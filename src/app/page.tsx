@@ -1,7 +1,6 @@
 import { Bookmark } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
-import HomeHero from '@/components/home/HomeHero'
 import SectionHeader from '@/components/SectionHeader'
 import SuggestionCard from '@/components/cards/SuggestionCard'
 import RecentSearches from '@/components/home/RecentSearches'
@@ -64,10 +63,8 @@ export default async function HomePage() {
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
-      <HomeHero />
-
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        {/* ââ Suggestions ââ */}
+        {/* Ã¢ÂÂÃ¢ÂÂ Suggestions Ã¢ÂÂÃ¢ÂÂ */}
         <section className="mb-16">
           <SectionHeader label="Curated Selection" title="Suggestions" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -77,7 +74,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ââ Recent Searches & Favorites â magazine 2-col layout ââ */}
+        {/* Ã¢ÂÂÃ¢ÂÂ Recent Searches & Favorites Ã¢ÂÂ magazine 2-col layout Ã¢ÂÂÃ¢ÂÂ */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           <section>
             <SectionHeader title="Recent Searches" />
@@ -90,7 +87,7 @@ export default async function HomePage() {
           </section>
         </div>
 
-        {/* ââ Saved Collections ââ */}
+        {/* Ã¢ÂÂÃ¢ÂÂ Saved Collections Ã¢ÂÂÃ¢ÂÂ */}
         <section>
           <SectionHeader title="Saved Collections" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
