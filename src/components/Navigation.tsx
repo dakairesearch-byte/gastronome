@@ -73,16 +73,16 @@ export default function Navigation() {
         }}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-28">
             {/* Logo */}
             <Link href="/" className="flex items-center" aria-label="Gastronome">
               <Image
                 src="/Logo.jpg"
                 alt="Gastronome"
-                width={180}
-                height={48}
+                width={360}
+                height={96}
                 priority
-                className="h-12 w-auto"
+                className="h-24 w-auto"
               />
             </Link>
 
