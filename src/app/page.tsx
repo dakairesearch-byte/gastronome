@@ -66,10 +66,10 @@ export default async function HomePage() {
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       <HomeHero />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        {/* ── Our Recommendations ── */}
-        <section className="mb-20">
-          <SectionHeader label="Curated Selection" title="Our Recommendations" />
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        {/* ââ Suggestions ââ */}
+        <section className="mb-16">
+          <SectionHeader label="Curated Selection" title="Suggestions" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {suggestions.map((r) => (
               <SuggestionCard key={r.id} restaurant={r} />
@@ -77,30 +77,22 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Recent Searches & Favorites — magazine 2-col layout ── */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-20">
+        {/* ââ Recent Searches & Favorites â magazine 2-col layout ââ */}
+        <div className="grid lg:grid-cols-2 gap-12 mb-16">
           <section>
-            <SectionHeader
-              label="Activity"
-              title="Recent Searches"
-              align="left"
-            />
+            <SectionHeader title="Recent Searches" />
             <RecentSearches />
           </section>
 
           <section>
-            <SectionHeader
-              label="Personal"
-              title="Your Favorites"
-              align="left"
-            />
+            <SectionHeader title="Your Favorites" />
             <FavoritesSection />
           </section>
         </div>
 
-        {/* ── Saved Collections ── */}
+        {/* ââ Saved Collections ââ */}
         <section>
-          <SectionHeader label="Bookmarks" title="Saved Collections" />
+          <SectionHeader title="Saved Collections" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {PLACEHOLDER_COLLECTIONS.map((c) => (
               <div
