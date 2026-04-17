@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -91,14 +92,14 @@ export default function SignupPage() {
       }
 
       if (!data.user) {
-        setError('Signup failed — no user returned')
+        setError('Signup failed â no user returned')
         return
       }
 
       // When email confirmation is enabled, signUp returns a user but no
       // session. Pushing to /onboarding would bounce to /auth/login because
       // the server component has no authenticated user to read. Show a
-      // "check your email" screen instead — the confirmation link already
+      // "check your email" screen instead â the confirmation link already
       // routes through /auth/callback?next=/onboarding.
       if (!data.session) {
         setAwaitingConfirmation(true)
@@ -116,15 +117,19 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — branding (hidden on mobile) */}
+      {/* Left panel â branding (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
         <div className="relative flex flex-col justify-center px-12 lg:px-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-xl">
-              G
-            </div>
-            <span className="text-white font-bold text-xl">Gastronome</span>
+          <div className="flex items-center mb-8">
+            <Image
+              src="/Logo.jpg"
+              alt="Gastronome"
+              width={220}
+              height={56}
+              priority
+              className="h-14 w-auto bg-white rounded-lg p-1"
+            />
           </div>
           <h2 className="text-3xl font-bold text-white leading-snug">
             Discover your next<br />favorite restaurant
@@ -135,7 +140,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel â form */}
       <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-8">
         <div className="w-full max-w-sm">
           {awaitingConfirmation ? (
@@ -181,8 +186,15 @@ export default function SignupPage() {
           ) : (
           <>
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-xl mb-4 lg:hidden">
-              <span className="text-white font-bold text-lg">G</span>
+            <div className="inline-flex items-center justify-center mb-4 lg:hidden">
+              <Image
+                src="/Logo.jpg"
+                alt="Gastronome"
+                width={160}
+                height={40}
+                priority
+                className="h-10 w-auto"
+              />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
             <p className="text-sm text-gray-500 mt-1">Create your Gastronome account</p>
