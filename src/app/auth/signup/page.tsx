@@ -125,10 +125,10 @@ export default function SignupPage() {
             <Image
               src="/Logo.jpg"
               alt="Gastronome"
-              width={220}
-              height={56}
+              width={440}
+              height={112}
               priority
-              className="h-14 w-auto bg-white rounded-lg p-1"
+              className="h-28 w-auto bg-white rounded-lg p-2"
             />
           </div>
           <h2 className="text-3xl font-bold text-white leading-snug">
@@ -190,10 +190,10 @@ export default function SignupPage() {
               <Image
                 src="/Logo.jpg"
                 alt="Gastronome"
-                width={160}
-                height={40}
+                width={320}
+                height={80}
                 priority
-                className="h-10 w-auto"
+                className="h-20 w-auto"
               />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
