@@ -4,6 +4,7 @@ import { getCitiesWithLiveCounts } from '@/lib/cities'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
 import FeaturedCityShowcase from '@/components/explore/FeaturedCityShowcase'
+import Top10Trending from '@/components/explore/Top10Trending'
 import ExploreCollectionCard from '@/components/cards/ExploreCollectionCard'
 import type { Restaurant } from '@/types/database'
 
@@ -149,6 +150,46 @@ export default async function ExplorePage() {
     cityFeatures[0]?.city ??
     ''
 
+  // --- Top 10 Trending for the default city (Figma v23 section) ---
+  // Reuse the already-computed scoreMap so this adds at most one extra
+  // round-trip (the `.in('id', [...])` fetch to hydrate restaurant rows).
+  let top10: Restaurant[] = []
+  if (defaultCity) {
+    const topEntries = rankScores(scoreMap, { city: defaultCity, limit: 10 })
+    const topIds = topEntries
+      .filter((e) => e.score > 0)
+      .map((e) => e.restaurant_id)
+
+    if (topIds.length > 0) {
+      const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .in('id', topIds)
+      const byId = new Map<string, Restaurant>()
+      for (const row of (data ?? []) as Restaurant[]) byId.set(row.id, row)
+      top10 = topIds
+        .map((id) => byId.get(id))
+        .filter((r): r is Restaurant => r != null)
+    }
+
+    // Fallback: if the city doesn't have 10 trending rows yet, fill with
+    // top-rated restaurants in the same city so the section is never
+    // half-empty on a fresh install.
+    if (top10.length < 10) {
+      const existing = new Set(top10.map((r) => r.id))
+      const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('city', defaultCity)
+        .order('google_rating', { ascending: false, nullsFirst: false })
+        .limit(10)
+      for (const row of (data ?? []) as Restaurant[]) {
+        if (top10.length >= 10) break
+        if (!existing.has(row.id)) top10.push(row)
+      }
+    }
+  }
+
   // Light per-collection placeholder counts. The COLLECTIONS list is curated,
   // not derived from a join — until the Saved Collections feature is wired
   // to a real table, deterministic dummy counts keep the layout honest.
@@ -165,6 +206,11 @@ export default async function ExplorePage() {
         {/* Iconic Dining — city tabs + featured city card */}
         {cityFeatures.length > 0 && (
           <FeaturedCityShowcase cities={cityFeatures} defaultCity={defaultCity} />
+        )}
+
+        {/* Top 10 Trending — numbered list + map panel */}
+        {top10.length > 0 && (
+          <Top10Trending city={defaultCity} restaurants={top10} />
         )}
 
         {/* Editorial Collections */}
