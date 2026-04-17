@@ -8,14 +8,13 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import {
   User,
+  Users,
   LogOut,
   Menu,
   X,
   Home,
   Search,
-  MapPin,
   Settings,
-  Clock,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -72,7 +71,7 @@ export default function Navbar() {
 
   // Close the mobile menu whenever the route changes. The documented React
   // pattern for "adjust state during rendering" uses a companion state to
-  // detect the change — this avoids setState inside an effect (which the
+  // detect the change â this avoids setState inside an effect (which the
   // React 19 lint rule disallows) while still reacting synchronously to
   // navigation.
   const [trackedPathname, setTrackedPathname] = useState(pathname)
@@ -93,8 +92,12 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/explore', label: 'Explore', icon: Search },
-    { href: '/recent', label: 'Recent', icon: Clock },
-    { href: '/cities', label: 'Cities', icon: MapPin },
+    { href: '/community', label: 'Community', icon: Users },
+    {
+      href: user ? `/profile/${user.id}` : '/auth/login',
+      label: 'Profile',
+      icon: User,
+    },
   ]
 
   const isActive = (href: string) =>
