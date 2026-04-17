@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, User, X } from 'lucide-react'
@@ -73,23 +74,19 @@ export default function Navigation() {
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo — circular monogram, no wordmark per Figma */}
+            {/* Logo */}
             <Link href="/" className="flex items-center" aria-label="Gastronome">
-              <div
-                className="h-12 w-12 rounded-full flex items-center justify-center text-white shadow-sm"
-                style={{
-                  backgroundColor: 'var(--color-primary)',
-                  fontFamily: 'var(--font-heading)',
-                  fontWeight: 500,
-                  fontSize: '20px',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                G
-              </div>
+              <Image
+                src="/Logo.jpg"
+                alt="Gastronome"
+                width={180}
+                height={48}
+                priority
+                className="h-12 w-auto"
+              />
             </Link>
 
-            {/* Desktop nav — centered cluster */}
+            {/* Desktop nav â centered cluster */}
             <nav className="hidden md:flex items-center gap-10">
               {navItems.map((item) => {
                 const active = isActivePath(pathname, item.path)
@@ -123,7 +120,7 @@ export default function Navigation() {
               })}
             </nav>
 
-            {/* Minimal profile/sign-in affordance — the Figma design
+            {/* Minimal profile/sign-in affordance â the Figma design
                 doesn't show an avatar cluster, but users still need a
                 reachable entry point for auth. */}
             <div className="hidden md:flex items-center">
