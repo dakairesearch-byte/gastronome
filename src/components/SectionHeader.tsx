@@ -1,6 +1,6 @@
 /**
- * Editorial section header â the Figma v23 pattern:
- * optional small uppercase accent label â large Spectral heading.
+ * Editorial section header Ã¢ÂÂ the Figma v23 pattern:
+ * optional small uppercase accent label Ã¢ÂÂ large Spectral heading.
  *
  * Figma v23 left-aligns every section title on the home/explore pages and
  * only renders the uppercase eyebrow label on the hero section of each
@@ -51,12 +51,10 @@ export default function SectionHeader({
       >
         {title}
       </h2>
-      {label && (
-        <div
-          className={`mt-4 w-12 h-px ${isCenter ? 'mx-auto' : ''}`}
-          style={{ backgroundColor: 'var(--color-accent)' }}
-        />
-      )}
+      <div
+        className={`mt-4 w-12 h-px ${isCenter ? 'mx-auto' : ''}`}
+        style={{ backgroundColor: 'var(--color-accent)' }}
+      />
     </div>
   )
 }
