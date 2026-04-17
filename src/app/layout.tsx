@@ -27,18 +27,36 @@ const spectral = Spectral({
 })
 
 export const metadata: Metadata = {
-  title: 'Gastronome — Every Restaurant Rating in One Place',
+  title: 'Gastronome â Every Restaurant Rating in One Place',
   description:
     'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
   keywords:
     'restaurant ratings, restaurant reviews, Google rating, Yelp rating, Michelin stars, Infatuation, dining, food',
   authors: [{ name: 'Gastronome' }],
+  icons: {
+    icon: '/Logo.jpg',
+    shortcut: '/Logo.jpg',
+    apple: '/Logo.jpg',
+  },
   openGraph: {
-    title: 'Gastronome — Every Restaurant Rating in One Place',
+    title: 'Gastronome â Every Restaurant Rating in One Place',
     description:
       'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/Logo.jpg',
+        alt: 'Gastronome',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Gastronome â Every Restaurant Rating in One Place',
+    description:
+      'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
+    images: ['/Logo.jpg'],
   },
 }
 
