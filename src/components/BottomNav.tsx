@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Compass, Users, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { openSignInModal } from '@/components/auth/SignInModalHost'
 
 /**
  * Exact-prefix match: `/exploreXYZ` must NOT activate `/explore`. Match
@@ -15,13 +18,34 @@ function isActivePath(pathname: string, path: string): boolean {
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const [authed, setAuthed] = useState(false)
 
-  const tabs = [
+  // Matches Navigation.tsx so the Profile tab links to settings when
+  // the user is signed in, and triggers the popup sign-in modal
+  // otherwise — keeping the bottom bar's entry point consistent across
+  // auth states.
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setAuthed(!!data.session?.user)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (active) setAuthed(!!session?.user)
+    })
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+  const navTabs = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/explore', icon: Compass, label: 'Explore' },
     { href: '/community', icon: Users, label: 'Community' },
-    { href: '/profile', icon: User, label: 'Profile' },
-  ]
+  ] as const
+
+  const profileActive = isActivePath(pathname, '/profile')
 
   return (
     <nav
@@ -33,10 +57,9 @@ export default function BottomNav() {
       }}
     >
       <div className="flex items-center justify-around h-16 px-2">
-        {tabs.map((tab) => {
+        {navTabs.map((tab) => {
           const active = isActivePath(pathname, tab.href)
           const Icon = tab.icon
-
           return (
             <Link
               key={tab.href}
@@ -59,6 +82,43 @@ export default function BottomNav() {
             </Link>
           )
         })}
+
+        {authed ? (
+          <Link
+            href="/profile"
+            className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
+            style={{
+              color: profileActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            }}
+          >
+            <User size={22} strokeWidth={profileActive ? 2.5 : 1.5} />
+            <span
+              className="text-[10px]"
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontWeight: profileActive ? 500 : 400,
+              }}
+            >
+              Profile
+            </span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openSignInModal()}
+            className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
+            style={{ color: 'var(--color-text-secondary)' }}
+            aria-label="Sign in"
+          >
+            <User size={22} strokeWidth={1.5} />
+            <span
+              className="text-[10px]"
+              style={{ fontFamily: 'var(--font-body)', fontWeight: 400 }}
+            >
+              Sign in
+            </span>
+          </button>
+        )}
       </div>
     </nav>
   )

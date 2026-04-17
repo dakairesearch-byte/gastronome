@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, User, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { openSignInModal } from '@/components/auth/SignInModalHost'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navItems = [
@@ -124,14 +125,26 @@ export default function Navigation() {
                 doesn't show an avatar cluster, but users still need a
                 reachable entry point for auth. */}
             <div className="hidden md:flex items-center">
-              <Link
-                href={user ? '/profile' : '/auth/login'}
-                aria-label={user ? 'Profile' : 'Sign in'}
-                className="p-2 rounded-full transition-colors hover:bg-gray-100"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                <User size={20} strokeWidth={1.5} />
-              </Link>
+              {user ? (
+                <Link
+                  href="/profile"
+                  aria-label="Profile"
+                  className="p-2 rounded-full transition-colors hover:bg-gray-100"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  <User size={20} strokeWidth={1.5} />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openSignInModal()}
+                  aria-label="Sign in"
+                  className="p-2 rounded-full transition-colors hover:bg-gray-100"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  <User size={20} strokeWidth={1.5} />
+                </button>
+              )}
             </div>
 
             {/* Mobile hamburger */}
@@ -231,20 +244,29 @@ export default function Navigation() {
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/auth/login"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false)
+                      openSignInModal({ mode: 'signin' })
+                    }}
                     className="block w-full text-center py-2.5 border rounded-sm text-xs uppercase tracking-wider font-medium transition-colors"
                     style={{
                       fontFamily: 'var(--font-body)',
                       letterSpacing: '0.1em',
                       borderColor: 'var(--color-border)',
                       color: 'var(--color-text)',
+                      backgroundColor: 'transparent',
                     }}
                   >
                     Log in
-                  </Link>
-                  <Link
-                    href="/auth/signup"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false)
+                      openSignInModal({ mode: 'signup' })
+                    }}
                     className="block w-full text-center py-2.5 rounded-sm text-xs uppercase tracking-wider font-medium text-white transition-all hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-body)',
@@ -253,7 +275,7 @@ export default function Navigation() {
                     }}
                   >
                     Sign up
-                  </Link>
+                  </button>
                 </>
               )}
             </div>

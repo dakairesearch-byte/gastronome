@@ -4,6 +4,7 @@ import './globals.css'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import BottomNav from '@/components/BottomNav'
+import SignInModalHost from '@/components/auth/SignInModalHost'
 
 /**
  * Fonts are loaded via `next/font/google` so they're self-hosted and
@@ -78,6 +79,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <BottomNav />
+        <SignInModalHost />
       </body>
     </html>
   )

@@ -272,7 +272,7 @@ function NewReviewContent() {
             </div>
             {!creativeModeEnabled && (
               <Link
-                href="/profile/edit"
+                href="/profile"
                 className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-emerald-600 transition-colors"
                 title="Enable Creative Mode in settings for detailed reviews"
               >

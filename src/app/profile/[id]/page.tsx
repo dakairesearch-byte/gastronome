@@ -2,23 +2,30 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { Edit2, MapPin, UtensilsCrossed } from 'lucide-react'
+import { MapPin, UtensilsCrossed } from 'lucide-react'
 import EmptyState from '@/components/EmptyState'
 
 export default function ProfilePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise)
+  const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isOwnProfile, setIsOwnProfile] = useState(false)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
+        // Viewing your own profile?  That lives at `/profile` now
+        // (settings-only). Redirect so there's a single canonical
+        // destination for your own profile and no duplicated UI.
         const { data: { session } } = await supabase.auth.getSession()
-        setIsOwnProfile(session?.user?.id === params.id)
+        if (session?.user?.id === params.id) {
+          router.replace('/profile')
+          return
+        }
 
         const { data: profileData } = await supabase
           .from('profiles').select('*').eq('id', params.id).single()
@@ -29,7 +36,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
       }
     }
     fetchProfileData()
-  }, [params.id, supabase])
+  }, [params.id, supabase, router])
 
   if (loading) {
     return (
@@ -85,27 +92,14 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
           </div>
         </div>
 
-        {/* Action Buttons */}
-        {isOwnProfile && (
-          <div>
-            <Link
-              href="/profile/edit"
-              className="inline-flex items-center justify-center gap-1.5 px-5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              <Edit2 size={14} />
-              Edit Profile
-            </Link>
-          </div>
-        )}
-
         {/* Explore CTA */}
         <section>
           <EmptyState
             icon={UtensilsCrossed}
-            title={isOwnProfile ? 'Start exploring' : `${profile.display_name} is on Gastronome`}
-            description={isOwnProfile ? 'Discover and compare restaurant ratings across Google, Yelp, and more' : 'Compare restaurant ratings from every major platform in one place'}
-            ctaText={isOwnProfile ? 'Browse restaurants' : undefined}
-            ctaHref={isOwnProfile ? '/explore' : undefined}
+            title={`${profile.display_name} is on Gastronome`}
+            description="Compare restaurant ratings from every major platform in one place"
+            ctaText={undefined}
+            ctaHref={undefined}
           />
         </section>
       </div>
