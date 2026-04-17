@@ -11,6 +11,7 @@ const navItems = [
   { path: '/', label: 'Home' },
   { path: '/explore', label: 'Explore' },
   { path: '/community', label: 'Community' },
+  { path: '/profile', label: 'Profile' },
 ]
 
 /**
