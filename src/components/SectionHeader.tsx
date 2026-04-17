@@ -1,10 +1,11 @@
 /**
- * Editorial section header — the Figma design's signature pattern:
- * small uppercase accent label → large Spectral heading → thin accent divider.
+ * Editorial section header â the Figma v23 pattern:
+ * optional small uppercase accent label â large Spectral heading.
  *
- * Defaults to centered (matching the current Figma source). Pass
- * `align="left"` for the few sections that hang the divider on the
- * leading edge.
+ * Figma v23 left-aligns every section title on the home/explore pages and
+ * only renders the uppercase eyebrow label on the hero section of each
+ * page. The accent divider is only drawn when an eyebrow label is present,
+ * otherwise the heading stands alone for a cleaner editorial rhythm.
  */
 
 interface SectionHeaderProps {
@@ -17,12 +18,12 @@ interface SectionHeaderProps {
 export default function SectionHeader({
   label,
   title,
-  align = 'center',
+  align = 'left',
   className = '',
 }: SectionHeaderProps) {
   const isCenter = align === 'center'
   return (
-    <div className={`mb-10 ${isCenter ? 'text-center' : ''} ${className}`}>
+    <div className={`mb-8 ${isCenter ? 'text-center' : ''} ${className}`}>
       {label && (
         <div className="mb-3">
           <span
@@ -39,7 +40,7 @@ export default function SectionHeader({
         </div>
       )}
       <h2
-        className="text-3xl sm:text-4xl lg:text-5xl mb-4"
+        className="text-3xl sm:text-4xl lg:text-5xl"
         style={{
           color: 'var(--color-text)',
           fontFamily: 'var(--font-heading)',
@@ -50,10 +51,12 @@ export default function SectionHeader({
       >
         {title}
       </h2>
-      <div
-        className={`w-12 h-px ${isCenter ? 'mx-auto' : ''}`}
-        style={{ backgroundColor: 'var(--color-accent)' }}
-      />
+      {label && (
+        <div
+          className={`mt-4 w-12 h-px ${isCenter ? 'mx-auto' : ''}`}
+          style={{ backgroundColor: 'var(--color-accent)' }}
+        />
+      )}
     </div>
   )
 }
