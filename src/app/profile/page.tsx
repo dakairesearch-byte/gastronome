@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
-export const revalidate = 0 // always dynamic — depends on auth state
+export const revalidate = 0 // always dynamic â depends on auth state
 
 export default async function ProfilePage() {
   const supabase = await createServerSupabaseClient()
@@ -24,12 +25,14 @@ export default async function ProfilePage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-12">
-          <div
-            className="w-20 h-20 rounded-sm flex items-center justify-center text-white font-bold text-3xl shadow-lg"
-            style={{ backgroundColor: 'var(--color-primary)' }}
-          >
-            G
-          </div>
+          <Image
+            src="/Logo.jpg"
+            alt="Gastronome"
+            width={320}
+            height={96}
+            priority
+            className="h-24 w-auto"
+          />
         </div>
 
         {/* Welcome Text */}
