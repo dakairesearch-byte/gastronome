@@ -28,10 +28,10 @@ export default async function ProfilePage() {
           <Image
             src="/Logo.jpg"
             alt="Gastronome"
-            width={320}
-            height={96}
+            width={640}
+            height={192}
             priority
-            className="h-24 w-auto"
+            className="h-48 w-auto"
           />
         </div>
 
