@@ -302,6 +302,41 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_highlighted_dishes: {
+        Row: {
+          restaurant_id: string
+          dish_name: string
+          mention_count: number
+          rank: number | null
+          sample_video_ids: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          restaurant_id: string
+          dish_name: string
+          mention_count?: number
+          rank?: number | null
+          sample_video_ids?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          restaurant_id?: string
+          dish_name?: string
+          mention_count?: number
+          rank?: number | null
+          sample_video_ids?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_highlighted_dishes_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       fetch_logs: {
         Row: {
           id: string
