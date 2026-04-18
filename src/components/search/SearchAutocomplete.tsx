@@ -218,7 +218,7 @@ export default function SearchAutocomplete({
   const containerClass =
     variant === 'hero'
       ? 'flex items-center gap-3 px-5 py-3 border rounded-sm shadow-sm transition-shadow hover:shadow-lg'
-      : 'flex items-center gap-4 px-6 py-4 transition-all hover:shadow-xl border rounded-sm'
+      : 'flex items-center gap-3 pl-5 pr-4 py-3'
 
   return (
     <div ref={rootRef} className="relative w-full">
@@ -229,8 +229,8 @@ export default function SearchAutocomplete({
             backgroundColor:
               variant === 'hero'
                 ? 'var(--color-background)'
-                : 'var(--color-surface)',
-            borderColor: 'var(--color-border)',
+                : 'transparent',
+            borderColor: variant === 'hero' ? 'var(--color-border)' : 'transparent',
           }}
         >
           <Search
@@ -245,7 +245,7 @@ export default function SearchAutocomplete({
               aria-hidden
             />
           )}
-          {submitBtn}
+          {variant === 'hero' && submitBtn}
         </div>
       </form>
 

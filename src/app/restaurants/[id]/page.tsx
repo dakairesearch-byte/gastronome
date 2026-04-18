@@ -2,13 +2,13 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import RestaurantCard from '@/components/RestaurantCard'
 import type { Restaurant } from '@/types/database'
-import AccoladesBadges, { getDesignationDisplay } from '@/components/AccoladesBadges'
+import AccoladesBadges from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
 import ShareButton from '@/components/ShareButton'
 import BookmarkButton from '@/components/BookmarkButton'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ExternalLink, ArrowLeft } from 'lucide-react'
+import { MapPin, Phone, Globe, ArrowLeft, Star } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -23,11 +23,6 @@ async function getRestaurantData(restaurantId: string) {
 
   if (error || !restaurant) return null
 
-  // Related + videoCount don't depend on each other — run them in
-  // parallel. Previously the page waterfalled three sequential
-  // round-trips (restaurant, trending, videoCount); collapsing the
-  // last two into a `Promise.all` shaves ~one round-trip of TTFB on
-  // every detail render.
   const [trending, videoCountResult] = await Promise.all([
     topTrendingRestaurants(supabase, {
       city: restaurant.city ?? undefined,
@@ -61,24 +56,20 @@ async function getRestaurantData(restaurantId: string) {
   }
 }
 
-type RatingSource = {
-  key: 'google' | 'yelp' | 'infatuation' | 'beli'
+type ScoreSource = {
+  key: string
   label: string
   icon: string
   rating: number | null
   maxRating: number
   reviewCount?: number | null
   url: string | null
-  bg: string
-  border: string
-  accent: string
-  text: string
-  iconBg: string
+  badgeBg: string
 }
 
-function buildRatingSources(
+function buildScoreSources(
   restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']
-): RatingSource[] {
+): ScoreSource[] {
   return [
     {
       key: 'google',
@@ -88,11 +79,7 @@ function buildRatingSources(
       maxRating: 5,
       reviewCount: restaurant.google_review_count,
       url: restaurant.google_url,
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      accent: 'text-blue-700',
-      text: 'text-blue-600',
-      iconBg: 'bg-blue-100',
+      badgeBg: '#DBEAFE',
     },
     {
       key: 'yelp',
@@ -102,11 +89,7 @@ function buildRatingSources(
       maxRating: 5,
       reviewCount: restaurant.yelp_review_count,
       url: restaurant.yelp_url,
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      accent: 'text-red-700',
-      text: 'text-red-600',
-      iconBg: 'bg-red-100',
+      badgeBg: '#FEE2E2',
     },
     {
       key: 'infatuation',
@@ -116,25 +99,7 @@ function buildRatingSources(
       maxRating: 10,
       reviewCount: null,
       url: restaurant.infatuation_url,
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
-      accent: 'text-orange-700',
-      text: 'text-orange-600',
-      iconBg: 'bg-orange-100',
-    },
-    {
-      key: 'beli',
-      label: 'Beli',
-      icon: 'B',
-      rating: restaurant.beli_score,
-      maxRating: 10,
-      reviewCount: null,
-      url: restaurant.beli_url,
-      bg: 'bg-purple-50',
-      border: 'border-purple-200',
-      accent: 'text-purple-700',
-      text: 'text-purple-600',
-      iconBg: 'bg-purple-100',
+      badgeBg: '#FFEDD5',
     },
   ]
 }
@@ -150,28 +115,36 @@ export default async function RestaurantPage({
   if (!data) notFound()
 
   const { restaurant, relatedRestaurants, videoCount } = data
-  const ratingSources = buildRatingSources(restaurant)
-  const hasAccolades = restaurant.michelin_stars > 0 || restaurant.michelin_designation || restaurant.james_beard_winner || restaurant.james_beard_nominated || restaurant.eater_38
+  const scoreSources = buildScoreSources(restaurant)
+  const hasAccolades =
+    restaurant.michelin_stars > 0 ||
+    restaurant.michelin_designation ||
+    restaurant.james_beard_winner ||
+    restaurant.james_beard_nominated ||
+    restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
-  const trackedCount = ratingSources.filter((s) => s.rating != null).length
+  const avgRating = restaurant.google_rating ?? restaurant.yelp_rating ?? null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Header */}
-      <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
+    <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
+      {/* Hero */}
+      <div className="relative overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
         {photoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photoUrl}
-            alt={restaurant.name}
+            alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
-          <div className="flex items-center justify-between mb-6">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+        <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
+          <div className="flex items-center justify-between mb-4">
             <Link
               href="/explore"
-              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm transition-colors"
+              style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}
             >
               <ArrowLeft size={14} />
               Discover
@@ -192,142 +165,63 @@ export default async function RestaurantPage({
           </div>
 
           <div className="max-w-3xl">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
+              <span
+                className="inline-block px-3 py-1 text-xs uppercase mb-3"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  letterSpacing: '0.12em',
+                  fontWeight: 500,
+                  color: 'rgba(255,255,255,0.9)',
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  borderRadius: '8px',
+                }}
+              >
+                {restaurant.cuisine}
+              </span>
+            )}
+
+            <h1
+              className="text-2xl sm:text-3xl mb-2"
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 500,
+                color: '#fff',
+                letterSpacing: '-0.01em',
+              }}
+            >
               {restaurant.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-gray-300">
-              {restaurant.cuisine && (
-                <span className="px-2.5 py-0.5 bg-white/10 backdrop-blur-sm rounded-lg text-xs font-medium text-gray-200 border border-white/10">
-                  {restaurant.cuisine}
-                </span>
-              )}
-              <span className="text-gray-500">&middot;</span>
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={13} className="text-gray-400" />
+
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <MapPin size={13} />
+              <span style={{ fontFamily: 'var(--font-body)' }}>
                 {restaurant.neighborhood || restaurant.city}
+                {restaurant.address && ` · ${restaurant.address}`}
               </span>
             </div>
-            {restaurant.address && (
-              <p className="text-sm text-gray-400 mt-2">
-                {restaurant.google_url ? (
-                  <a href={restaurant.google_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
-                    {restaurant.address} <ExternalLink size={11} className="inline -mt-0.5 ml-0.5" />
-                  </a>
-                ) : (
-                  restaurant.address
-                )}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Accolades Banner */}
-      {hasAccolades && (
-        <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-b border-amber-200/60">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-            <AccoladesBadges restaurant={restaurant} />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Ratings Dashboard */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Ratings Dashboard</h2>
-                <span className="text-xs text-gray-400">{trackedCount} of 4 sources tracked</span>
-              </div>
-              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-                {ratingSources.map((source) => (
-                  <DashboardCard key={source.key} source={source} />
-                ))}
-              </div>
-
-              {restaurant.infatuation_review_snippet && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <blockquote className="text-sm text-gray-700 italic leading-relaxed">
-                    &ldquo;{restaurant.infatuation_review_snippet}&rdquo;
-                  </blockquote>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs font-semibold text-gray-500">&mdash; The Infatuation</span>
-                    {restaurant.infatuation_url && (
-                      <a
-                        href={restaurant.infatuation_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
-                      >
-                        Read full review <ExternalLink size={11} />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* On Social — TikTok + Instagram Video Gallery */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">On Social</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Videos from TikTok &amp; Instagram</p>
-                </div>
-                <span className="text-xs text-gray-400">
-                  {videoCount > 0
-                    ? `${videoCount} video${videoCount !== 1 ? 's' : ''}`
-                    : 'TikTok & Instagram'}
+            {avgRating != null && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <Star size={14} className="fill-current" style={{ color: 'var(--color-primary)' }} />
+                <span
+                  className="text-sm"
+                  style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
+                >
+                  {avgRating.toFixed(1)}
                 </span>
               </div>
-              <VideoGallery restaurantId={restaurant.id} />
-            </section>
-
-            {/* Description */}
-            {restaurant.description && (
-              <section>
-                <h2 className="text-lg font-bold text-gray-900 mb-3">About</h2>
-                <p className="text-sm text-gray-600 leading-relaxed">{restaurant.description}</p>
-              </section>
             )}
 
-          </div>
-
-          {/* Right sidebar */}
-          <div className="space-y-6">
-            {/* Map */}
-            {restaurant.latitude && restaurant.longitude && (
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="aspect-[4/3] bg-gray-100">
-                  <iframe
-                    title="Restaurant location"
-                    src={`https://www.google.com/maps?q=${restaurant.latitude},${restaurant.longitude}&z=15&output=embed`}
-                    className="w-full h-full border-0"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Contact Details */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-3">
-              <h3 className="text-sm font-bold text-gray-900">Details</h3>
-              {restaurant.address && (
-                <div className="flex items-start gap-2 text-sm text-gray-600">
-                  <MapPin size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                  <span>{restaurant.address}</span>
-                </div>
-              )}
+            {/* Contact inline */}
+            <div className="flex flex-wrap items-center gap-4 mt-3">
               {restaurant.phone && (
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}
                 >
-                  <Phone size={15} className="text-gray-400 flex-shrink-0" />
+                  <Phone size={12} />
                   {restaurant.phone}
                 </a>
               )}
@@ -336,11 +230,11 @@ export default async function RestaurantPage({
                   href={restaurant.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}
                 >
-                  <Globe size={15} className="flex-shrink-0" />
-                  Visit website
-                  <ExternalLink size={11} />
+                  <Globe size={12} />
+                  Website
                 </a>
               )}
               {restaurant.instagram_handle && (
@@ -351,24 +245,178 @@ export default async function RestaurantPage({
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-pink-600 hover:text-pink-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs text-white px-2.5 py-1"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    background: 'linear-gradient(135deg, #F58529, #DD2A7B, #8134AF)',
+                    borderRadius: '6px',
+                    fontWeight: 500,
+                  }}
                 >
-                  <span
-                    aria-hidden
-                    className="inline-flex items-center justify-center w-[15px] h-[15px] rounded-sm bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 text-white text-[9px] font-bold flex-shrink-0"
-                  >
-                    IG
-                  </span>
-                  View on Instagram
-                  <ExternalLink size={11} />
+                  @{restaurant.instagram_handle}
                 </a>
               )}
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* More in City */}
+      {/* Accolades Banner */}
+      {hasAccolades && (
+        <div
+          className="border-b"
+          style={{
+            backgroundColor: 'rgba(212,165,116,0.08)',
+            borderColor: 'rgba(212,165,116,0.2)',
+          }}
+        >
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 py-4">
+            <AccoladesBadges restaurant={restaurant} />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-6 lg:px-8 py-10 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
+          {/* Main column */}
+          <div className="space-y-9">
+            {/* Ratings Scoreboard */}
+            <section>
+              <h2
+                className="text-lg mb-3.5"
+                style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontWeight: 500,
+                  color: 'var(--color-text)',
+                }}
+              >
+                Ratings Dashboard
+              </h2>
+              <div
+                className="grid grid-cols-3 overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--color-surface)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                {scoreSources.map((source, i) => (
+                  <ScoreCell key={source.key} source={source} last={i === scoreSources.length - 1} />
+                ))}
+              </div>
+            </section>
+
+            {/* On Social */}
+            <section>
+              <div className="flex items-center justify-between mb-3.5">
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 500,
+                    fontSize: '18px',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  On Social
+                </h2>
+                <span
+                  className="text-xs"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {videoCount > 0
+                    ? `${videoCount} video${videoCount !== 1 ? 's' : ''}`
+                    : 'TikTok & Instagram'}
+                </span>
+              </div>
+              <VideoGallery restaurantId={restaurant.id} />
+            </section>
+
+            {/* The Story */}
+            {restaurant.description && (
+              <section>
+                <h2
+                  className="text-lg mb-3.5"
+                  style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 500,
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  The Story
+                </h2>
+                <p
+                  className="text-sm leading-relaxed italic"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 300,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {restaurant.description}
+                </p>
+              </section>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Map */}
+            {restaurant.latitude && restaurant.longitude && (
+              <div
+                className="overflow-hidden"
+                style={{
+                  borderRadius: '10px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-surface)',
+                }}
+              >
+                <div className="aspect-video bg-gray-100">
+                  <iframe
+                    title="Restaurant location"
+                    src={`https://www.google.com/maps?q=${restaurant.latitude},${restaurant.longitude}&z=15&output=embed`}
+                    className="w-full h-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                {restaurant.google_url && (
+                  <a
+                    href={restaurant.google_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-3 text-xs uppercase transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.1em',
+                      fontWeight: 500,
+                      color: 'var(--color-accent)',
+                      borderTop: '1px solid var(--color-border)',
+                    }}
+                  >
+                    View on Google Maps
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Similar Restaurants */}
             {relatedRestaurants.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-3">More in {restaurant.city}</h3>
+                <h3
+                  className="text-sm mb-3"
+                  style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 500,
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  Similar Restaurants
+                </h3>
                 <div className="space-y-3">
                   {relatedRestaurants.map((related) => (
                     <RestaurantCard key={related.id} restaurant={related} />
@@ -383,52 +431,85 @@ export default async function RestaurantPage({
   )
 }
 
-function DashboardCard({ source }: { source: RatingSource }) {
+function ScoreCell({ source, last }: { source: ScoreSource; last: boolean }) {
   const hasRating = source.rating != null
-  const Wrapper = hasRating && source.url ? 'a' : 'div'
-  const wrapperProps =
-    hasRating && source.url
-      ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' }
-      : {}
-
-  if (!hasRating) {
-    return (
-      <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-100">
-        <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-gray-100 flex items-center justify-center">
-          <span className="text-xs font-bold text-gray-400">{source.icon}</span>
-        </div>
-        <p className="text-xs font-bold uppercase text-gray-400 tracking-wide">{source.label}</p>
-        <p className="text-3xl font-extrabold text-gray-300 mt-1">&mdash;</p>
-        <p className="text-xs text-gray-400 mt-1.5">Not yet tracked</p>
-      </div>
-    )
-  }
 
   return (
-    <Wrapper
-      {...wrapperProps}
-      className={`${source.bg} rounded-xl p-4 text-center border ${source.border} transition-colors group block`}
+    <div
+      className="flex flex-col items-center justify-center py-5 px-3 text-center"
+      style={{
+        borderRight: last ? 'none' : '1px solid var(--color-border)',
+      }}
     >
-      <div className={`w-8 h-8 mx-auto mb-2 rounded-lg ${source.iconBg} flex items-center justify-center`}>
-        <span className={`text-xs font-bold ${source.accent}`}>{source.icon}</span>
+      <div
+        className="w-[22px] h-[22px] flex items-center justify-center mb-2"
+        style={{
+          borderRadius: '4px',
+          backgroundColor: source.badgeBg,
+          fontFamily: 'var(--font-body)',
+          fontSize: '10px',
+          fontWeight: 700,
+          color: 'var(--color-text)',
+        }}
+      >
+        {source.icon}
       </div>
-      <p className="text-xs font-bold uppercase text-gray-500 tracking-wide">{source.label}</p>
-      <p className={`text-3xl font-extrabold ${source.accent} mt-1`}>
-        {source.rating!.toFixed(1)}
-      </p>
-      <p className={`text-xs ${source.text} mt-0.5`}>/ {source.maxRating}</p>
-      {source.reviewCount != null && source.reviewCount > 0 ? (
-        <p className="text-xs text-gray-400 mt-1.5">
-          {source.reviewCount.toLocaleString()} {source.reviewCount === 1 ? 'review' : 'reviews'}
-        </p>
+      <span
+        className="text-[10px] uppercase mb-1"
+        style={{
+          fontFamily: 'var(--font-body)',
+          letterSpacing: '0.1em',
+          fontWeight: 500,
+          color: 'var(--color-text-secondary)',
+        }}
+      >
+        {source.label}
+      </span>
+      {hasRating ? (
+        <>
+          <span
+            className="text-xl"
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 500,
+              color: 'var(--color-text)',
+            }}
+          >
+            {source.rating!.toFixed(1)}
+          </span>
+          <span
+            className="text-[10px]"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            / {source.maxRating}
+          </span>
+          {source.reviewCount != null && source.reviewCount > 0 && (
+            <span
+              className="text-[10px] mt-0.5"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              {source.reviewCount.toLocaleString()} reviews
+            </span>
+          )}
+        </>
       ) : (
-        <p className="text-xs text-gray-400 mt-1.5">Rated</p>
-      )}
-      {source.url && (
-        <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-gray-600 mt-2 transition-colors">
-          View source <ExternalLink size={9} />
+        <span
+          className="text-xl"
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 400,
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          —
         </span>
       )}
-    </Wrapper>
+    </div>
   )
 }
