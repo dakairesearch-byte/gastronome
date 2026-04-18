@@ -1,22 +1,31 @@
+'use client'
+
 /**
  * Top 10 Trending — the Figma v23 editorial list + map panel.
  *
  * Two-column layout on desktop: a numbered 1…10 list of restaurants on the
- * left (circle index, name, CUISINE • neighborhood, star rating) and a
- * decorative map panel on the right with numbered pins that echo the list
- * order. On mobile the two columns stack and the map panel is hidden to
- * keep the list readable.
+ * left (circle index, name, CUISINE • neighborhood, star rating) and a map
+ * panel on the right with numbered pins positioned by lat/lng. On mobile
+ * the two columns stack and the map panel is hidden to keep the list
+ * readable.
  *
- * This component is intentionally presentational — the caller selects the
- * 10 trending restaurants (via `rankScores` / `computeAllScores`) and the
- * city label, so it can be reused as cities change. When latitude /
- * longitude are available the pins are positioned proportionally; when
- * they are not, we fall back to a deterministic scatter so the panel
- * never looks empty.
+ * The caller picks the 10 trending restaurants via `topTrendingRestaurants`
+ * and the city label, so this component is agnostic to the ranking. When
+ * lat/lng is available we compute a geographic bbox and place pins
+ * proportionally; when coordinates are missing for any row we fall back to
+ * a deterministic scatter so the panel never looks empty.
+ *
+ * Interactivity (client-side):
+ *   - List rows are `<Link>`s to the restaurant detail page.
+ *   - Hovering a row highlights its pin, and hovering a pin highlights its
+ *     row — the two always stay paired.
+ *   - Pins are `<Link>`s too, so users can jump straight from the map.
  */
 
-import SectionHeader from '@/components/SectionHeader'
+import Link from 'next/link'
+import { useState } from 'react'
 import { Star } from 'lucide-react'
+import SectionHeader from '@/components/SectionHeader'
 import type { Restaurant } from '@/types/database'
 
 interface Top10TrendingProps {
@@ -46,6 +55,14 @@ function getRating(r: Restaurant): number | null {
   return null
 }
 
+/** Web Mercator Y projection. Used for lat→panel-Y so pins stay
+ *  proportional to the underlying geography even for north/south-slanted
+ *  cities. Web Mercator for `lat` in degrees. */
+function latToMercatorY(lat: number): number {
+  const rad = (lat * Math.PI) / 180
+  return Math.log(Math.tan(Math.PI / 4 + rad / 2))
+}
+
 function pinPosition(
   r: Restaurant,
   index: number,
@@ -61,24 +78,25 @@ function pinPosition(
     typeof r.latitude === 'number' &&
     typeof r.longitude === 'number'
   ) {
-    const latRange = bounds.maxLat - bounds.minLat || 1
     const lngRange = bounds.maxLng - bounds.minLng || 1
-    // 8% padding inside the panel so pins never sit on the border.
-    const x = 8 + ((r.longitude - bounds.minLng) / lngRange) * 84
-    const y = 8 + (1 - (r.latitude - bounds.minLat) / latRange) * 84
+    const minY = latToMercatorY(bounds.minLat)
+    const maxY = latToMercatorY(bounds.maxLat)
+    const yRange = maxY - minY || 1
+    // 10% padding inside the panel so pins never sit on the border.
+    const x = 10 + ((r.longitude - bounds.minLng) / lngRange) * 80
+    const y = 10 + (1 - (latToMercatorY(r.latitude) - minY) / yRange) * 80
     return { x, y }
   }
   return FALLBACK_POSITIONS[index % FALLBACK_POSITIONS.length]
 }
 
 export default function Top10Trending({ city, restaurants }: Top10TrendingProps) {
+  const [activeId, setActiveId] = useState<string | null>(null)
+
   if (restaurants.length === 0) return null
 
   const items = restaurants.slice(0, 10)
 
-  // Compute geographic bounds if every restaurant has lat/lng. If any pin
-  // is missing coordinates we skip bounds entirely and use the fallback
-  // scatter so the panel stays visually balanced.
   const lats = items
     .map((r) => r.latitude)
     .filter((v): v is number => typeof v === 'number')
@@ -105,96 +123,117 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           {items.map((r, i) => {
             const rank = i + 1
             const rating = getRating(r)
+            const isActive = activeId === r.id
             return (
               <li
                 key={r.id}
-                className="flex items-start gap-4 py-4 border-b"
+                className="border-b"
                 style={{ borderColor: 'var(--color-border, rgba(0,0,0,0.08))' }}
               >
-                <span
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                <Link
+                  href={`/restaurants/${r.id}`}
+                  onMouseEnter={() => setActiveId(r.id)}
+                  onMouseLeave={() => setActiveId(null)}
+                  onFocus={() => setActiveId(r.id)}
+                  onBlur={() => setActiveId(null)}
+                  className="flex items-start gap-4 py-4 transition-colors"
                   style={{
-                    backgroundColor: 'var(--color-surface-alt, #F3EFE7)',
-                    color: 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font-body)',
-                    fontWeight: 500,
+                    backgroundColor: isActive
+                      ? 'var(--color-surface, rgba(0,0,0,0.02))'
+                      : 'transparent',
                   }}
                 >
-                  {rank}
-                </span>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h3
-                      className="text-lg truncate"
-                      style={{
-                        color: 'var(--color-text)',
-                        fontFamily: 'var(--font-heading)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {r.name}
-                    </h3>
-                    {rating != null && (
-                      <span
-                        className="flex items-center gap-1 text-sm flex-shrink-0"
-                        style={{
-                          color: 'var(--color-text)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        <Star
-                          size={14}
-                          className="flex-shrink-0"
-                          style={{
-                            color: 'var(--color-accent)',
-                            fill: 'var(--color-accent)',
-                          }}
-                        />
-                        {rating.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div
-                    className="mt-1 flex items-center gap-2 text-xs"
+                  <span
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors"
                     style={{
-                      color: 'var(--color-text-secondary)',
+                      backgroundColor: isActive
+                        ? 'var(--color-primary)'
+                        : 'var(--color-surface-alt, #F3EFE7)',
+                      color: isActive
+                        ? '#fff'
+                        : 'var(--color-text-secondary)',
                       fontFamily: 'var(--font-body)',
+                      fontWeight: 500,
                     }}
                   >
-                    <span
-                      className="uppercase"
-                      style={{ letterSpacing: '0.14em' }}
+                    {rank}
+                  </span>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3
+                        className="text-lg truncate"
+                        style={{
+                          color: 'var(--color-text)',
+                          fontFamily: 'var(--font-heading)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {r.name}
+                      </h3>
+                      {rating != null && (
+                        <span
+                          className="flex items-center gap-1 text-sm flex-shrink-0"
+                          style={{
+                            color: 'var(--color-text)',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          <Star
+                            size={14}
+                            className="flex-shrink-0"
+                            style={{
+                              color: 'var(--color-accent)',
+                              fill: 'var(--color-accent)',
+                            }}
+                          />
+                          {rating.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      className="mt-1 flex items-center gap-2 text-xs"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                      }}
                     >
-                      {r.cuisine}
-                    </span>
-                    {r.neighborhood && (
-                      <>
-                        <span aria-hidden="true">•</span>
-                        <span>{r.neighborhood}</span>
-                      </>
-                    )}
+                      <span
+                        className="uppercase"
+                        style={{ letterSpacing: '0.14em' }}
+                      >
+                        {r.cuisine}
+                      </span>
+                      {r.neighborhood && (
+                        <>
+                          <span aria-hidden="true">•</span>
+                          <span>{r.neighborhood}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </Link>
               </li>
             )
           })}
         </ol>
 
-        {/* --- Map panel (decorative; pins echo the list order) --- */}
+        {/* --- Map panel --- */}
         <div
           className="hidden lg:block relative rounded-sm overflow-hidden"
           style={{
             backgroundColor: 'var(--color-surface-alt, #EFEAE1)',
             minHeight: '520px',
           }}
-          aria-hidden="true"
+          role="img"
+          aria-label={`Map with ${items.length} numbered pins showing trending restaurants in ${city}`}
         >
           {/* Subtle grid lines, evoke a streetmap without being one. */}
           <svg
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ opacity: 0.45 }}
+            aria-hidden
           >
             <defs>
               <pattern
@@ -216,30 +255,44 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
           {items.map((r, i) => {
             const { x, y } = pinPosition(r, i, bounds)
+            const isActive = activeId === r.id
             return (
-              <div
+              <Link
                 key={r.id}
-                className="absolute flex items-center justify-center rounded-full text-[11px] shadow-md"
+                href={`/restaurants/${r.id}`}
+                onMouseEnter={() => setActiveId(r.id)}
+                onMouseLeave={() => setActiveId(null)}
+                onFocus={() => setActiveId(r.id)}
+                onBlur={() => setActiveId(null)}
+                aria-label={`${r.name} — rank ${i + 1}`}
+                className="absolute flex items-center justify-center rounded-full text-[11px] shadow-md transition-all"
                 style={{
                   left: `${x}%`,
                   top: `${y}%`,
-                  transform: 'translate(-50%, -50%)',
+                  transform: isActive
+                    ? 'translate(-50%, -50%) scale(1.25)'
+                    : 'translate(-50%, -50%)',
                   width: '26px',
                   height: '26px',
-                  backgroundColor: 'var(--color-text)',
-                  color: 'var(--color-background)',
+                  backgroundColor: isActive
+                    ? 'var(--color-primary)'
+                    : 'var(--color-text)',
+                  color: isActive
+                    ? '#fff'
+                    : 'var(--color-background)',
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
+                  zIndex: isActive ? 2 : 1,
                 }}
               >
                 {i + 1}
-              </div>
+              </Link>
             )
           })}
 
           {/* City label caption */}
           <div
-            className="absolute bottom-4 left-4 px-3 py-1.5 text-xs uppercase rounded-sm"
+            className="absolute bottom-4 left-4 px-3 py-1.5 text-xs uppercase rounded-sm pointer-events-none"
             style={{
               backgroundColor: 'var(--color-surface, #FFFFFF)',
               color: 'var(--color-text-secondary)',

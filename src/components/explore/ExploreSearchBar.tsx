@@ -1,20 +1,37 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronDown, PlusCircle } from 'lucide-react'
 import SearchAutocomplete from '@/components/search/SearchAutocomplete'
 
 interface ExploreSearchBarProps {
   cities: string[]
+  /** City currently reflected in the URL; drives the picker's initial label. */
+  initialCity?: string
 }
 
-export default function ExploreSearchBar({ cities }: ExploreSearchBarProps) {
-  const [selectedCity, setSelectedCity] = useState(cities[0] ?? 'New York')
+export default function ExploreSearchBar({
+  cities,
+  initialCity,
+}: ExploreSearchBarProps) {
+  const router = useRouter()
+  const [selectedCity, setSelectedCity] = useState(
+    initialCity || cities[0] || 'New York'
+  )
   const [menuOpen, setMenuOpen] = useState(false)
   const [customActive, setCustomActive] = useState(false)
   const [customValue, setCustomValue] = useState('')
   const wrapRef = useRef<HTMLDivElement>(null)
   const customInputRef = useRef<HTMLInputElement>(null)
+
+  // Keep the label in sync when the URL changes (e.g. browser back/forward).
+  useEffect(() => {
+    if (initialCity && initialCity !== selectedCity) {
+      setSelectedCity(initialCity)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCity])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -28,6 +45,17 @@ export default function ExploreSearchBar({ cities }: ExploreSearchBarProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [menuOpen])
 
+  const pickCity = (city: string) => {
+    setSelectedCity(city)
+    setMenuOpen(false)
+    setCustomActive(false)
+    setCustomValue('')
+    // Push the city into the URL so the server re-renders Top 10 Trending
+    // and the map for the new city. Using push (not replace) keeps browser
+    // back/forward working as users expect.
+    router.push(`/explore?city=${encodeURIComponent(city)}`)
+  }
+
   const handleCustomTrigger = () => {
     setCustomActive(true)
     setTimeout(() => customInputRef.current?.focus(), 50)
@@ -36,12 +64,7 @@ export default function ExploreSearchBar({ cities }: ExploreSearchBarProps) {
   const handleCustomKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const v = customValue.trim()
-      if (v) {
-        setSelectedCity(v)
-        setMenuOpen(false)
-        setCustomActive(false)
-        setCustomValue('')
-      }
+      if (v) pickCity(v)
     } else if (e.key === 'Escape') {
       setCustomActive(false)
       setCustomValue('')
@@ -150,10 +173,7 @@ export default function ExploreSearchBar({ cities }: ExploreSearchBarProps) {
                         type="button"
                         role="option"
                         aria-selected={city === selectedCity}
-                        onClick={() => {
-                          setSelectedCity(city)
-                          setMenuOpen(false)
-                        }}
+                        onClick={() => pickCity(city)}
                         className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors"
                         style={{
                           fontFamily: 'var(--font-body)',

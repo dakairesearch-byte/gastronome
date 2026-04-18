@@ -59,9 +59,18 @@ const COLLECTIONS = [
   },
 ]
 
-const TOP10_CITY = 'New York'
+const DEFAULT_CITY = 'New York'
 
-export default async function ExplorePage() {
+interface SearchParamsInput {
+  city?: string
+}
+
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsInput>
+}) {
+  const raw = await searchParams
   const supabase = await createServerSupabaseClient()
 
   const { data: cityRows } = await supabase
@@ -71,8 +80,17 @@ export default async function ExplorePage() {
     .order('restaurant_count', { ascending: false })
   const cities = (cityRows ?? []).map((c) => c.name)
 
+  // Pick the active city: URL param wins, else first city from DB, else
+  // the hard-coded default. Matching is case-insensitive so shareable
+  // links like `/explore?city=new%20york` still resolve.
+  const requestedCity = raw.city?.trim()
+  const matchedCity =
+    requestedCity &&
+    cities.find((c) => c.toLowerCase() === requestedCity.toLowerCase())
+  const activeCity = matchedCity || requestedCity || cities[0] || DEFAULT_CITY
+
   const trending = await topTrendingRestaurants(supabase, {
-    city: TOP10_CITY,
+    city: activeCity,
     window: '30d',
     limit: 10,
   })
@@ -83,7 +101,7 @@ export default async function ExplorePage() {
     const { data } = await supabase
       .from('restaurants')
       .select('*')
-      .eq('city', TOP10_CITY)
+      .ilike('city', activeCity)
       .order('google_rating', { ascending: false, nullsFirst: false })
       .limit(10)
     for (const row of (data ?? []) as Restaurant[]) {
@@ -99,11 +117,11 @@ export default async function ExplorePage() {
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
-      <ExploreSearchBar cities={cities} />
+      <ExploreSearchBar cities={cities} initialCity={activeCity} />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
         {top10.length > 0 && (
-          <Top10Trending city={TOP10_CITY} restaurants={top10} />
+          <Top10Trending city={activeCity} restaurants={top10} />
         )}
 
         <section>
