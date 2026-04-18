@@ -1,6 +1,6 @@
 /**
- * Editorial section header Ã¢ÂÂ the Figma v23 pattern:
- * optional small uppercase accent label Ã¢ÂÂ large Spectral heading.
+ * Editorial section header — the Figma v23 pattern:
+ * optional small uppercase accent label — large Spectral heading.
  *
  * Figma v23 left-aligns every section title on the home/explore pages and
  * only renders the uppercase eyebrow label on the hero section of each

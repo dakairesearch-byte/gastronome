@@ -1,16 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { computeAllScores, rankScores } from '@/lib/ranking/trending'
-import { getCitiesWithLiveCounts } from '@/lib/cities'
+import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
-import FeaturedCityShowcase from '@/components/explore/FeaturedCityShowcase'
 import Top10Trending from '@/components/explore/Top10Trending'
 import ExploreCollectionCard from '@/components/cards/ExploreCollectionCard'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
 
-/** Curated collection definitions. */
 const COLLECTIONS = [
   {
     id: 'brunch',
@@ -62,137 +59,32 @@ const COLLECTIONS = [
   },
 ]
 
-/** Compact display labels matching the Figma city tabs. */
-function shortLabelFor(name: string): string {
-  if (name === 'New York') return 'NYC'
-  if (name === 'Los Angeles') return 'LA'
-  if (name === 'San Francisco') return 'SF'
-  return name
-}
+const TOP10_CITY = 'New York'
 
 export default async function ExplorePage() {
   const supabase = await createServerSupabaseClient()
 
-  // Get live city list (only cities with restaurants in the DB).
-  const cities = await getCitiesWithLiveCounts(supabase)
+  const trending = await topTrendingRestaurants(supabase, {
+    city: TOP10_CITY,
+    window: '30d',
+    limit: 10,
+  })
 
-  // --- Batched trending lookup ---
-  // `computeAllScores` is memoized per-request by React.cache, but more
-  // importantly we derive the per-city top ranker purely in memory and
-  // do a single `.in('id', [...])` fetch for all the trending-winner
-  // restaurant rows instead of the previous N queries (one per city).
-  // Cities with no trending activity still need a per-city fallback
-  // lookup, but those run in parallel.
-  const scoreMap = await computeAllScores(supabase, '30d')
-
-  // Top-trending entry per city (null if no activity in the window).
-  const trendingByCity = new Map<
-    string,
-    { restaurant_id: string } | null
-  >()
-  for (const city of cities) {
-    const [top] = rankScores(scoreMap, { city: city.name, limit: 1 })
-    trendingByCity.set(city.name, top && top.score > 0 ? top : null)
-  }
-
-  const trendingIds = Array.from(trendingByCity.values())
-    .filter((e): e is { restaurant_id: string } => e != null)
-    .map((e) => e.restaurant_id)
-
-  // Single batched fetch for all the trending-winner rows.
-  const trendingById = new Map<string, Restaurant>()
-  if (trendingIds.length > 0) {
+  let top10: Restaurant[] = trending
+  if (top10.length < 10) {
+    const existing = new Set(top10.map((r) => r.id))
     const { data } = await supabase
       .from('restaurants')
       .select('*')
-      .in('id', trendingIds)
-    for (const row of data ?? []) {
-      trendingById.set(row.id, row as Restaurant)
+      .eq('city', TOP10_CITY)
+      .order('google_rating', { ascending: false, nullsFirst: false })
+      .limit(10)
+    for (const row of (data ?? []) as Restaurant[]) {
+      if (top10.length >= 10) break
+      if (!existing.has(row.id)) top10.push(row)
     }
   }
 
-  // Fallback: parallel per-city top-rated lookups for cities with no
-  // trending activity in the window. One round-trip per fallback city,
-  // but all fired concurrently.
-  const fallbackCities = cities.filter((c) => trendingByCity.get(c.name) == null)
-  const fallbackEntries = await Promise.all(
-    fallbackCities.map(async (city) => {
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('city', city.name)
-        .order('google_rating', { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle()
-      return [city.name, (data as Restaurant | null) ?? null] as const
-    })
-  )
-  const fallbackByCity = new Map(fallbackEntries)
-
-  const cityFeatures = cities.map((city) => {
-    const trendingEntry = trendingByCity.get(city.name)
-    const featured: Restaurant | null =
-      (trendingEntry && trendingById.get(trendingEntry.restaurant_id)) ||
-      fallbackByCity.get(city.name) ||
-      null
-    return {
-      city: city.name,
-      shortLabel: shortLabelFor(city.name),
-      restaurant: featured,
-      locationLabel: `${city.name}, ${city.state}`,
-      cityCount: city.live_restaurant_count,
-    }
-  })
-
-  // Default to NYC if available, otherwise first city.
-  const defaultCity =
-    cityFeatures.find((c) => c.city === 'New York')?.city ??
-    cityFeatures[0]?.city ??
-    ''
-
-  // --- Top 10 Trending for the default city (Figma v23 section) ---
-  // Reuse the already-computed scoreMap so this adds at most one extra
-  // round-trip (the `.in('id', [...])` fetch to hydrate restaurant rows).
-  let top10: Restaurant[] = []
-  if (defaultCity) {
-    const topEntries = rankScores(scoreMap, { city: defaultCity, limit: 10 })
-    const topIds = topEntries
-      .filter((e) => e.score > 0)
-      .map((e) => e.restaurant_id)
-
-    if (topIds.length > 0) {
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .in('id', topIds)
-      const byId = new Map<string, Restaurant>()
-      for (const row of (data ?? []) as Restaurant[]) byId.set(row.id, row)
-      top10 = topIds
-        .map((id) => byId.get(id))
-        .filter((r): r is Restaurant => r != null)
-    }
-
-    // Fallback: if the city doesn't have 10 trending rows yet, fill with
-    // top-rated restaurants in the same city so the section is never
-    // half-empty on a fresh install.
-    if (top10.length < 10) {
-      const existing = new Set(top10.map((r) => r.id))
-      const { data } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('city', defaultCity)
-        .order('google_rating', { ascending: false, nullsFirst: false })
-        .limit(10)
-      for (const row of (data ?? []) as Restaurant[]) {
-        if (top10.length >= 10) break
-        if (!existing.has(row.id)) top10.push(row)
-      }
-    }
-  }
-
-  // Light per-collection placeholder counts. The COLLECTIONS list is curated,
-  // not derived from a join — until the Saved Collections feature is wired
-  // to a real table, deterministic dummy counts keep the layout honest.
   const collectionCounts = COLLECTIONS.map((c, i) => ({
     ...c,
     count: 8 + ((i * 7) % 14),
@@ -203,17 +95,10 @@ export default async function ExplorePage() {
       <ExploreSearchBar />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        {/* Iconic Dining — city tabs + featured city card */}
-        {cityFeatures.length > 0 && (
-          <FeaturedCityShowcase cities={cityFeatures} defaultCity={defaultCity} />
-        )}
-
-        {/* Top 10 Trending — numbered list + map panel */}
         {top10.length > 0 && (
-          <Top10Trending city={defaultCity} restaurants={top10} />
+          <Top10Trending city={TOP10_CITY} restaurants={top10} />
         )}
 
-        {/* Editorial Collections */}
         <section>
           <SectionHeader label="Expertly Curated" title="Editorial Collections" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
