@@ -8,7 +8,7 @@ import RestaurantCard from '@/components/RestaurantCard'
 import FilterChips from '@/components/FilterChips'
 import EmptyState from '@/components/EmptyState'
 import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
-import { Search, UtensilsCrossed, MapPin } from 'lucide-react'
+import { Search, UtensilsCrossed, MapPin, Utensils } from 'lucide-react'
 import { Restaurant } from '@/types/database'
 import Link from 'next/link'
 
@@ -20,6 +20,12 @@ interface GooglePlaceResult {
   rating?: number
 }
 
+interface DishHit {
+  dish_name: string
+  mention_count: number
+  restaurant: Restaurant
+}
+
 function SearchContent() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || searchParams.get('cuisine') || ''
@@ -29,6 +35,7 @@ function SearchContent() {
   )
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [googlePlaces, setGooglePlaces] = useState<GooglePlaceResult[]>([])
+  const [dishes, setDishes] = useState<DishHit[]>([])
   const [availableCuisines, setAvailableCuisines] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -133,7 +140,7 @@ function SearchContent() {
                         })
                       } else {
                         resolve(null)
-                      }
+                    }
                     }
                   )
                 })
@@ -181,7 +188,7 @@ function SearchContent() {
           .limit(20)
 
         // Search returns results in text-match + alphabetical order. No
-        // ranking here — discovery lives on /explore, which uses the
+        // ranking here â discovery lives on /explore, which uses the
         // project's single trending function.
         const orderedRestaurants: Restaurant[] = restaurantData || []
         setRestaurants(orderedRestaurants)
@@ -197,6 +204,43 @@ function SearchContent() {
           )
         }
         setGooglePlaces(googleResults)
+
+        // Dish search: match highlighted dishes by name across all
+        // restaurants, ranked by mention_count so the most talked-about
+        // plates surface first. We include the joined restaurant so the
+        // result cards can link straight to the place.
+        let dishResults: DishHit[] = []
+        if (searchQuery.trim()) {
+          const sanitized = searchQuery.replace(/[%_\\]/g, '')
+          const { data: dishRows, error: dishErr } = await supabase
+            .from('restaurant_highlighted_dishes')
+            .select('dish_name, mention_count, restaurant:restaurants(*)')
+            .ilike('dish_name', `%${sanitized}%`)
+            .order('mention_count', { ascending: false })
+            .limit(20)
+
+          if (!dishErr && dishRows) {
+            dishResults = (dishRows as unknown as Array<{
+              dish_name: string
+              mention_count: number | null
+              restaurant: Restaurant | null
+            }>)
+              .filter((d): d is { dish_name: string; mention_count: number | null; restaurant: Restaurant } => !!d.restaurant)
+              .map((d) => ({
+                dish_name: d.dish_name,
+                mention_count: d.mention_count ?? 0,
+                restaurant: d.restaurant,
+              }))
+
+            // Respect the cuisine filter on dishes too.
+            if (selectedCuisines.length > 0) {
+              dishResults = dishResults.filter((d) =>
+                selectedCuisines.includes(d.restaurant.cuisine)
+              )
+            }
+          }
+        }
+        setDishes(dishResults)
       } finally {
         setLoading(false)
       }
@@ -219,6 +263,7 @@ function SearchContent() {
   }
 
   const totalRestaurants = restaurants.length + googlePlaces.length
+  const hasAnyResults = totalRestaurants > 0 || dishes.length > 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -256,14 +301,14 @@ function SearchContent() {
         )}
 
         {/* No Results */}
-        {!loading && totalRestaurants === 0 && (
+        {!loading && !hasAnyResults && (
           <EmptyState
             icon={Search}
             title={searchQuery || selectedCuisines.length > 0 ? 'No results found' : 'Start searching'}
             description={
               searchQuery || selectedCuisines.length > 0
                 ? 'Try adjusting your filters or search terms'
-                : 'Enter a restaurant name, cuisine, or city to get started'
+                : 'Enter a restaurant, cuisine, city, or dish (try "ramen" or "pizza") to get started'
             }
             ctaText="Discover"
             ctaHref="/explore"
@@ -271,8 +316,57 @@ function SearchContent() {
         )}
 
         {/* Results */}
-        {!loading && totalRestaurants > 0 && (
+        {!loading && hasAnyResults && (
           <div className="space-y-3">
+            {/* Dishes that match the query â shown first since it's often
+                why someone typed a food word in. Each card links to the
+                restaurant that serves it. */}
+            {dishes.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="h-px bg-gray-200 flex-1" />
+                  <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                    <Utensils size={12} /> Dishes matching &ldquo;{searchQuery}&rdquo;
+                  </span>
+                  <div className="h-px bg-gray-200 flex-1" />
+                </div>
+                {dishes.map((d, i) => (
+                  <Link
+                    key={`${d.restaurant.id}-${d.dish_name}-${i}`}
+                    href={`/restaurants/${d.restaurant.id}`}
+                    className="block bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <Utensils size={18} className="text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {d.dish_name}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          at {d.restaurant.name}
+                          {d.restaurant.city ? ` Â· ${d.restaurant.city}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                        {d.mention_count} {d.mention_count === 1 ? 'mention' : 'mentions'}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+                {restaurants.length > 0 && (
+                  <div className="flex items-center gap-2 pt-2">
+                    <div className="h-px bg-gray-200 flex-1" />
+                    <span className="text-xs text-gray-400 font-medium">
+                      Restaurants
+                    </span>
+                    <div className="h-px bg-gray-200 flex-1" />
+                  </div>
+                )}
+              </>
+            )}
+
             {/* Local results */}
             {restaurants.map((restaurant) => (
               <RestaurantCard key={restaurant.id} restaurant={restaurant} />
