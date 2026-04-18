@@ -64,6 +64,13 @@ const TOP10_CITY = 'New York'
 export default async function ExplorePage() {
   const supabase = await createServerSupabaseClient()
 
+  const { data: cityRows } = await supabase
+    .from('cities')
+    .select('name, slug')
+    .eq('is_active', true)
+    .order('restaurant_count', { ascending: false })
+  const cities = (cityRows ?? []).map((c) => c.name)
+
   const trending = await topTrendingRestaurants(supabase, {
     city: TOP10_CITY,
     window: '30d',
@@ -92,7 +99,7 @@ export default async function ExplorePage() {
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
-      <ExploreSearchBar />
+      <ExploreSearchBar cities={cities} />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
         {top10.length > 0 && (
