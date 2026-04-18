@@ -124,25 +124,36 @@ export default function Navigation() {
             {/* Minimal profile/sign-in affordance â the Figma design
                 doesn't show an avatar cluster, but users still need a
                 reachable entry point for auth. */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden md:flex items-center gap-2">
               {user ? (
                 <Link
                   href="/profile"
                   aria-label="Profile"
-                  className="p-2 rounded-full transition-colors hover:bg-gray-100"
+                  className="flex items-center gap-2 px-3 py-2 rounded-sm transition-colors hover:bg-gray-100"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  <User size={20} strokeWidth={1.5} />
+                  <User size={18} strokeWidth={1.5} />
+                  <span
+                    className="text-xs uppercase"
+                    style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}
+                  >
+                    Profile
+                  </span>
                 </Link>
               ) : (
                 <button
                   type="button"
-                  onClick={() => openSignInModal()}
-                  aria-label="Sign in"
-                  className="p-2 rounded-full transition-colors hover:bg-gray-100"
+                  onClick={() => openSignInModal({ mode: 'signin' })}
+                  className="flex items-center gap-2 px-3 py-2 rounded-sm transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  <User size={20} strokeWidth={1.5} />
+                  <User size={18} strokeWidth={1.5} />
+                  <span
+                    className="text-xs uppercase"
+                    style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}
+                  >
+                    Sign in
+                  </span>
                 </button>
               )}
             </div>

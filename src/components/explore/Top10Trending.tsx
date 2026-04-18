@@ -115,7 +115,14 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
   return (
     <section className="mb-16">
-      <SectionHeader label={city.toUpperCase()} title="Top 10 Trending" />
+      <SectionHeader
+        label={city.toUpperCase()}
+        title={
+          items.length >= 10
+            ? 'Top 10 Trending'
+            : `Top ${items.length} Trending`
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* --- Numbered list --- */}

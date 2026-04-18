@@ -19,7 +19,13 @@ function applyAccoladeFilter(
   accolade: string | null
 ): Restaurant[] {
   if (!accolade) return rows
-  if (accolade === 'michelin_star') return rows.filter((r) => (r.michelin_stars ?? 0) > 0)
+  // NOTE: the "Michelin" chip counts *any* Michelin designation (stars, bib
+  // gourmand, selected), matching the header badge. This is intentional so
+  // the chip result count and the header "N Michelin" badge agree.
+  if (accolade === 'michelin_star')
+    return rows.filter(
+      (r) => (r.michelin_stars ?? 0) > 0 || !!r.michelin_designation
+    )
   if (accolade === 'bib_gourmand')
     return rows.filter((r) => r.michelin_designation === 'bib_gourmand')
   if (accolade === 'james_beard')
@@ -244,12 +250,38 @@ export default async function CityPage({
 
       {/* Body */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <p className="text-xs text-gray-500 mb-4">
-          {filtered.length} showing ·
-          {trending.length > 0
-            ? ' ranked by trending engagement (30-day window)'
-            : ' alphabetical'}
-        </p>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+          <p className="text-xs text-gray-500">
+            <span className="font-semibold text-gray-700">
+              {filtered.length.toLocaleString()}
+            </span>{' '}
+            {filtered.length === 1 ? 'restaurant' : 'restaurants'} showing
+            {(activeAccolade || activeCuisine) && (
+              <>
+                {' of '}
+                {totalCount.toLocaleString()}
+                {' · filtered by '}
+                {[activeAccolade, activeCuisine].filter(Boolean).join(' + ')}
+              </>
+            )}
+            {!activeAccolade && !activeCuisine && (
+              <>
+                {' · '}
+                {trending.length > 0
+                  ? 'ranked by trending engagement (30-day window)'
+                  : 'alphabetical'}
+              </>
+            )}
+          </p>
+          {(activeAccolade || activeCuisine) && (
+            <Link
+              href={`/cities/${city.slug}`}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+            >
+              Clear all filters
+            </Link>
+          )}
+        </div>
         {filtered.length === 0 ? (
           <EmptyState
             icon={MapPin}

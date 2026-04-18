@@ -33,11 +33,15 @@ export default async function CitiesPage() {
       .from('cities')
       .select('*')
       .eq('is_active', true)
-      .gt('restaurant_count', 0)
-      .order('restaurant_count', { ascending: false }),
+      .order('name', { ascending: true }),
+    // No limit — Supabase defaults to 1000. Use .range to pull up to 5000
+    // so NY (600+) doesn't get silently truncated when we sum counts.
     supabase
       .from('restaurants')
-      .select('city, michelin_stars, michelin_designation, james_beard_winner, james_beard_nominated, eater_38, google_rating, cuisine'),
+      .select(
+        'city, michelin_stars, michelin_designation, james_beard_winner, james_beard_nominated, eater_38, google_rating, cuisine'
+      )
+      .range(0, 4999),
   ])
 
   const cities = (citiesRes.data ?? []) as City[]
@@ -51,6 +55,14 @@ export default async function CitiesPage() {
     const key = r.city
     if (!grouped.has(key)) grouped.set(key, [])
     grouped.get(key)!.push(r)
+  }
+
+  // Live count per city (don't trust the denormalized cities.restaurant_count —
+  // it goes stale between ingestions and causes the number on /cities to
+  // disagree with /cities/[slug]).
+  const liveCount = new Map<string, number>()
+  for (const [city, rests] of grouped) {
+    liveCount.set(city, rests.length)
   }
   for (const [city, rests] of grouped) {
     const michelinCount = rests.filter(
@@ -81,9 +93,15 @@ export default async function CitiesPage() {
     statsMap.set(city, { michelinCount, jamesBeardCount, eater38Count, avgRating, topCuisines })
   }
 
-  const totalRestaurants = cities.reduce(
-    (s, c) => s + (c.restaurant_count || 0),
+  // Use live counts consistently — cities with 0 live restaurants are hidden.
+  const visibleCities = cities.filter((c) => (liveCount.get(c.name) ?? 0) > 0)
+  const totalRestaurants = visibleCities.reduce(
+    (s, c) => s + (liveCount.get(c.name) ?? 0),
     0
+  )
+  // Sort by live count (matches what users see on the detail page).
+  visibleCities.sort(
+    (a, b) => (liveCount.get(b.name) ?? 0) - (liveCount.get(a.name) ?? 0)
   )
 
   return (
@@ -98,7 +116,7 @@ export default async function CitiesPage() {
             </h1>
           </div>
           <p className="text-gray-400 text-sm">
-            {cities.length} {cities.length === 1 ? 'city' : 'cities'} &middot;{' '}
+            {visibleCities.length} {visibleCities.length === 1 ? 'city' : 'cities'} &middot;{' '}
             {totalRestaurants.toLocaleString()} restaurants
           </p>
         </div>
@@ -106,11 +124,12 @@ export default async function CitiesPage() {
 
       {/* Stacked City Cards */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {cities.length > 0 ? (
+        {visibleCities.length > 0 ? (
           <div className="flex flex-col gap-4">
-            {cities.map((city) => {
+            {visibleCities.map((city) => {
               const stats = statsMap.get(city.name)
               const gradient = gradientFor(city.name)
+              const count = liveCount.get(city.name) ?? 0
               return (
                 <Link
                   key={city.id}
@@ -189,7 +208,7 @@ export default async function CitiesPage() {
                       <div className="flex items-center gap-4 sm:gap-6 sm:flex-col sm:items-end sm:justify-center flex-shrink-0">
                         <div className="text-left sm:text-right">
                           <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600 leading-none">
-                            {(city.restaurant_count || 0).toLocaleString()}
+                            {count.toLocaleString()}
                           </p>
                           <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 font-medium">
                             restaurants

@@ -55,7 +55,7 @@ export default function Footer() {
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
-                  Discover
+                  Explore
                 </Link>
               </li>
               <li>
@@ -108,7 +108,7 @@ export default function Footer() {
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
-                  What&apos;s new
+                  Recent
                 </Link>
               </li>
             </ul>

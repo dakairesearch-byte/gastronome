@@ -52,11 +52,25 @@ h1, h2, h3 {
   font-family: var(--font-heading);
 }
 
-/* Focus styles */
+/*
+ * Focus styles — keyboard users only (via :focus-visible so we don't
+ * flash an outline after every mouse click). Previous bug: the outline
+ * declaration was missing `outline-style`, which defaults to `none` in
+ * every major browser and silently erased the focus ring. Keyboard
+ * users had no visible indicator of the focused element.
+ */
 :focus-visible {
-  outline-width: 2px;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  outline-color: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* Buttons + links get a tighter ring that reads well on dark surfaces. */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.25);
 }
 
 /* Shimmer animation for loading skeletons */

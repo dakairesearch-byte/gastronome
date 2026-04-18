@@ -9,6 +9,9 @@ import {
   useCollections,
   useFavorites,
 } from '@/lib/collections'
+import { createClient } from '@/lib/supabase/client'
+import { openSignInModal } from '@/components/auth/SignInModalHost'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface BookmarkButtonProps {
   restaurantId: string
@@ -43,9 +46,35 @@ export default function BookmarkButton({
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const isFavorite = favorites.includes(restaurantId)
+
+  // Track auth state so Save can show a sign-in prompt instead of silently
+  // storing to localStorage when the user isn't logged in.
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setUser(data.session?.user ?? null)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (active) setUser(session?.user ?? null)
+    })
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+  // Auto-dismiss toast after 2s.
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   // Dismiss the popover on outside click / Escape so it behaves like a
   // conventional dropdown. `mousedown` runs before the target element's
@@ -68,13 +97,30 @@ export default function BookmarkButton({
   }, [open])
 
   const handleToggleFavorite = () => {
+    if (!user) {
+      openSignInModal({ mode: 'signin' })
+      return
+    }
     toggleFavorite(restaurantId)
+    setToast(isFavorite ? 'Removed from favorites' : 'Saved to favorites')
+  }
+
+  const handleOpenCollections = () => {
+    if (!user) {
+      openSignInModal({ mode: 'signin' })
+      return
+    }
+    setOpen((v) => !v)
   }
 
   const handleCreateCollection = () => {
     const trimmed = newName.trim()
     if (!trimmed) {
       setError('Name required')
+      return
+    }
+    if (!user) {
+      openSignInModal({ mode: 'signin' })
       return
     }
     try {
@@ -84,6 +130,7 @@ export default function BookmarkButton({
       toggleInCollection(created.id, restaurantId)
       setNewName('')
       setError(null)
+      setToast(`Added to ${created.name}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create')
     }
@@ -118,7 +165,7 @@ export default function BookmarkButton({
 
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpenCollections}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Save to collection"
@@ -127,15 +174,32 @@ export default function BookmarkButton({
         ▾
       </button>
 
+      {toast && (
+        <div
+          role="status"
+          className="absolute right-0 top-full mt-2 px-3 py-1.5 rounded-md shadow-lg bg-gray-900 text-white text-xs whitespace-nowrap z-50"
+        >
+          {toast}
+        </div>
+      )}
+
       {open && (
         <div
           role="menu"
           className="absolute right-0 top-full mt-2 w-72 rounded-lg shadow-xl border border-gray-200 bg-white text-gray-900 z-50 overflow-hidden"
         >
-          <div className="px-4 py-3 border-b border-gray-100">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-xs uppercase tracking-wider font-semibold text-gray-500">
               Save to collection
             </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              className="p-1 -mr-1 rounded-sm text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            >
+              ✕
+            </button>
           </div>
 
           <div className="max-h-56 overflow-y-auto">

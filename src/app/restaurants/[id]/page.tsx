@@ -6,11 +6,78 @@ import AccoladesBadges from '@/components/AccoladesBadges'
 import VideoGallery from '@/components/VideoGallery'
 import ShareButton from '@/components/ShareButton'
 import BookmarkButton from '@/components/BookmarkButton'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, ArrowLeft, Star } from 'lucide-react'
+import { MapPin, Phone, Globe, Star } from 'lucide-react'
+import BackButton from '@/components/BackButton'
+import type { Metadata } from 'next'
 
 export const revalidate = 60
+
+/**
+ * OG / Twitter metadata for restaurant pages (QA bug #62).
+ *
+ * Previously restaurant URLs pasted into Slack, iMessage, or Twitter
+ * produced a bare link with no title or preview image — embarrassing
+ * for an aggregator whose whole pitch is rich restaurant context. We
+ * now synthesize a descriptive title, subtitle, and hero image from
+ * whichever photo source is available (primary, Google, Yelp).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createServerSupabaseClient()
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select(
+      'name, cuisine, city, neighborhood, photo_url, google_photo_url, yelp_photo_url, google_rating, description'
+    )
+    .eq('id', id)
+    .single()
+
+  if (!restaurant) {
+    return { title: 'Restaurant not found · Gastronome' }
+  }
+
+  const where = [restaurant.neighborhood, restaurant.city]
+    .filter(Boolean)
+    .join(', ')
+  const cuisine =
+    restaurant.cuisine && restaurant.cuisine !== 'Restaurant'
+      ? restaurant.cuisine
+      : 'Restaurant'
+  const ratingBit =
+    typeof restaurant.google_rating === 'number'
+      ? ` · ${restaurant.google_rating.toFixed(1)}★`
+      : ''
+
+  const title = `${restaurant.name} · ${cuisine}${where ? ' in ' + where : ''}${ratingBit}`
+  const description =
+    restaurant.description ||
+    `Reviews from every major source for ${restaurant.name}${where ? ' in ' + where : ''}. See Google, Yelp, Beli, and Infatuation ratings side-by-side on Gastronome.`
+
+  const image =
+    restaurant.photo_url || restaurant.google_photo_url || restaurant.yelp_photo_url
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      images: image ? [{ url: image, alt: restaurant.name }] : undefined,
+    },
+    twitter: {
+      card: image ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  }
+}
 
 async function getRestaurantData(restaurantId: string) {
   const supabase = await createServerSupabaseClient()
@@ -141,14 +208,14 @@ export default async function RestaurantPage({
 
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
           <div className="flex items-center justify-between mb-4">
-            <Link
-              href="/explore"
+            <BackButton
+              fallbackHref="/explore"
+              ariaLabel="Back"
               className="inline-flex items-center gap-1.5 text-sm transition-colors"
               style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}
             >
-              <ArrowLeft size={14} />
-              Discover
-            </Link>
+              Back
+            </BackButton>
             <div className="flex items-center gap-2">
               <BookmarkButton restaurantId={restaurant.id} />
               <ShareButton
@@ -365,7 +432,7 @@ export default async function RestaurantPage({
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Map */}
+            {/* Map with "View on Google Maps" click-through (design v2) */}
             {restaurant.latitude && restaurant.longitude && (
               <div
                 className="overflow-hidden"
@@ -384,9 +451,13 @@ export default async function RestaurantPage({
                     referrerPolicy="no-referrer-when-downgrade"
                   />
                 </div>
-                {restaurant.google_url && (
+                {(restaurant.google_url ||
+                  (restaurant.latitude && restaurant.longitude)) && (
                   <a
-                    href={restaurant.google_url}
+                    href={
+                      restaurant.google_url ||
+                      `https://www.google.com/maps/search/?api=1&query=${restaurant.latitude},${restaurant.longitude}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 py-3 text-xs uppercase transition-colors"
