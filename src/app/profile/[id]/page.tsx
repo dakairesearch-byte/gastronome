@@ -57,6 +57,12 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
     )
   }
 
+  // Profiles created via OAuth before a username/display name is chosen
+  // can have null values for those fields. Fall back gracefully so the
+  // page doesn't crash with "cannot read .charAt of null".
+  const displayName = profile.display_name || profile.username || 'Guest'
+  const initial = displayName.charAt(0).toUpperCase() || 'G'
+
   return (
     <div className="min-h-screen">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
@@ -66,20 +72,22 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
-              alt={profile.display_name}
+              alt={displayName}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0"
             />
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-              {profile.display_name.charAt(0).toUpperCase()}
+              {initial}
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-              {profile.display_name}
+              {displayName}
             </h1>
-            <p className="text-sm text-gray-400">@{profile.username}</p>
+            {profile.username && (
+              <p className="text-sm text-gray-400">@{profile.username}</p>
+            )}
             {profile.bio && (
               <p className="text-sm text-gray-600 mt-2 line-clamp-2">{profile.bio}</p>
             )}
@@ -96,7 +104,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
         <section>
           <EmptyState
             icon={UtensilsCrossed}
-            title={`${profile.display_name} is on Gastronome`}
+            title={`${displayName} is on Gastronome`}
             description="Compare restaurant ratings from every major platform in one place"
             ctaText={undefined}
             ctaHref={undefined}

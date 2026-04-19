@@ -307,7 +307,7 @@ export default async function CityPage({
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((r, i) => {
+            {filtered.map((r) => {
               const trendingRank =
                 trending.length > 0 && trendingById.get(r.id)?.trending_rank
               return (
@@ -327,7 +327,7 @@ export default async function CityPage({
                     <p className="mt-2 text-[11px] font-semibold text-orange-600">
                       🔥 #{trendingRank} trending in {city.name}
                     </p>
-                  ) : i < trending.length === false ? null : null}
+                  ) : null}
                   <div className="mt-2">
                     <AccoladesBadges restaurant={r} maxBadges={3} />
                   </div>

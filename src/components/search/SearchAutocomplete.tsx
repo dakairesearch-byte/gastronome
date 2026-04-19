@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, MapPin, Loader2 } from 'lucide-react'
@@ -50,6 +50,7 @@ export default function SearchAutocomplete({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const latestQueryRef = useRef('')
+  const listboxId = useId()
 
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
@@ -175,6 +176,7 @@ export default function SearchAutocomplete({
       autoComplete="off"
       aria-autocomplete="list"
       aria-expanded={dropdownVisible}
+      aria-controls={listboxId}
       role="combobox"
       className="flex-1 bg-transparent outline-none min-w-0"
       style={{
@@ -251,6 +253,7 @@ export default function SearchAutocomplete({
 
       {dropdownVisible && (
         <div
+          id={listboxId}
           role="listbox"
           className="absolute left-0 right-0 top-full mt-2 z-50 rounded-sm border shadow-xl overflow-hidden"
           style={{

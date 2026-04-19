@@ -65,7 +65,15 @@ function readFavorites(): string[] {
 }
 
 function writeFavorites(ids: string[]) {
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids.slice(0, 200)))
+  // localStorage.setItem throws in Safari private mode and when the
+  // quota is exceeded. Swallow both — the UI will re-render from the
+  // prior value via the event below, which is worse than persisting
+  // but far better than crashing the page.
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids.slice(0, 200)))
+  } catch {
+    // Best effort — private browsing or quota exceeded.
+  }
   try {
     window.dispatchEvent(new Event(FAVORITES_EVENT))
   } catch {
@@ -97,7 +105,11 @@ function readCollections(): Collection[] {
 }
 
 function writeCollections(collections: Collection[]) {
-  localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections))
+  try {
+    localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections))
+  } catch {
+    // Best effort — private browsing or quota exceeded.
+  }
   try {
     window.dispatchEvent(new Event(COLLECTIONS_EVENT))
   } catch {
@@ -242,7 +254,16 @@ function subscribe(event: string) {
 let cachedFavRaw: string | null = null
 let cachedFavValue: string[] = []
 function getFavSnapshot(): string[] {
-  const raw = localStorage.getItem(FAVORITES_KEY) ?? '[]'
+  // localStorage.getItem throws in Safari private mode when the origin
+  // has disabled storage. Treat it as an empty favorites list rather
+  // than letting the exception bubble up through useSyncExternalStore
+  // and crash the subtree.
+  let raw: string
+  try {
+    raw = localStorage.getItem(FAVORITES_KEY) ?? '[]'
+  } catch {
+    raw = '[]'
+  }
   if (raw === cachedFavRaw) return cachedFavValue
   cachedFavRaw = raw
   try {
@@ -259,7 +280,12 @@ function getFavSnapshot(): string[] {
 let cachedColRaw: string | null = null
 let cachedColValue: Collection[] = []
 function getColSnapshot(): Collection[] {
-  const raw = localStorage.getItem(COLLECTIONS_KEY) ?? '[]'
+  let raw: string
+  try {
+    raw = localStorage.getItem(COLLECTIONS_KEY) ?? '[]'
+  } catch {
+    raw = '[]'
+  }
   if (raw === cachedColRaw) return cachedColValue
   cachedColRaw = raw
   cachedColValue = readCollections()

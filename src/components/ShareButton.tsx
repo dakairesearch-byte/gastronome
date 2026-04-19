@@ -66,11 +66,14 @@ export default function ShareButton({
           return
         }
       } catch (err) {
-        // User dismissed the sheet — don't fall through to clipboard.
+        // User dismissed the sheet — stop here, don't silently copy.
         if ((err as DOMException)?.name === 'AbortError') {
           setState({ kind: 'idle' })
           return
         }
+        // Any other failure (permission denied, malformed payload) falls
+        // through to the clipboard path so the user still gets a
+        // working action. Fall through deliberately.
       }
     }
 

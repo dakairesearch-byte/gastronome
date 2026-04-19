@@ -184,7 +184,14 @@ function pinPosition(
     typeof r.latitude === 'number' &&
     typeof r.longitude === 'number'
   ) {
-    const lngRange = bounds.maxLng - bounds.minLng || 1
+    const lngRange = bounds.maxLng - bounds.minLng
+    const latRange = bounds.maxLat - bounds.minLat
+    // Degenerate bbox — a single restaurant, or several rows that share
+    // exact coordinates. Fall back to the scatter so pins don't all
+    // stack on the panel's left edge.
+    if (lngRange === 0 || latRange === 0) {
+      return FALLBACK_POSITIONS[index % FALLBACK_POSITIONS.length]
+    }
     const minY = latToMercatorY(bounds.minLat)
     const maxY = latToMercatorY(bounds.maxLat)
     const yRange = maxY - minY || 1

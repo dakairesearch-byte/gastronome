@@ -80,15 +80,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Authed-but-unfinished users → forced to complete onboarding.
+  // Authed-but-unfinished users → forced to complete onboarding. We use
+  // `.maybeSingle()` because brand-new users may have signed up but
+  // their `profiles` row hasn't been created yet (the trigger runs
+  // asynchronously); treating "no row yet" the same as "onboarding not
+  // completed" avoids letting users slip past the gate during that
+  // window.
   if (user && !exempt) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completed')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (profile && profile.onboarding_completed === false) {
+    if (!profile || profile.onboarding_completed === false) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       url.search = ''

@@ -38,6 +38,14 @@ export async function paginateSelect<T>(
     const { data, error } = await buildQuery(from, to)
     if (error) throw error
     if (!data || data.length === 0) break
+    // Clamp at maxRows so callers never receive more than they asked for.
+    // Without the slice we can overshoot by up to pageSize-1 rows on the
+    // final page.
+    const remaining = maxRows - out.length
+    if (data.length > remaining) {
+      out.push(...data.slice(0, remaining))
+      break
+    }
     out.push(...data)
     if (data.length < pageSize) break
     from += pageSize

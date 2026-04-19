@@ -224,8 +224,11 @@ export default function OnboardingFlow() {
         return
       }
 
-      // Active session → persist preferences and head home.
-      await supabase
+      // Active session → persist preferences and head home. If the
+      // update fails we keep the user on the onboarding page rather
+      // than landing them on `/` where the middleware would bounce
+      // them right back.
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           onboarding_completed: true,
@@ -233,6 +236,12 @@ export default function OnboardingFlow() {
           favorite_cities: selectedCity ? [selectedCity] : [],
         })
         .eq('id', data.user.id)
+
+      if (updateError) {
+        setError(updateError.message)
+        setSubmitting(false)
+        return
+      }
 
       router.push('/')
       router.refresh()
