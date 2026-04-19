@@ -74,31 +74,10 @@ interface SearchParamsInput {
   accolade?: string
 }
 
-function applyAccoladeFilter(rows: Restaurant[], accolade: string | null): Restaurant[] {
-  if (!accolade) return rows
-  if (accolade === 'michelin_star') return rows.filter((r) => (r.michelin_stars ?? 0) > 0)
-  if (accolade === 'bib_gourmand')
-    return rows.filter((r) => r.michelin_designation === 'bib_gourmand')
-  if (accolade === 'james_beard')
-    return rows.filter((r) => r.james_beard_nominated || r.james_beard_winner)
-  if (accolade === 'eater_38') return rows.filter((r) => r.eater_38)
-  if (accolade === 'hidden_gems') {
-    // "Hidden gem" heuristic: rated well but under-reviewed (<= 500
-    // reviews). We pull the review count off `google_review_count`
-    // (the actual column name — the original edit referenced a
-    // non-existent `google_user_ratings_total` and failed typecheck).
-    return rows.filter(
-      (r) => (r.google_rating ?? 0) >= 4.3 && (r.google_review_count ?? 0) <= 500
-    )
-  }
-  return rows
-}
-
-function applyCuisineFilter(rows: Restaurant[], cuisine: string | null): Restaurant[] {
-  if (!cuisine) return rows
-  const c = cuisine.toLowerCase()
-  return rows.filter((r) => r.cuisine?.toLowerCase() === c)
-}
+// NOTE: filter logic used to live here as `applyAccoladeFilter` /
+// `applyCuisineFilter` that ran client-side over a `.limit(500)` page.
+// Both predicates are now pushed into the Supabase query in the filtered
+// branch of `ExplorePage` so we don't silently drop rows past the cap.
 
 export default async function ExplorePage({
   searchParams,
@@ -151,10 +130,33 @@ export default async function ExplorePage({
       }
     }
 
-    const collectionCounts = COLLECTIONS.map((c, i) => ({
-      ...c,
-      count: 8 + ((i * 7) % 14),
-    }))
+    // Real counts: each tile previously advertised a hardcoded
+    // `8 + ((i*7)%14)` placeholder. Now we run the same filter the tile
+    // links to and count the actual matching rows in the active city.
+    // Kept parallel; each query is a `head: true` count so we don't
+    // pay the page-size transfer cost.
+    const collectionCounts = await Promise.all(
+      COLLECTIONS.map(async (c) => {
+        const url = new URL(c.href, 'https://placeholder.invalid')
+        const accolade = url.searchParams.get('accolade')
+        const cuisine = url.searchParams.get('cuisine')
+        let q = supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', activeCity)
+        if (cuisine) q = q.ilike('cuisine', cuisine)
+        if (accolade === 'michelin_star') q = q.gt('michelin_stars', 0)
+        if (accolade === 'bib_gourmand')
+          q = q.eq('michelin_designation', 'bib_gourmand')
+        if (accolade === 'james_beard')
+          q = q.or('james_beard_nominated.eq.true,james_beard_winner.eq.true')
+        if (accolade === 'eater_38') q = q.eq('eater_38', true)
+        if (accolade === 'hidden_gems')
+          q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
+        const { count } = await q
+        return { ...c, count: count ?? 0 }
+      })
+    )
 
     return (
       <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
@@ -178,15 +180,35 @@ export default async function ExplorePage({
     )
   }
 
-  // Filtered experience: apply cuisine/accolade across all restaurants in city.
-  const { data: rows } = await supabase
+  // Filtered experience: push cuisine / accolade predicates INTO the DB
+  // query so we don't silently drop rows past a hardcoded client-side cap
+  // (QA pass 2: advertised "15 Hidden Gems" was actually 193; cap was 500
+  // and the footer read "filtered from 500" even if the city had 2000).
+  let query = supabase
     .from('restaurants')
-    .select('*')
+    .select('*', { count: 'exact' })
     .ilike('city', activeCity)
     .order('google_rating', { ascending: false, nullsFirst: false })
     .limit(500)
-  const all = (rows ?? []) as Restaurant[]
-  const filtered = applyCuisineFilter(applyAccoladeFilter(all, activeAccolade), activeCuisine)
+
+  if (activeCuisine) query = query.ilike('cuisine', activeCuisine)
+  if (activeAccolade === 'michelin_star') query = query.gt('michelin_stars', 0)
+  if (activeAccolade === 'bib_gourmand')
+    query = query.eq('michelin_designation', 'bib_gourmand')
+  if (activeAccolade === 'james_beard')
+    query = query.or('james_beard_nominated.eq.true,james_beard_winner.eq.true')
+  if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
+  if (activeAccolade === 'hidden_gems')
+    query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
+
+  const { data: rows, count: filteredTotal } = await query
+  const filtered = (rows ?? []) as Restaurant[]
+  // Count of restaurants in the city (ignoring the filter) — used for
+  // the "… of N total" footer.
+  const { count: cityTotal } = await supabase
+    .from('restaurants')
+    .select('id', { count: 'exact', head: true })
+    .ilike('city', activeCity)
 
   // Friendly label for the collection that was clicked.
   const matching = COLLECTIONS.find(
@@ -215,7 +237,7 @@ export default async function ExplorePage({
         </div>
 
         <p className="text-xs mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-          {filtered.length} showing · filtered from {all.length} {activeCity} restaurants
+          {filteredTotal ?? filtered.length} matching · {cityTotal ?? '—'} {activeCity} restaurants total
         </p>
 
         {filtered.length === 0 ? (
@@ -232,9 +254,20 @@ export default async function ExplorePage({
                 href={`/restaurants/${r.id}`}
                 className="group block rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-300 hover:shadow-sm transition-all"
               >
-                <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                  {r.name}
-                </h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                    {r.name}
+                  </h3>
+                  {typeof r.google_rating === 'number' && (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      aria-label={`${r.google_rating.toFixed(1)} stars`}
+                    >
+                      ★ {r.google_rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-xs text-gray-500 truncate">
                   {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
                   {r.neighborhood ? ` • ${r.neighborhood}` : ''}

@@ -90,21 +90,51 @@ async function getRestaurantData(restaurantId: string) {
 
   if (error || !restaurant) return null
 
-  const [trending, videoCountResult] = await Promise.all([
-    topTrendingRestaurants(supabase, {
-      city: restaurant.city ?? undefined,
-      window: '30d',
-      limit: 8,
-    }),
-    supabase
-      .from('restaurant_videos')
-      .select('*', { count: 'exact', head: true })
-      .eq('restaurant_id', restaurantId),
-  ])
+  // Parallel: related (prefer same cuisine, fall back to trending), video
+  // count, and highlighted dishes (QA pass 2: previously fetched and
+  // unused on this page — now rendered under "Signature Dishes").
+  const [sameCuisine, trending, videoCountResult, dishesResult] =
+    await Promise.all([
+      restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && restaurant.city
+        ? supabase
+            .from('restaurants')
+            .select('*')
+            .ilike('city', restaurant.city)
+            .ilike('cuisine', restaurant.cuisine)
+            .neq('id', restaurantId)
+            .order('google_rating', { ascending: false, nullsFirst: false })
+            .limit(4)
+        : Promise.resolve({ data: [] as Restaurant[] }),
+      topTrendingRestaurants(supabase, {
+        city: restaurant.city ?? undefined,
+        window: '30d',
+        limit: 8,
+      }),
+      supabase
+        .from('restaurant_videos')
+        .select('*', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId),
+      supabase
+        .from('restaurant_highlighted_dishes')
+        .select('dish_name, mention_count, rank')
+        .eq('restaurant_id', restaurantId)
+        .order('mention_count', { ascending: false })
+        .limit(12),
+    ])
 
-  let relatedRestaurants: Restaurant[] = trending
-    .filter((r) => r.id !== restaurantId)
-    .slice(0, 4)
+  // Prefer same-cuisine picks; pad with trending; final fallback = any
+  // restaurant in the same city.
+  let relatedRestaurants: Restaurant[] = (sameCuisine.data ?? []) as Restaurant[]
+  if (relatedRestaurants.length < 4) {
+    const existing = new Set(relatedRestaurants.map((r) => r.id).concat(restaurantId))
+    for (const r of trending) {
+      if (relatedRestaurants.length >= 4) break
+      if (!existing.has(r.id)) {
+        relatedRestaurants.push(r)
+        existing.add(r.id)
+      }
+    }
+  }
   if (relatedRestaurants.length === 0 && restaurant.city) {
     const { data: fallback } = await supabase
       .from('restaurants')
@@ -116,10 +146,29 @@ async function getRestaurantData(restaurantId: string) {
     relatedRestaurants = (fallback ?? []) as Restaurant[]
   }
 
+  // De-dupe dishes by normalized name, drop obvious junk, take top 6.
+  const rawDishes = (dishesResult.data ?? []) as Array<{
+    dish_name: string | null
+    mention_count: number | null
+    rank: number | null
+  }>
+  const seen = new Set<string>()
+  const dishes: Array<{ name: string; count: number }> = []
+  for (const d of rawDishes) {
+    const name = (d.dish_name ?? '').trim()
+    if (!name || name.length < 2) continue
+    const key = name.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    dishes.push({ name, count: d.mention_count ?? 0 })
+    if (dishes.length >= 6) break
+  }
+
   return {
     restaurant,
     relatedRestaurants,
     videoCount: videoCountResult.count ?? 0,
+    dishes,
   }
 }
 
@@ -181,7 +230,7 @@ export default async function RestaurantPage({
 
   if (!data) notFound()
 
-  const { restaurant, relatedRestaurants, videoCount } = data
+  const { restaurant, relatedRestaurants, videoCount, dishes } = data
   const scoreSources = buildScoreSources(restaurant)
   const hasAccolades =
     restaurant.michelin_stars > 0 ||
@@ -373,6 +422,63 @@ export default async function RestaurantPage({
                 ))}
               </div>
             </section>
+
+            {/* Signature Dishes — surfaced from restaurant_highlighted_dishes.
+                Extractor currently yields cuisine-level tokens; we present
+                them as "what reviewers mention" rather than menu items so
+                the label doesn't over-promise the data quality. */}
+            {dishes.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3.5">
+                  <h2
+                    className="text-lg"
+                    style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 500,
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    What Reviewers Mention
+                  </h2>
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    Top {dishes.length}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dishes.map((dish) => (
+                    <span
+                      key={dish.name}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm"
+                      style={{
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '999px',
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      <span style={{ textTransform: 'capitalize' }}>
+                        {dish.name}
+                      </span>
+                      {dish.count > 0 && (
+                        <span
+                          className="text-[11px]"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {dish.count}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* On Social */}
             <section>

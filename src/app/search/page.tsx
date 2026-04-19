@@ -188,7 +188,7 @@ function SearchContent() {
           .limit(20)
 
         // Search returns results in text-match + alphabetical order. No
-        // ranking here â discovery lives on /explore, which uses the
+        // ranking here — discovery lives on /explore, which uses the
         // project's single trending function.
         const orderedRestaurants: Restaurant[] = restaurantData || []
         setRestaurants(orderedRestaurants)
@@ -318,7 +318,7 @@ function SearchContent() {
         {/* Results */}
         {!loading && hasAnyResults && (
           <div className="space-y-3">
-            {/* Dishes that match the query â shown first since it's often
+            {/* Dishes that match the query — shown first since it's often
                 why someone typed a food word in. Each card links to the
                 restaurant that serves it. */}
             {dishes.length > 0 && (
@@ -346,7 +346,7 @@ function SearchContent() {
                         </p>
                         <p className="text-xs text-gray-500 truncate">
                           at {d.restaurant.name}
-                          {d.restaurant.city ? ` Â· ${d.restaurant.city}` : ''}
+                          {d.restaurant.city ? ` · ${d.restaurant.city}` : ''}
                         </p>
                       </div>
                       <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">

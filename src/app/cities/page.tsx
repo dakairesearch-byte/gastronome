@@ -28,69 +28,118 @@ function gradientFor(cityName: string): string {
 export default async function CitiesPage() {
   const supabase = await createServerSupabaseClient()
 
-  const [citiesRes, statsRes] = await Promise.all([
-    supabase
-      .from('cities')
-      .select('*')
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    // No limit — Supabase defaults to 1000. Use .range to pull up to 5000
-    // so NY (600+) doesn't get silently truncated when we sum counts.
-    supabase
-      .from('restaurants')
-      .select(
-        'city, michelin_stars, michelin_designation, james_beard_winner, james_beard_nominated, eater_38, google_rating, cuisine'
-      )
-      .range(0, 4999),
-  ])
+  const { data: citiesData } = await supabase
+    .from('cities')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
 
-  const cities = (citiesRes.data ?? []) as City[]
-  const allRestaurants = statsRes.data ?? []
+  const cities = (citiesData ?? []) as City[]
 
-  // Compute per-city stats
+  // Per-city stats — each city runs a handful of `count: 'exact', head: true`
+  // queries in parallel + a bounded sample for cuisine/avg rating. Critical:
+  // the count uses `.ilike('city', city.name)`, matching what
+  // /cities/[slug] does, so the tallies on the two pages agree. Prior
+  // version grouped a single `.range(0, 4999)` pull by strict string match,
+  // which silently diverged from the slug page whenever rows had
+  // case variations or the 5k ceiling was hit.
   const statsMap = new Map<string, CityStats>()
-  const grouped = new Map<string, typeof allRestaurants>()
-  for (const r of allRestaurants) {
-    if (!r.city) continue
-    const key = r.city
-    if (!grouped.has(key)) grouped.set(key, [])
-    grouped.get(key)!.push(r)
-  }
-
-  // Live count per city (don't trust the denormalized cities.restaurant_count —
-  // it goes stale between ingestions and causes the number on /cities to
-  // disagree with /cities/[slug]).
   const liveCount = new Map<string, number>()
-  for (const [city, rests] of grouped) {
-    liveCount.set(city, rests.length)
-  }
-  for (const [city, rests] of grouped) {
-    const michelinCount = rests.filter(
-      (r) => (r.michelin_stars || 0) > 0 || !!r.michelin_designation
-    ).length
-    const jamesBeardCount = rests.filter(
-      (r) => r.james_beard_winner || r.james_beard_nominated
-    ).length
-    const eater38Count = rests.filter((r) => r.eater_38).length
-    const ratings = rests
-      .map((r) => r.google_rating)
-      .filter((v): v is number => typeof v === 'number' && v > 0)
-    const avgRating = ratings.length
-      ? ratings.reduce((s, v) => s + v, 0) / ratings.length
-      : null
 
-    const cuisineCounts = new Map<string, number>()
-    for (const r of rests) {
-      if (r.cuisine && r.cuisine !== 'Restaurant') {
-        cuisineCounts.set(r.cuisine, (cuisineCounts.get(r.cuisine) || 0) + 1)
+  const perCity = await Promise.all(
+    cities.map(async (city) => {
+      const [
+        totalRes,
+        michelinStarRes,
+        michelinDesigRes,
+        jbRes,
+        eater38Res,
+        sampleRes,
+      ] = await Promise.all([
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name),
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name)
+          .gt('michelin_stars', 0),
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name)
+          .not('michelin_designation', 'is', null),
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name)
+          .or('james_beard_nominated.eq.true,james_beard_winner.eq.true'),
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name)
+          .eq('eater_38', true),
+        // Sample up to 500 rows for avg rating + top cuisines. This is a
+        // bounded sample — not the source of truth for counts.
+        supabase
+          .from('restaurants')
+          .select('google_rating, cuisine')
+          .ilike('city', city.name)
+          .limit(500),
+      ])
+
+      // Michelin = stars > 0 OR any designation (bib/selected/etc).
+      // We count the union with UNION-like math: stars is a strict subset of
+      // "has designation" when designation='one_star'/etc is set, but since
+      // upstream data may have stars without a designation string, use max
+      // of the two counts as an approximation. Better: count with an OR.
+      const { count: michelinCount } = await supabase
+        .from('restaurants')
+        .select('id', { count: 'exact', head: true })
+        .ilike('city', city.name)
+        .or('michelin_stars.gt.0,michelin_designation.not.is.null')
+
+      const sample = (sampleRes.data ?? []) as Array<{
+        google_rating: number | null
+        cuisine: string | null
+      }>
+      const ratings = sample
+        .map((r) => r.google_rating)
+        .filter((v): v is number => typeof v === 'number' && v > 0)
+      const avgRating = ratings.length
+        ? ratings.reduce((s, v) => s + v, 0) / ratings.length
+        : null
+      const cuisineCounts = new Map<string, number>()
+      for (const r of sample) {
+        if (r.cuisine && r.cuisine !== 'Restaurant') {
+          cuisineCounts.set(r.cuisine, (cuisineCounts.get(r.cuisine) || 0) + 1)
+        }
       }
-    }
-    const topCuisines = [...cuisineCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([c]) => c)
+      const topCuisines = [...cuisineCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([c]) => c)
 
-    statsMap.set(city, { michelinCount, jamesBeardCount, eater38Count, avgRating, topCuisines })
+      return {
+        name: city.name,
+        total: totalRes.count ?? 0,
+        stats: {
+          michelinCount:
+            michelinCount ??
+            Math.max(michelinStarRes.count ?? 0, michelinDesigRes.count ?? 0),
+          jamesBeardCount: jbRes.count ?? 0,
+          eater38Count: eater38Res.count ?? 0,
+          avgRating,
+          topCuisines,
+        } satisfies CityStats,
+      }
+    })
+  )
+
+  for (const c of perCity) {
+    liveCount.set(c.name, c.total)
+    statsMap.set(c.name, c.stats)
   }
 
   // Use live counts consistently — cities with 0 live restaurants are hidden.

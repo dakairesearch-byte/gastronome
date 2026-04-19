@@ -52,32 +52,49 @@ async function getCityData(slug: string) {
 
   // Live count (never trust cities.restaurant_count — it's denormalized
   // and goes stale with every ingestion).
-  const [{ count: totalCount }, { data: allRestaurants }, trending] =
-    await Promise.all([
-      supabase
-        .from('restaurants')
-        .select('*', { count: 'exact', head: true })
-        .ilike('city', city.name),
-      supabase
-        .from('restaurants')
-        .select('*')
-        .ilike('city', city.name)
-        .order('name', { ascending: true })
-        .limit(500),
-      topTrendingRestaurants(supabase, {
-        window: '30d',
-        city: city.name,
-        limit: 500,
-      }),
-    ])
+  //
+  // Totals (total, michelin, JB) come from `count: 'exact', head: true`
+  // queries — they must NOT be computed from the `.limit(500)` sample, or
+  // a city like NY with 600+ rows would undercount Michelins (QA pass 2).
+  // The 500-row pull is only used to derive cuisineCounts and to feed the
+  // main grid, which is already bounded by what we display.
+  const [
+    { count: totalCount },
+    { count: michelinCountRaw },
+    { count: jamesBeardCountRaw },
+    { data: allRestaurants },
+    trending,
+  ] = await Promise.all([
+    supabase
+      .from('restaurants')
+      .select('*', { count: 'exact', head: true })
+      .ilike('city', city.name),
+    supabase
+      .from('restaurants')
+      .select('id', { count: 'exact', head: true })
+      .ilike('city', city.name)
+      .or('michelin_stars.gt.0,michelin_designation.not.is.null'),
+    supabase
+      .from('restaurants')
+      .select('id', { count: 'exact', head: true })
+      .ilike('city', city.name)
+      .or('james_beard_nominated.eq.true,james_beard_winner.eq.true'),
+    supabase
+      .from('restaurants')
+      .select('*')
+      .ilike('city', city.name)
+      .order('name', { ascending: true })
+      .limit(500),
+    topTrendingRestaurants(supabase, {
+      window: '30d',
+      city: city.name,
+      limit: 500,
+    }),
+  ])
 
   const all = (allRestaurants ?? []) as Restaurant[]
-  const michelinCount = all.filter(
-    (r) => (r.michelin_stars ?? 0) > 0 || !!r.michelin_designation
-  ).length
-  const jamesBeardCount = all.filter(
-    (r) => r.james_beard_winner || r.james_beard_nominated
-  ).length
+  const michelinCount = michelinCountRaw ?? 0
+  const jamesBeardCount = jamesBeardCountRaw ?? 0
   const cuisineCounts = new Map<string, number>()
   for (const r of all) {
     if (!r.cuisine || r.cuisine === 'Restaurant') continue

@@ -87,7 +87,7 @@ export default function Navigation() {
               />
             </Link>
 
-            {/* Desktop nav â centered cluster */}
+            {/* Desktop nav — centered cluster */}
             <nav className="hidden md:flex items-center gap-10">
               {navItems.map((item) => {
                 const active = isActivePath(pathname, item.path)
@@ -121,7 +121,7 @@ export default function Navigation() {
               })}
             </nav>
 
-            {/* Minimal profile/sign-in affordance â the Figma design
+            {/* Minimal profile/sign-in affordance — the Figma design
                 doesn't show an avatar cluster, but users still need a
                 reachable entry point for auth. */}
             <div className="hidden md:flex items-center gap-2">

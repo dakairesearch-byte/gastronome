@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Bookmark } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
@@ -9,7 +10,13 @@ import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
 
-/** Placeholder bookmark collections for the "Saved Collections" grid. */
+/** Default city used for trending on the home page (matches /explore). */
+const DEFAULT_CITY = 'New York'
+
+/**
+ * Placeholder "Saved Collections" tiles. Each links to the matching
+ * filtered explore view so the tiles are no longer click-dead (QA pass 2).
+ */
 const PLACEHOLDER_COLLECTIONS = [
   {
     id: 'date-night',
@@ -17,6 +24,7 @@ const PLACEHOLDER_COLLECTIONS = [
     type: 'Romance',
     image:
       'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
+    href: '/explore?cuisine=French',
   },
   {
     id: 'quick-lunch',
@@ -24,6 +32,7 @@ const PLACEHOLDER_COLLECTIONS = [
     type: 'Weekday',
     image:
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
+    href: '/explore?cuisine=Sandwich',
   },
   {
     id: 'special-occasions',
@@ -31,6 +40,7 @@ const PLACEHOLDER_COLLECTIONS = [
     type: 'Celebration',
     image:
       'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=600&q=80',
+    href: '/explore?accolade=michelin_star',
   },
   {
     id: 'hidden-gems',
@@ -38,24 +48,30 @@ const PLACEHOLDER_COLLECTIONS = [
     type: 'Discovery',
     image:
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
+    href: '/explore?accolade=hidden_gems',
   },
 ]
 
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
 
-  // Use the trending ranker for "Our Recommendations"
+  // Home page "Suggestions" shows trending for a default city so the
+  // mix isn't dominated by whichever city happens to have the loudest
+  // 7-day engagement. `/explore` has a city selector; the home page
+  // does not, so pinning it to NY matches the `/explore` default.
   const trendingRestaurants = await topTrendingRestaurants(supabase, {
+    city: DEFAULT_CITY,
     window: '7d',
     limit: 8,
   })
 
-  // Fallback: if trending has no results, show top-rated
+  // Fallback: if trending has no results, show top-rated in the same city.
   let suggestions: Restaurant[] = trendingRestaurants
   if (suggestions.length === 0) {
     const { data } = await supabase
       .from('restaurants')
       .select('*')
+      .ilike('city', DEFAULT_CITY)
       .order('google_rating', { ascending: false, nullsFirst: false })
       .limit(8)
     suggestions = (data ?? []) as Restaurant[]
@@ -89,9 +105,10 @@ export default async function HomePage() {
           <SectionHeader title="Saved Collections" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {PLACEHOLDER_COLLECTIONS.map((c) => (
-              <div
+              <Link
                 key={c.id}
-                className="overflow-hidden cursor-pointer transition-all hover:shadow-2xl group rounded-sm"
+                href={c.href}
+                className="overflow-hidden cursor-pointer transition-all hover:shadow-2xl group rounded-sm block"
                 style={{ backgroundColor: 'var(--color-surface)' }}
               >
                 <div className="overflow-hidden relative rounded-sm aspect-square">
@@ -127,7 +144,7 @@ export default async function HomePage() {
                     {c.type}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
