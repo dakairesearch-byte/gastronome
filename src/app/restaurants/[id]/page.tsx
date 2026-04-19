@@ -7,8 +7,9 @@ import VideoGallery from '@/components/VideoGallery'
 import ShareButton from '@/components/ShareButton'
 import BookmarkButton from '@/components/BookmarkButton'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Globe, Star } from 'lucide-react'
+import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import BackButton from '@/components/BackButton'
+import { GoogleGIcon } from '@/components/brands/BrandIcons'
 import type { Metadata } from 'next'
 
 export const revalidate = 60
@@ -116,9 +117,11 @@ async function getRestaurantData(restaurantId: string) {
         .eq('restaurant_id', restaurantId),
       supabase
         .from('restaurant_highlighted_dishes')
-        .select('dish_name, mention_count, rank')
+        .select(
+          'dish_name, mention_count, rank, google_mentions, tiktok_mentions, instagram_mentions, other_mentions, avg_rating, rating_sample_size, positive_pct, sentiment_sample_size, sample_quote'
+        )
         .eq('restaurant_id', restaurantId)
-        .order('mention_count', { ascending: false })
+        .order('rank', { ascending: true, nullsFirst: false })
         .limit(12),
     ])
 
@@ -147,20 +150,57 @@ async function getRestaurantData(restaurantId: string) {
   }
 
   // De-dupe dishes by normalized name, drop obvious junk, take top 6.
-  const rawDishes = (dishesResult.data ?? []) as Array<{
+  // Each dish now carries source-split mention counts plus optional
+  // rating/sentiment rollups so the UI can show a confidence chip
+  // alongside the name.
+  type RawDish = {
     dish_name: string | null
     mention_count: number | null
     rank: number | null
-  }>
+    google_mentions: number | null
+    tiktok_mentions: number | null
+    instagram_mentions: number | null
+    other_mentions: number | null
+    avg_rating: number | null
+    rating_sample_size: number | null
+    positive_pct: number | null
+    sentiment_sample_size: number | null
+    sample_quote: string | null
+  }
+  const rawDishes = (dishesResult.data ?? []) as RawDish[]
   const seen = new Set<string>()
-  const dishes: Array<{ name: string; count: number }> = []
+  const dishes: Array<{
+    name: string
+    count: number
+    google: number
+    tiktok: number
+    instagram: number
+    other: number
+    avgRating: number | null
+    ratingSample: number
+    positivePct: number | null
+    sentimentSample: number
+    sampleQuote: string | null
+  }> = []
   for (const d of rawDishes) {
     const name = (d.dish_name ?? '').trim()
     if (!name || name.length < 2) continue
     const key = name.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
-    dishes.push({ name, count: d.mention_count ?? 0 })
+    dishes.push({
+      name,
+      count: d.mention_count ?? 0,
+      google: d.google_mentions ?? 0,
+      tiktok: d.tiktok_mentions ?? 0,
+      instagram: d.instagram_mentions ?? 0,
+      other: d.other_mentions ?? 0,
+      avgRating: d.avg_rating ?? null,
+      ratingSample: d.rating_sample_size ?? 0,
+      positivePct: d.positive_pct ?? null,
+      sentimentSample: d.sentiment_sample_size ?? 0,
+      sampleQuote: d.sample_quote ?? null,
+    })
     if (dishes.length >= 6) break
   }
 
@@ -423,10 +463,14 @@ export default async function RestaurantPage({
               </div>
             </section>
 
-            {/* Signature Dishes — surfaced from restaurant_highlighted_dishes.
-                Extractor currently yields cuisine-level tokens; we present
-                them as "what reviewers mention" rather than menu items so
-                the label doesn't over-promise the data quality. */}
+            {/* Signature Dishes — sourced from restaurant_highlighted_dishes,
+                which unions LLM-extracted mentions from TikTok captions,
+                Instagram captions, and Google / external reviews. Each dish
+                carries a sentiment/rating rollup (★ avg from Google reviews
+                when we have ≥3 ratings, otherwise a 👍 positive-share from
+                LLM sentiment when we have ≥3 sentiment samples) plus a
+                source-split indicator strip, so the UI reflects *which*
+                reviewers are talking about *which* dishes. */}
             {dishes.length > 0 && (
               <section>
                 <div className="flex items-center justify-between mb-3.5">
@@ -451,31 +495,137 @@ export default async function RestaurantPage({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {dishes.map((dish) => (
-                    <span
-                      key={dish.name}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm"
-                      style={{
-                        backgroundColor: 'var(--color-surface)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '999px',
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text)',
-                      }}
-                    >
-                      <span style={{ textTransform: 'capitalize' }}>
-                        {dish.name}
+                  {dishes.map((dish) => {
+                    // Prefer a ★ rating chip when we have enough Google
+                    // rating samples (≥3), otherwise fall back to a 👍
+                    // positive-share chip from LLM sentiment (≥3 samples).
+                    // Below that floor we show nothing — a single
+                    // "positive" mention is not a confidence signal.
+                    const hasRating =
+                      dish.avgRating !== null && dish.ratingSample >= 3
+                    const hasSentiment =
+                      dish.positivePct !== null && dish.sentimentSample >= 3
+                    const ratingChip = hasRating ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-[11px]"
+                        style={{
+                          backgroundColor: 'rgba(234,179,8,0.12)',
+                          color: '#a16207',
+                          borderRadius: '999px',
+                          padding: '2px 7px',
+                          fontWeight: 500,
+                        }}
+                        title={`${dish.ratingSample} Google review${dish.ratingSample !== 1 ? 's' : ''} mentioned this`}
+                      >
+                        <Star
+                          size={10}
+                          fill="#ca8a04"
+                          stroke="#ca8a04"
+                        />
+                        {dish.avgRating!.toFixed(1)}
                       </span>
-                      {dish.count > 0 && (
-                        <span
-                          className="text-[11px]"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {dish.count}
-                        </span>
-                      )}
-                    </span>
-                  ))}
+                    ) : hasSentiment ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-[11px]"
+                        style={{
+                          backgroundColor:
+                            dish.positivePct! >= 70
+                              ? 'rgba(22,163,74,0.12)'
+                              : dish.positivePct! >= 40
+                              ? 'rgba(148,163,184,0.15)'
+                              : 'rgba(220,38,38,0.12)',
+                          color:
+                            dish.positivePct! >= 70
+                              ? '#15803d'
+                              : dish.positivePct! >= 40
+                              ? '#475569'
+                              : '#b91c1c',
+                          borderRadius: '999px',
+                          padding: '2px 7px',
+                          fontWeight: 500,
+                        }}
+                        title={`${Math.round(dish.positivePct!)}% positive across ${dish.sentimentSample} mention${dish.sentimentSample !== 1 ? 's' : ''}`}
+                      >
+                        <ThumbsUp size={10} />
+                        {Math.round(dish.positivePct!)}%
+                      </span>
+                    ) : null
+                    return (
+                      <span
+                        key={dish.name}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-surface)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '999px',
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-text)',
+                        }}
+                        title={dish.sampleQuote ?? undefined}
+                      >
+                        <span style={{ fontWeight: 500 }}>{dish.name}</span>
+                        {ratingChip}
+                        {(dish.google > 0 ||
+                          dish.tiktok > 0 ||
+                          dish.instagram > 0) && (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            style={{ opacity: 0.85 }}
+                          >
+                            {dish.google > 0 && (
+                              <GoogleGIcon
+                                size={11}
+                                title={`${dish.google} Google mention${dish.google !== 1 ? 's' : ''}`}
+                              />
+                            )}
+                            {dish.tiktok > 0 && (
+                              <span
+                                className="inline-flex items-center justify-center text-[9px]"
+                                style={{
+                                  backgroundColor: '#000',
+                                  color: '#fff',
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '3px',
+                                  fontWeight: 700,
+                                  letterSpacing: '-0.03em',
+                                }}
+                                title={`${dish.tiktok} TikTok mention${dish.tiktok !== 1 ? 's' : ''}`}
+                              >
+                                TT
+                              </span>
+                            )}
+                            {dish.instagram > 0 && (
+                              <span
+                                className="inline-flex items-center justify-center text-[9px]"
+                                style={{
+                                  background:
+                                    'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',
+                                  color: '#fff',
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '3px',
+                                  fontWeight: 700,
+                                  letterSpacing: '-0.03em',
+                                }}
+                                title={`${dish.instagram} Instagram mention${dish.instagram !== 1 ? 's' : ''}`}
+                              >
+                                IG
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        {dish.count > 0 && (
+                          <span
+                            className="text-[11px]"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {dish.count}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })}
                 </div>
               </section>
             )}
