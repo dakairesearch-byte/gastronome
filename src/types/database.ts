@@ -261,7 +261,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "restaurant_videos_restaurant_id_fkey"
+            foreignKeyName: "restaurad_videos_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -302,6 +302,7 @@ export type Database = {
         }
         Relationships: []
       }
+
       restaurant_highlighted_dishes: {
         Row: {
           restaurant_id: string
@@ -310,6 +311,16 @@ export type Database = {
           rank: number | null
           sample_video_ids: string[] | null
           updated_at: string
+          google_mentions: number
+          tiktok_mentions: number
+          instagram_mentions: number
+          other_mentions: number
+          avg_rating: number | null
+          rating_sample_size: number
+          positive_pct: number | null
+          sentiment_sample_size: number
+          sample_quote: string | null
+          sample_quote_source: string | null
         }
         Insert: {
           restaurant_id: string
@@ -318,6 +329,16 @@ export type Database = {
           rank?: number | null
           sample_video_ids?: string[] | null
           updated_at?: string
+          google_mentions?: number
+          tiktok_mentions?: number
+          instagram_mentions?: number
+          other_mentions?: number
+          avg_rating?: number | null
+          rating_sample_size?: number
+          positive_pct?: number | null
+          sentiment_sample_size?: number
+          sample_quote?: string | null
+          sample_quote_source?: string | null
         }
         Update: {
           restaurant_id?: string
@@ -326,6 +347,16 @@ export type Database = {
           rank?: number | null
           sample_video_ids?: string[] | null
           updated_at?: string
+          google_mentions?: number
+          tiktok_mentions?: number
+          instagram_mentions?: number
+          other_mentions?: number
+          avg_rating?: number | null
+          rating_sample_size?: number
+          positive_pct?: number | null
+          sentiment_sample_size?: number
+          sample_quote?: string | null
+          sample_quote_source?: string | null
         }
         Relationships: [
           {
