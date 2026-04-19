@@ -24,8 +24,16 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Award, ChefHat, Flame, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 import SectionHeader from '@/components/SectionHeader'
+import {
+  BibGourmandIcon,
+  EaterIcon,
+  GoogleGIcon,
+  JamesBeardIcon,
+  MichelinStarIcon,
+  YelpIcon,
+} from '@/components/brands/BrandIcons'
 import type { Restaurant } from '@/types/database'
 
 interface Top10TrendingProps {
@@ -56,19 +64,25 @@ function getRating(r: Restaurant): number | null {
 }
 
 /**
- * Accolades to render on the right-side cluster. Order matches the detail
- * page header — Michelin first (it's the most prestigious), then James
- * Beard, then Eater 38. `michelin_designation` covers Bib Gourmand / Plate
- * / Selected and is rendered separately from star-count so the pill labels
- * don't collide.
+ * Accolades to render on the right-side cluster. Each badge now renders
+ * the source's actual brand mark (Michelin rosette, Bibendum for Bib
+ * Gourmand, James Beard medallion, Eater E) instead of a generic lucide
+ * icon. Michelin stars are rendered as N repeated rosettes so the count
+ * is visible at a glance — that's how the Michelin Guide itself surfaces
+ * them on cards.
  */
-type Accolade = {
-  key: string
-  icon: typeof Star
-  label: string
-  fg: string
-  bg: string
-}
+type Accolade =
+  | {
+      key: string
+      kind: 'michelin-stars'
+      stars: number
+      label: string
+    }
+  | {
+      key: string
+      kind: 'bib' | 'michelin-other' | 'james-beard' | 'eater-38'
+      label: string
+    }
 
 function getAccolades(r: Restaurant): Accolade[] {
   const out: Accolade[] = []
@@ -76,50 +90,75 @@ function getAccolades(r: Restaurant): Accolade[] {
   if (stars > 0) {
     out.push({
       key: 'michelin-stars',
-      icon: Star,
+      kind: 'michelin-stars',
+      stars,
       label: stars === 1 ? '1 Michelin Star' : `${stars} Michelin Stars`,
-      fg: '#FFFFFF',
-      // Michelin red — intentionally hard-coded to match the detail page
-      // badge. Theme tokens aren't wired for brand colors on this surface.
-      bg: '#C8102E',
     })
   } else if (r.michelin_designation === 'bib_gourmand') {
-    out.push({
-      key: 'bib-gourmand',
-      icon: ChefHat,
-      label: 'Bib Gourmand',
-      fg: '#FFFFFF',
-      bg: '#C8102E',
-    })
+    out.push({ key: 'bib', kind: 'bib', label: 'Bib Gourmand' })
   } else if (r.michelin_designation) {
-    // e.g. "selected" / "plate"
     out.push({
       key: 'michelin-other',
-      icon: ChefHat,
+      kind: 'michelin-other',
       label: 'Michelin Guide',
-      fg: '#FFFFFF',
-      bg: '#C8102E',
     })
   }
   if (r.james_beard_winner || r.james_beard_nominated) {
     out.push({
       key: 'james-beard',
-      icon: Award,
+      kind: 'james-beard',
       label: r.james_beard_winner ? 'James Beard Winner' : 'James Beard Nominee',
-      fg: '#FFFFFF',
-      bg: '#8B5A2B',
     })
   }
   if (r.eater_38) {
-    out.push({
-      key: 'eater-38',
-      icon: Flame,
-      label: 'Eater 38',
-      fg: '#FFFFFF',
-      bg: '#E85D1A',
-    })
+    out.push({ key: 'eater-38', kind: 'eater-38', label: 'Eater 38' })
   }
   return out
+}
+
+function AccoladeBadge({ accolade }: { accolade: Accolade }) {
+  const pill =
+    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-white border border-gray-200'
+  if (accolade.kind === 'michelin-stars') {
+    return (
+      <span
+        className={pill}
+        title={accolade.label}
+        aria-label={accolade.label}
+      >
+        {Array.from({ length: accolade.stars }).map((_, i) => (
+          <MichelinStarIcon key={i} size={12} />
+        ))}
+      </span>
+    )
+  }
+  if (accolade.kind === 'bib' || accolade.kind === 'michelin-other') {
+    return (
+      <span
+        className={pill}
+        title={accolade.label}
+        aria-label={accolade.label}
+      >
+        <BibGourmandIcon size={13} />
+      </span>
+    )
+  }
+  if (accolade.kind === 'james-beard') {
+    return (
+      <span
+        className={pill}
+        title={accolade.label}
+        aria-label={accolade.label}
+      >
+        <JamesBeardIcon size={13} />
+      </span>
+    )
+  }
+  return (
+    <span className={pill} title={accolade.label} aria-label={accolade.label}>
+      <EaterIcon size={13} />
+    </span>
+  )
 }
 
 /** Web Mercator Y projection. Used for lat→panel-Y so pins stay
@@ -273,45 +312,19 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
                         {accolades.length > 0 && (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            {accolades.map((a) => {
-                              const Icon = a.icon
-                              return (
-                                <span
-                                  key={a.key}
-                                  title={a.label}
-                                  aria-label={a.label}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] uppercase"
-                                  style={{
-                                    backgroundColor: a.bg,
-                                    color: a.fg,
-                                    fontFamily: 'var(--font-body)',
-                                    letterSpacing: '0.1em',
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  <Icon
-                                    size={10}
-                                    className="flex-shrink-0"
-                                    style={{
-                                      fill:
-                                        a.key === 'michelin-stars'
-                                          ? a.fg
-                                          : 'transparent',
-                                    }}
-                                  />
-                                  {a.label}
-                                </span>
-                              )
-                            })}
+                            {accolades.map((a) => (
+                              <AccoladeBadge key={a.key} accolade={a} />
+                            ))}
                           </div>
                         )}
                       </div>
 
                       {/* Rating cluster — Google + Yelp stacked vertically
-                          on the right edge. Each row shows a small source
-                          label ("G" / "Y") so users can tell the scales
-                          apart at a glance. If both ratings are missing we
-                          fall back to whatever getRating() surfaces. */}
+                          on the right edge. Each row renders the source's
+                          actual brand mark (4-color Google G, red Yelp
+                          burst) so scale attribution is immediate. If
+                          both are missing we fall back to whatever
+                          getRating() surfaces, labeled with a lucide star. */}
                       <div
                         className="flex-shrink-0 flex flex-col items-end gap-1 text-sm"
                         style={{
@@ -321,64 +334,24 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
                       >
                         {googleRating != null && (
                           <span
-                            className="inline-flex items-center gap-1"
+                            className="inline-flex items-center gap-1.5"
                             aria-label={`Google rating ${googleRating.toFixed(1)}`}
                           >
-                            <span
-                              className="inline-flex items-center justify-center rounded-full text-[10px]"
-                              style={{
-                                width: '16px',
-                                height: '16px',
-                                backgroundColor: '#4285F4',
-                                color: '#FFFFFF',
-                                fontWeight: 700,
-                                fontFamily: 'var(--font-body)',
-                              }}
-                            >
-                              G
-                            </span>
-                            <Star
-                              size={12}
-                              className="flex-shrink-0"
-                              style={{
-                                color: 'var(--color-accent)',
-                                fill: 'var(--color-accent)',
-                              }}
-                            />
-                            {googleRating.toFixed(1)}
+                            <GoogleGIcon size={14} title="Google" />
+                            <span>{googleRating.toFixed(1)}</span>
                           </span>
                         )}
                         {yelpRating != null && (
                           <span
-                            className="inline-flex items-center gap-1"
+                            className="inline-flex items-center gap-1.5"
                             aria-label={`Yelp rating ${yelpRating.toFixed(1)}`}
                           >
-                            <span
-                              className="inline-flex items-center justify-center rounded-full text-[10px]"
-                              style={{
-                                width: '16px',
-                                height: '16px',
-                                backgroundColor: '#D32323',
-                                color: '#FFFFFF',
-                                fontWeight: 700,
-                                fontFamily: 'var(--font-body)',
-                              }}
-                            >
-                              Y
-                            </span>
-                            <Star
-                              size={12}
-                              className="flex-shrink-0"
-                              style={{
-                                color: '#D32323',
-                                fill: '#D32323',
-                              }}
-                            />
-                            {yelpRating.toFixed(1)}
+                            <YelpIcon size={14} title="Yelp" />
+                            <span>{yelpRating.toFixed(1)}</span>
                           </span>
                         )}
                         {fallbackRating != null && (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1.5">
                             <Star
                               size={12}
                               className="flex-shrink-0"

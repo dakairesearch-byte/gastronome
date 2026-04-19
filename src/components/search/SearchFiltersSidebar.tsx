@@ -13,6 +13,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, Search, Sliders, Star, X } from 'lucide-react'
+import {
+  BibGourmandIcon,
+  EaterIcon,
+  GoogleGIcon,
+  JamesBeardIcon,
+  MichelinStarIcon,
+  YelpIcon,
+} from '@/components/brands/BrandIcons'
 
 export type SearchMode = 'all' | 'restaurants' | 'dishes'
 
@@ -172,7 +180,10 @@ export default function SearchFiltersSidebar({
       )}
 
       {/* Google */}
-      <Section title="Google">
+      <Section
+        title="Google"
+        titleIcon={<GoogleGIcon size={12} title="Google" />}
+      >
         <RatingSlider
           label="Min rating"
           value={filters.googleMinRating}
@@ -180,18 +191,19 @@ export default function SearchFiltersSidebar({
           step={0.1}
           onChange={(v) => set('googleMinRating', v)}
           iconColor="#4285F4"
+          badge={<GoogleGIcon size={12} title="Google" />}
         />
         <ReviewCountSlider
           label="Min reviews"
           value={filters.googleMinReviews}
           onChange={(v) => set('googleMinReviews', v)}
           iconColor="#4285F4"
-          letter="G"
+          badge={<GoogleGIcon size={12} title="Google" />}
         />
       </Section>
 
       {/* Yelp */}
-      <Section title="Yelp">
+      <Section title="Yelp" titleIcon={<YelpIcon size={12} title="Yelp" />}>
         <RatingSlider
           label="Min rating"
           value={filters.yelpMinRating}
@@ -199,22 +211,27 @@ export default function SearchFiltersSidebar({
           step={0.5}
           onChange={(v) => set('yelpMinRating', v)}
           iconColor="#D32323"
+          badge={<YelpIcon size={12} title="Yelp" />}
         />
         <ReviewCountSlider
           label="Min reviews"
           value={filters.yelpMinReviews}
           onChange={(v) => set('yelpMinReviews', v)}
           iconColor="#D32323"
-          letter="Y"
+          badge={<YelpIcon size={12} title="Yelp" />}
         />
       </Section>
 
       {/* Accolades */}
       <Section title="Accolades">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-700">Michelin Stars</span>
-            <div className="flex gap-1">
+        <div className="space-y-2.5">
+          {/* Michelin stars — each button shows the rosette repeated N times. */}
+          <div>
+            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+              <MichelinStarIcon size={12} title="Michelin" />
+              Michelin Stars
+            </span>
+            <div className="grid grid-cols-3 gap-1">
               {[1, 2, 3].map((n) => {
                 const active = filters.michelinStars.includes(n)
                 return (
@@ -230,13 +247,20 @@ export default function SearchFiltersSidebar({
                       )
                     }
                     aria-label={`${n} Michelin Star${n > 1 ? 's' : ''}`}
-                    className={`px-2 py-1 rounded-md border text-[11px] font-bold transition-colors ${
+                    aria-pressed={active}
+                    className={`flex items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md border transition-colors ${
                       active
-                        ? 'bg-red-600 border-red-600 text-white'
-                        : 'bg-white border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-200'
+                        ? 'bg-red-50 border-red-400'
+                        : 'bg-white border-gray-200 hover:bg-red-50 hover:border-red-200'
                     }`}
                   >
-                    {n}★
+                    {Array.from({ length: n }).map((_, i) => (
+                      <MichelinStarIcon
+                        key={i}
+                        size={13}
+                        color={active ? '#C8102E' : '#9CA3AF'}
+                      />
+                    ))}
                   </button>
                 )
               })}
@@ -245,13 +269,17 @@ export default function SearchFiltersSidebar({
 
           <CheckRow
             label="Bib Gourmand"
+            icon={<BibGourmandIcon size={14} title="Bib Gourmand" />}
             checked={filters.bibGourmand}
             onChange={(v) => set('bibGourmand', v)}
             accent="#C8102E"
           />
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs font-semibold text-gray-700">James Beard</span>
+          <div className="pt-1">
+            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+              <JamesBeardIcon size={14} title="James Beard" />
+              James Beard
+            </span>
             <div className="grid grid-cols-3 gap-1 p-0.5 bg-gray-100 rounded-md">
               {(
                 [
@@ -268,7 +296,7 @@ export default function SearchFiltersSidebar({
                     onClick={() => set('jamesBeard', key)}
                     className={`px-2 py-1 text-[10px] font-semibold rounded transition-colors ${
                       active
-                        ? 'bg-white text-amber-700 shadow-sm'
+                        ? 'bg-white text-amber-800 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
@@ -281,6 +309,7 @@ export default function SearchFiltersSidebar({
 
           <CheckRow
             label="Eater 38"
+            icon={<EaterIcon size={14} title="Eater 38" />}
             checked={filters.eater38}
             onChange={(v) => set('eater38', v)}
             accent="#E85D1A"
@@ -297,14 +326,17 @@ export default function SearchFiltersSidebar({
 
 function Section({
   title,
+  titleIcon,
   children,
 }: {
   title: string
+  titleIcon?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section>
-      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        {titleIcon}
         {title}
       </h3>
       {children}
@@ -314,18 +346,21 @@ function Section({
 
 function CheckRow({
   label,
+  icon,
   checked,
   onChange,
   accent,
 }: {
   label: string
+  icon?: React.ReactNode
   checked: boolean
   onChange: (v: boolean) => void
   accent: string
 }) {
   return (
     <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">
+      <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors flex items-center gap-1.5">
+        {icon}
         {label}
       </span>
       <button
@@ -356,6 +391,7 @@ function RatingSlider({
   step,
   onChange,
   iconColor,
+  badge,
 }: {
   label: string
   value: number
@@ -363,6 +399,7 @@ function RatingSlider({
   step: number
   onChange: (v: number) => void
   iconColor: string
+  badge?: React.ReactNode
 }) {
   const pct = (value / max) * 100
   return (
@@ -370,7 +407,9 @@ function RatingSlider({
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[11px] font-semibold text-gray-600">{label}</span>
         <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-900">
-          <Star size={11} style={{ color: iconColor, fill: iconColor }} />
+          {badge ?? (
+            <Star size={11} style={{ color: iconColor, fill: iconColor }} />
+          )}
           {value === 0 ? 'Any' : `${value.toFixed(1)}+`}
         </span>
       </div>
@@ -395,13 +434,13 @@ function ReviewCountSlider({
   value,
   onChange,
   iconColor,
-  letter,
+  badge,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
   iconColor: string
-  letter: string
+  badge?: React.ReactNode
 }) {
   // Snap to the discrete REVIEW_COUNT_STEPS so the slider feels decisive.
   const idx = Math.max(
@@ -415,12 +454,7 @@ function ReviewCountSlider({
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[11px] font-semibold text-gray-600">{label}</span>
         <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-900">
-          <span
-            className="inline-flex items-center justify-center rounded-full text-[9px] font-bold text-white"
-            style={{ width: 14, height: 14, backgroundColor: iconColor }}
-          >
-            {letter}
-          </span>
+          {badge}
           {reviewCountLabel(value)}
         </span>
       </div>
