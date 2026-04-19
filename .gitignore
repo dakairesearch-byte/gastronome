@@ -43,3 +43,7 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 .env.local
+
+# one-off scrape/debug scratch scripts (sandbox-only, not production)
+/scripts/debug*.ts
+/scripts/testScrapeChips.ts
