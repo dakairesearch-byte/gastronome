@@ -4,6 +4,18 @@ import OnboardingFlow from '@/components/OnboardingFlow'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Onboarding is the default landing experience for Gastronome.
+ *
+ * Three states:
+ *   - Anonymous visitor → render the 4-pane flow. Pane 4 is the
+ *     sign-up form. No escape hatch; anonymous browsing has been
+ *     removed by product direction.
+ *   - Authed + unfinished → render the same flow. Pane 4 becomes a
+ *     "you're all set" confirmation that persists preferences.
+ *   - Authed + finished → redirect straight home; they have no
+ *     reason to see the pitch again.
+ */
 export default async function OnboardingPage() {
   const supabase = await createServerSupabaseClient()
 
@@ -11,18 +23,16 @@ export default async function OnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/auth/login')
-  }
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .single()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('onboarding_completed')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.onboarding_completed) {
-    redirect('/')
+    if (profile?.onboarding_completed) {
+      redirect('/')
+    }
   }
 
   return (
