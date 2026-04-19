@@ -24,7 +24,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Star } from 'lucide-react'
+import { Award, ChefHat, Flame, Star } from 'lucide-react'
 import SectionHeader from '@/components/SectionHeader'
 import type { Restaurant } from '@/types/database'
 
@@ -53,6 +53,73 @@ function getRating(r: Restaurant): number | null {
   if (typeof r.google_rating === 'number') return r.google_rating
   if (typeof r.avg_rating === 'number') return r.avg_rating
   return null
+}
+
+/**
+ * Accolades to render on the right-side cluster. Order matches the detail
+ * page header — Michelin first (it's the most prestigious), then James
+ * Beard, then Eater 38. `michelin_designation` covers Bib Gourmand / Plate
+ * / Selected and is rendered separately from star-count so the pill labels
+ * don't collide.
+ */
+type Accolade = {
+  key: string
+  icon: typeof Star
+  label: string
+  fg: string
+  bg: string
+}
+
+function getAccolades(r: Restaurant): Accolade[] {
+  const out: Accolade[] = []
+  const stars = r.michelin_stars ?? 0
+  if (stars > 0) {
+    out.push({
+      key: 'michelin-stars',
+      icon: Star,
+      label: stars === 1 ? '1 Michelin Star' : `${stars} Michelin Stars`,
+      fg: '#FFFFFF',
+      // Michelin red — intentionally hard-coded to match the detail page
+      // badge. Theme tokens aren't wired for brand colors on this surface.
+      bg: '#C8102E',
+    })
+  } else if (r.michelin_designation === 'bib_gourmand') {
+    out.push({
+      key: 'bib-gourmand',
+      icon: ChefHat,
+      label: 'Bib Gourmand',
+      fg: '#FFFFFF',
+      bg: '#C8102E',
+    })
+  } else if (r.michelin_designation) {
+    // e.g. "selected" / "plate"
+    out.push({
+      key: 'michelin-other',
+      icon: ChefHat,
+      label: 'Michelin Guide',
+      fg: '#FFFFFF',
+      bg: '#C8102E',
+    })
+  }
+  if (r.james_beard_winner || r.james_beard_nominated) {
+    out.push({
+      key: 'james-beard',
+      icon: Award,
+      label: r.james_beard_winner ? 'James Beard Winner' : 'James Beard Nominee',
+      fg: '#FFFFFF',
+      bg: '#8B5A2B',
+    })
+  }
+  if (r.eater_38) {
+    out.push({
+      key: 'eater-38',
+      icon: Flame,
+      label: 'Eater 38',
+      fg: '#FFFFFF',
+      bg: '#E85D1A',
+    })
+  }
+  return out
 }
 
 /** Web Mercator Y projection. Used for lat→panel-Y so pins stay
@@ -129,7 +196,10 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
         <ol className="flex flex-col">
           {items.map((r, i) => {
             const rank = i + 1
-            const rating = getRating(r)
+            const googleRating = typeof r.google_rating === 'number' ? r.google_rating : null
+            const yelpRating = typeof r.yelp_rating === 'number' ? r.yelp_rating : null
+            const fallbackRating = googleRating == null && yelpRating == null ? getRating(r) : null
+            const accolades = getAccolades(r)
             const isActive = activeId === r.id
             return (
               <li
@@ -167,57 +237,160 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
                   </span>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3
-                        className="text-lg truncate"
-                        style={{
-                          color: 'var(--color-text)',
-                          fontFamily: 'var(--font-heading)',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {r.name}
-                      </h3>
-                      {rating != null && (
-                        <span
-                          className="flex items-center gap-1 text-sm flex-shrink-0"
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3
+                          className="text-lg truncate"
                           style={{
                             color: 'var(--color-text)',
+                            fontFamily: 'var(--font-heading)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {r.name}
+                        </h3>
+
+                        <div
+                          className="mt-1 flex items-center gap-2 text-xs"
+                          style={{
+                            color: 'var(--color-text-secondary)',
                             fontFamily: 'var(--font-body)',
                           }}
                         >
-                          <Star
-                            size={14}
-                            className="flex-shrink-0"
-                            style={{
-                              color: 'var(--color-accent)',
-                              fill: 'var(--color-accent)',
-                            }}
-                          />
-                          {rating.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
+                          <span
+                            className="uppercase"
+                            style={{ letterSpacing: '0.14em' }}
+                          >
+                            {r.cuisine}
+                          </span>
+                          {r.neighborhood && (
+                            <>
+                              <span aria-hidden="true">•</span>
+                              <span>{r.neighborhood}</span>
+                            </>
+                          )}
+                        </div>
 
-                    <div
-                      className="mt-1 flex items-center gap-2 text-xs"
-                      style={{
-                        color: 'var(--color-text-secondary)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      <span
-                        className="uppercase"
-                        style={{ letterSpacing: '0.14em' }}
+                        {accolades.length > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {accolades.map((a) => {
+                              const Icon = a.icon
+                              return (
+                                <span
+                                  key={a.key}
+                                  title={a.label}
+                                  aria-label={a.label}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] uppercase"
+                                  style={{
+                                    backgroundColor: a.bg,
+                                    color: a.fg,
+                                    fontFamily: 'var(--font-body)',
+                                    letterSpacing: '0.1em',
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  <Icon
+                                    size={10}
+                                    className="flex-shrink-0"
+                                    style={{
+                                      fill:
+                                        a.key === 'michelin-stars'
+                                          ? a.fg
+                                          : 'transparent',
+                                    }}
+                                  />
+                                  {a.label}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rating cluster — Google + Yelp stacked vertically
+                          on the right edge. Each row shows a small source
+                          label ("G" / "Y") so users can tell the scales
+                          apart at a glance. If both ratings are missing we
+                          fall back to whatever getRating() surfaces. */}
+                      <div
+                        className="flex-shrink-0 flex flex-col items-end gap-1 text-sm"
+                        style={{
+                          color: 'var(--color-text)',
+                          fontFamily: 'var(--font-body)',
+                        }}
                       >
-                        {r.cuisine}
-                      </span>
-                      {r.neighborhood && (
-                        <>
-                          <span aria-hidden="true">•</span>
-                          <span>{r.neighborhood}</span>
-                        </>
-                      )}
+                        {googleRating != null && (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            aria-label={`Google rating ${googleRating.toFixed(1)}`}
+                          >
+                            <span
+                              className="inline-flex items-center justify-center rounded-full text-[10px]"
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                backgroundColor: '#4285F4',
+                                color: '#FFFFFF',
+                                fontWeight: 700,
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              G
+                            </span>
+                            <Star
+                              size={12}
+                              className="flex-shrink-0"
+                              style={{
+                                color: 'var(--color-accent)',
+                                fill: 'var(--color-accent)',
+                              }}
+                            />
+                            {googleRating.toFixed(1)}
+                          </span>
+                        )}
+                        {yelpRating != null && (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            aria-label={`Yelp rating ${yelpRating.toFixed(1)}`}
+                          >
+                            <span
+                              className="inline-flex items-center justify-center rounded-full text-[10px]"
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                backgroundColor: '#D32323',
+                                color: '#FFFFFF',
+                                fontWeight: 700,
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              Y
+                            </span>
+                            <Star
+                              size={12}
+                              className="flex-shrink-0"
+                              style={{
+                                color: '#D32323',
+                                fill: '#D32323',
+                              }}
+                            />
+                            {yelpRating.toFixed(1)}
+                          </span>
+                        )}
+                        {fallbackRating != null && (
+                          <span className="inline-flex items-center gap-1">
+                            <Star
+                              size={12}
+                              className="flex-shrink-0"
+                              style={{
+                                color: 'var(--color-accent)',
+                                fill: 'var(--color-accent)',
+                              }}
+                            />
+                            {fallbackRating.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>
