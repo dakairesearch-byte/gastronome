@@ -3,9 +3,16 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { Database } from '@/types/database'
 
 /**
- * Paths that must never trigger an onboarding redirect, even for users
- * with onboarding_completed = false. These are needed for the user to
- * be able to complete onboarding itself or sign in/out.
+ * Paths that must never trigger an onboarding redirect.
+ *
+ * Anonymous visitors are required to complete the onboarding flow
+ * (problem → solution → city → sign-up) before they can explore the
+ * app. Only the onboarding page itself, the auth endpoints, API
+ * routes, and Next.js internals are allowed to bypass the gate.
+ *
+ * `/auth/login` and `/auth/signup` are intentionally exempt so that
+ * *returning* users can sign in without re-walking the pitch. The
+ * onboarding flow itself links to `/auth/login` for that purpose.
  */
 const ONBOARDING_EXEMPT_PREFIXES = [
   '/onboarding',
@@ -55,15 +62,26 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // This refreshes a user's auth token
+  // Refresh auth token
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Force-onboarding guard: logged-in users who haven't completed onboarding
-  // should be redirected to /onboarding for any non-exempt route.
   const pathname = request.nextUrl.pathname
-  if (user && !isExempt(pathname)) {
+  const exempt = isExempt(pathname)
+
+  // Anonymous visitors → forced to /onboarding. The flow is the app's
+  // marketing page and sign-up funnel combined; there's no way to
+  // browse without an account by design.
+  if (!user && !exempt) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/onboarding'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
+  // Authed-but-unfinished users → forced to complete onboarding.
+  if (user && !exempt) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completed')
