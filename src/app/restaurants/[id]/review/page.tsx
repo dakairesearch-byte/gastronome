@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import StarRating from '@/components/StarRating';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
+import type { Restaurant } from '@/types/database';
 
 export default function WriteReviewPage() {
   const router = useRouter();
@@ -13,10 +15,10 @@ export default function WriteReviewPage() {
   const restaurantId = params.id as string;
   const supabase = createClient();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [restaurant, setRestaurant] = useState<any>(null);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -115,7 +117,7 @@ export default function WriteReviewPage() {
 
       router.push(`/restaurants/${restaurantId}`);
       router.refresh();
-    } catch (err) {
+    } catch {
       setError('Failed to submit review');
       setLoading(false);
     }

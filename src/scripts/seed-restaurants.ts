@@ -75,7 +75,7 @@ async function seed() {
   console.log(`Seeding ${SEED_RESTAURANTS.length} restaurants...`)
 
   for (const restaurant of SEED_RESTAURANTS) {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('restaurants')
       .upsert(
         {

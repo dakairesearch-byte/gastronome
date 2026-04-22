@@ -230,10 +230,7 @@ function CollectionsPanel() {
   }, [favorites, collections])
 
   useEffect(() => {
-    if (allIds.length === 0) {
-      setRestaurantsById({})
-      return
-    }
+    if (allIds.length === 0) return
     let active = true
     ;(async () => {
       const { data } = await supabase

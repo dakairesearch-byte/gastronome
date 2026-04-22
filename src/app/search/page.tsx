@@ -120,6 +120,7 @@ function SearchContent() {
   /*  Google Places autocomplete                                         */
   /* ------------------------------------------------------------------ */
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autocompleteServiceRef = useRef<any>(null)
   const [googleApiReady, setGoogleApiReady] = useState(false)
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
@@ -151,9 +152,11 @@ function SearchContent() {
     async (q: string): Promise<GooglePlaceResult[]> => {
       if (!q.trim() || !autocompleteServiceRef.current) return []
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const predictions = await new Promise<any[]>((resolve) => {
           autocompleteServiceRef.current.getPlacePredictions(
             { input: q, types: ['establishment'] },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (predictions: any[], status: string) => {
               if (status === 'OK' && predictions) resolve(predictions)
               else resolve([])
@@ -185,6 +188,7 @@ function SearchContent() {
                       placeId: prediction.place_id,
                       fields: ['name', 'formatted_address', 'geometry', 'rating', 'place_id'],
                     },
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (place: any, status: string) => {
                       if (status === 'OK' && place) {
                         const address = place.formatted_address || ''

@@ -1,5 +1,5 @@
 import { Star, Award, Utensils } from 'lucide-react'
-import type { Restaurant, Accolade } from '@/types/database'
+import type { Restaurant } from '@/types/database'
 
 const DESIGNATION_DISPLAY: Record<string, string> = {
   one_star: '1 Michelin Star',

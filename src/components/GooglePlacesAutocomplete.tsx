@@ -1,7 +1,9 @@
 'use client'
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- Google Maps JS API has no bundled types; install @types/google.maps to remove these */
+
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Search, MapPin, ExternalLink, Loader2, X } from 'lucide-react'
+import { Search, ExternalLink, Loader2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Restaurant } from '@/types/database'
 
@@ -21,7 +23,7 @@ interface LocalRestaurantResult extends Restaurant {
   isFromGoogle: false
 }
 
-type SearchResult = GooglePlacesResult | LocalRestaurantResult
+export type SearchResult = GooglePlacesResult | LocalRestaurantResult
 
 interface GooglePlacesAutocompleteProps {
   onSelect: (result: SearchResult) => void
@@ -50,7 +52,6 @@ export default function GooglePlacesAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autocompleteServiceRef = useRef<any>(null)
-  const placesServiceRef = useRef<any>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [query, setQuery] = useState('')
@@ -100,11 +101,12 @@ export default function GooglePlacesAutocomplete({
     async (searchQuery: string): Promise<LocalRestaurantResult[]> => {
       if (!searchQuery.trim()) return []
 
+      const sanitized = searchQuery.replace(/[%_\\]/g, '')
       const { data } = await supabase
         .from('restaurants')
         .select('*')
         .or(
-          `name.ilike.%${searchQuery}%,cuisine.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`
+          `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
         )
         .limit(5)
 
@@ -124,7 +126,7 @@ export default function GooglePlacesAutocomplete({
       if (!searchQuery.trim() || !autocompleteServiceRef.current) return []
 
       try {
-        const predictions = await new Promise<any[]>((resolve, reject) => {
+        const predictions = await new Promise<any[]>((resolve) => {
           autocompleteServiceRef.current.getPlacePredictions(
             {
               input: searchQuery,
@@ -381,7 +383,7 @@ export default function GooglePlacesAutocomplete({
               </div>
               {results
                 .filter((r) => !r.isFromGoogle)
-                .map((result, index) => {
+                .map((result) => {
                   const restaurant = result as LocalRestaurantResult
                   const resultIndex = results.indexOf(result)
                   return (
@@ -430,7 +432,7 @@ export default function GooglePlacesAutocomplete({
               </div>
               {results
                 .filter((r) => r.isFromGoogle)
-                .map((result, index) => {
+                .map((result) => {
                   const place = result as GooglePlacesResult
                   const resultIndex = results.indexOf(result)
                   return (

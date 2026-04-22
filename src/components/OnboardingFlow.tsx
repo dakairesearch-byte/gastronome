@@ -119,17 +119,17 @@ export default function OnboardingFlow() {
   // customized it — tiny ergonomic win that avoids the classic
   // "why do I need two different name fields?" friction.
   const displayNameRef = useRef(displayName)
-  displayNameRef.current = displayName
+  useEffect(() => {
+    displayNameRef.current = displayName
+  })
   useEffect(() => {
     if (!displayName) return
     const auto = slugifyUsername(displayName)
-    // Only overwrite username if it's empty or was previously auto-set.
     setUsername((prev) => {
       const prevAuto = slugifyUsername(displayNameRef.current)
       if (!prev || prev === prevAuto) return auto
       return prev
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayName])
 
   /**

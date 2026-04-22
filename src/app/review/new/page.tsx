@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import StarRating from '@/components/StarRating'
 import GooglePlacesAutocomplete from '@/components/GooglePlacesAutocomplete'
 import { Restaurant } from '@/types/database'
-import { AlertCircle, Loader2, X, Sparkles, Settings } from 'lucide-react'
+import { AlertCircle, Loader2, X, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import type { User } from '@supabase/supabase-js'
+import type { SearchResult } from '@/components/GooglePlacesAutocomplete'
 
 function NewReviewContent() {
   const searchParams = useSearchParams()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState('')
   const [selectedRestaurantData, setSelectedRestaurantData] = useState<Restaurant | null>(null)
@@ -32,6 +34,15 @@ function NewReviewContent() {
   const [profileLoading, setProfileLoading] = useState(true)
   const supabase = createClient()
   const router = useRouter()
+
+  const fetchRestaurants = useCallback(async () => {
+    const { data } = await supabase.from('restaurants').select('*').order('name')
+    if (data) {
+      setRestaurants(data)
+      return data
+    }
+    return []
+  }, [supabase])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -77,16 +88,7 @@ function NewReviewContent() {
     }
 
     checkAuth()
-  }, [supabase, router])
-
-  const fetchRestaurants = async () => {
-    const { data } = await supabase.from('restaurants').select('*').order('name')
-    if (data) {
-      setRestaurants(data)
-      return data
-    }
-    return []
-  }
+  }, [supabase, router, searchParams, fetchRestaurants])
 
   const handleRestaurantSelect = (restaurantId: string) => {
     setSelectedRestaurant(restaurantId)
@@ -94,7 +96,7 @@ function NewReviewContent() {
     setSelectedRestaurantData(restaurant || null)
   }
 
-  const handleAutocompleteSelect = (result: any) => {
+  const handleAutocompleteSelect = (result: SearchResult) => {
     if (result.isFromGoogle) {
       setShowNewRestaurant(true)
       setNewRestaurantName(result.name)
@@ -192,7 +194,7 @@ function NewReviewContent() {
         .insert([
           {
             restaurant_id: restaurantId,
-            author_id: user.id,
+            author_id: user!.id,
             rating,
             title: reviewTitle,
             content: reviewContent,
@@ -240,7 +242,7 @@ function NewReviewContent() {
 
       router.push('/restaurants/' + restaurantId)
       router.refresh()
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)

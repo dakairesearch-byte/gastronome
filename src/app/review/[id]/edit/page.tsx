@@ -12,7 +12,6 @@ export default function EditReviewPage() {
   const params = useParams()
   const reviewId = params.id as string
 
-  const [user, setUser] = useState<any>(null)
   const [review, setReview] = useState<Review | null>(null)
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [photos, setPhotos] = useState<ReviewPhoto[]>([])
@@ -37,8 +36,6 @@ export default function EditReviewPage() {
           router.push('/auth/login')
           return
         }
-
-        setUser(session.user)
 
         const { data: reviewData } = await supabase
           .from('reviews')
@@ -83,7 +80,7 @@ export default function EditReviewPage() {
             setPhotoPreview(photosData[0].photo_url)
           }
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load review')
       } finally {
         setLoading(false)
@@ -174,7 +171,7 @@ export default function EditReviewPage() {
 
       router.push(`/restaurants/${restaurant?.id}`)
       router.refresh()
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setSaving(false)
