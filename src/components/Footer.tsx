@@ -19,9 +19,9 @@ export default function Footer() {
               <Image
                 src="/Logo.jpg"
                 alt="Gastronome"
-                width={240}
+                width={64}
                 height={64}
-                className="h-16 w-auto bg-white rounded-sm p-1"
+                className="h-16 w-16 bg-white rounded-sm p-1 object-contain"
               />
             </div>
             <p

@@ -164,3 +164,13 @@ export function recordSearch(query: string) {
   const next = [{ query: q, time: new Date().toISOString() }, ...filtered].slice(0, MAX_SEARCHES)
   saveSearches(next)
 }
+
+/** Wipe the entire recent-searches history. */
+export function clearRecentSearches() {
+  saveSearches([])
+}
+
+/** Count of currently-stored recent searches. Useful for UI state. */
+export function getRecentSearchesCount(): number {
+  return loadSearches().length
+}

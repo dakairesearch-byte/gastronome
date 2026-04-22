@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
   Bookmark,
+  Check,
   FolderPlus,
+  History,
   Loader2,
   LogOut,
   Pencil,
@@ -23,6 +25,10 @@ import {
   useCollections,
   useFavorites,
 } from '@/lib/collections'
+import {
+  clearRecentSearches,
+  getRecentSearchesCount,
+} from '@/components/home/RecentSearches'
 
 /**
  * `/profile` — the user's personal home.
@@ -638,11 +644,34 @@ function SettingsPanel({
   const supabase = useMemo(() => createClient(), [])
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '')
   const [homeCity, setHomeCity] = useState(profile?.home_city ?? '')
-  const [creativeMode, setCreativeMode] = useState(!!profile?.creative_mode_enabled)
   const [cities, setCities] = useState<City[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [recentCount, setRecentCount] = useState(0)
+  const [recentCleared, setRecentCleared] = useState(false)
+
+  // Keep the recent-searches count in sync with whatever the rest of the
+  // app does. The Settings panel is mounted for the whole profile page
+  // lifetime, so storage events fired elsewhere (or by our clear button)
+  // should update the counter in real time.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sync = () => setRecentCount(getRecentSearchesCount())
+    sync()
+    window.addEventListener('storage', sync)
+    window.addEventListener('gastronome:recent-searches', sync)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.removeEventListener('gastronome:recent-searches', sync)
+    }
+  }, [])
+
+  const handleClearRecent = () => {
+    clearRecentSearches()
+    setRecentCleared(true)
+    window.setTimeout(() => setRecentCleared(false), 2000)
+  }
 
   useEffect(() => {
     let active = true
@@ -674,7 +703,6 @@ function SettingsPanel({
         display_name: trimmed,
         home_city: homeCity || null,
         favorite_cities: homeCity ? [homeCity] : [],
-        creative_mode_enabled: creativeMode,
         updated_at: new Date().toISOString(),
       }
       const { data, error: updateError } = await supabase
@@ -820,14 +848,15 @@ function SettingsPanel({
         <div className="flex items-center justify-between gap-4 pt-1">
           <div>
             <p
-              className="text-sm mb-1"
+              className="text-sm mb-1 flex items-center gap-1.5"
               style={{
                 color: 'var(--color-text)',
                 fontFamily: 'var(--font-body)',
                 fontWeight: 500,
               }}
             >
-              Creative Mode
+              <History size={14} />
+              Recent searches
             </p>
             <p
               className="text-xs"
@@ -836,26 +865,26 @@ function SettingsPanel({
                 fontFamily: 'var(--font-body)',
               }}
             >
-              Long-form reviews, image uploads, and rich formatting.
+              {recentCount === 0
+                ? 'No recent searches saved.'
+                : `${recentCount} recent ${recentCount === 1 ? 'search' : 'searches'} stored on this device.`}
             </p>
           </div>
           <button
             type="button"
-            role="switch"
-            aria-checked={creativeMode}
-            onClick={() => setCreativeMode((v) => !v)}
-            className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
+            onClick={handleClearRecent}
+            disabled={recentCount === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs uppercase rounded-sm transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              backgroundColor: creativeMode
-                ? 'var(--color-primary)'
-                : 'var(--color-border)',
+              fontFamily: 'var(--font-body)',
+              letterSpacing: '0.14em',
+              fontWeight: 500,
+              color: 'var(--color-text)',
+              border: '1px solid var(--color-border)',
             }}
           >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                creativeMode ? 'translate-x-5' : 'translate-x-0'
-              }`}
-            />
+            {recentCleared ? <Check size={14} /> : <Trash2 size={14} />}
+            {recentCleared ? 'Cleared' : 'Clear'}
           </button>
         </div>
       </section>

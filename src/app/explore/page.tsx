@@ -12,57 +12,61 @@ import type { Restaurant } from '@/types/database'
 export const revalidate = 60
 
 // NOTE: href values are read as query strings by this page below.
-// Values map to fields on `restaurants`:
-//   cuisine=Brunch  → filters where cuisine ilike 'Brunch'
-//   accolade=hidden_gems | michelin_star | bib_gourmand | james_beard | eater_38
+// Each collection maps to a real filter predicate that runs against
+// `restaurants`, so tiles only render when the live count > 0 in the
+// active city (see the `.filter((c) => c.count > 0)` below). Collections
+// whose mapping can't be trusted to return anything meaningful are not
+// listed here — previously we had Date Night→French, Street Food→Mexican,
+// and Healthy→Salad, which felt dummy because the cuisine column doesn't
+// carry those semantics.
 const COLLECTIONS = [
-  {
-    id: 'brunch',
-    title: 'Best Brunch Spots 2026',
-    description: 'Start your weekend right at these amazing brunch destinations',
-    image: 'https://images.unsplash.com/photo-1516061821-2ac22e822d3f?w=600&q=80',
-    curator: 'Editors',
-    href: '/explore?cuisine=Brunch',
-  },
   {
     id: 'hidden-gems',
     title: 'Hidden Gems',
-    description: 'Discover local favorites that are worth the trip',
+    description: 'Highly-rated spots that still fly under the radar.',
     image: 'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
-    curator: 'Local Explorers',
+    curator: 'Editorial',
     href: '/explore?accolade=hidden_gems',
   },
   {
-    id: 'date-night',
-    title: 'Date Night Perfection',
-    description: 'Romantic restaurants for that special evening',
-    image: 'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
-    curator: 'Romance Experts',
-    href: '/explore?cuisine=French',
+    id: 'michelin-stars',
+    title: 'Michelin Stars',
+    description: 'Every starred table in this city, one tap away.',
+    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?accolade=michelin_star',
   },
   {
-    id: 'street-food',
-    title: 'Street Food Adventures',
-    description: "Bold flavors from the city's best food trucks and stalls",
-    image: 'https://images.unsplash.com/photo-1707604341704-74abdc25e52a?w=600&q=80',
-    curator: 'Street Food Lovers',
-    href: '/explore?cuisine=Mexican',
+    id: 'bib-gourmand',
+    title: 'Bib Gourmand',
+    description: 'Michelin-recommended value cooking that punches above its price.',
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?accolade=bib_gourmand',
   },
   {
-    id: 'sweet-tooth',
-    title: 'Sweet Tooth Heaven',
-    description: 'Indulge in the finest desserts and pastries',
-    image: 'https://images.unsplash.com/photo-1607257882338-70f7dd2ae344?w=600&q=80',
-    curator: 'Dessert Connoisseurs',
-    href: '/explore?cuisine=Dessert',
+    id: 'james-beard',
+    title: 'James Beard Spotlight',
+    description: 'Restaurants and chefs recognized by the James Beard Foundation.',
+    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?accolade=james_beard',
   },
   {
-    id: 'healthy',
-    title: 'Healthy & Delicious',
-    description: "Nutritious meals that don't compromise on taste",
-    image: 'https://images.unsplash.com/photo-1649531794884-b8bb1de72e68?w=600&q=80',
-    curator: 'Wellness Editors',
-    href: '/explore?cuisine=Salad',
+    id: 'eater-38',
+    title: 'Eater 38',
+    description: "Eater's essential list of the city's must-try restaurants.",
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?accolade=eater_38',
+  },
+  {
+    id: 'brunch',
+    title: 'Best for Brunch',
+    description: 'Weekend brunch destinations worth the wait.',
+    image: 'https://images.unsplash.com/photo-1516061821-2ac22e822d3f?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?cuisine=Brunch',
   },
 ]
 
@@ -167,14 +171,25 @@ export default async function ExplorePage({
             <Top10Trending city={activeCity} restaurants={top10} />
           )}
 
-          <section>
-            <SectionHeader label="Expertly Curated" title="Editorial Collections" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {collectionCounts.map((c) => (
-                <ExploreCollectionCard key={c.id} {...c} />
-              ))}
-            </div>
-          </section>
+          {(() => {
+            // Hide collections that have zero matches in the active city.
+            // Previously every tile rendered regardless of count, so
+            // clicking into a collection could land on an empty results
+            // page — and tiles advertised "0 places", which felt like
+            // broken dummy content.
+            const liveCollections = collectionCounts.filter((c) => c.count > 0)
+            if (liveCollections.length === 0) return null
+            return (
+              <section>
+                <SectionHeader label="Expertly Curated" title="Editorial Collections" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {liveCollections.map((c) => (
+                    <ExploreCollectionCard key={c.id} {...c} />
+                  ))}
+                </div>
+              </section>
+            )
+          })()}
         </div>
       </div>
     )

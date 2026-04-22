@@ -80,10 +80,10 @@ export default function Navigation() {
               <Image
                 src="/Logo.jpg"
                 alt="Gastronome"
-                width={360}
+                width={96}
                 height={96}
                 priority
-                className="h-24 w-auto"
+                className="h-24 w-24 object-contain"
               />
             </Link>
 

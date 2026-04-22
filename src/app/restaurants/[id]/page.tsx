@@ -226,7 +226,7 @@ type ScoreSource = {
 function buildScoreSources(
   restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']
 ): ScoreSource[] {
-  return [
+  const all: ScoreSource[] = [
     {
       key: 'google',
       label: 'Google',
@@ -258,6 +258,10 @@ function buildScoreSources(
       badgeBg: '#FFEDD5',
     },
   ]
+  // Only surface sources that have a rating. An empty cell with a dash
+  // looks like a data bug and makes the comparison row feel broken —
+  // users have reported it as "this restaurant has no Infatuation page".
+  return all.filter((s) => s.rating != null)
 }
 
 export default async function RestaurantPage({
@@ -437,31 +441,36 @@ export default async function RestaurantPage({
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
           {/* Main column */}
           <div className="space-y-9">
-            {/* Ratings Scoreboard */}
-            <section>
-              <h2
-                className="text-lg mb-3.5"
-                style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontWeight: 500,
-                  color: 'var(--color-text)',
-                }}
-              >
-                Ratings Dashboard
-              </h2>
-              <div
-                className="grid grid-cols-3 overflow-hidden"
-                style={{
-                  backgroundColor: 'var(--color-surface)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {scoreSources.map((source, i) => (
-                  <ScoreCell key={source.key} source={source} last={i === scoreSources.length - 1} />
-                ))}
-              </div>
-            </section>
+            {/* Ratings Scoreboard — hidden entirely when no source has a
+                rating, so a brand-new restaurant page doesn't render an
+                empty dashboard box. */}
+            {scoreSources.length > 0 && (
+              <section>
+                <h2
+                  className="text-lg mb-3.5"
+                  style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 500,
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  Ratings Dashboard
+                </h2>
+                <div
+                  className="grid overflow-hidden"
+                  style={{
+                    gridTemplateColumns: `repeat(${scoreSources.length}, minmax(0, 1fr))`,
+                    backgroundColor: 'var(--color-surface)',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  {scoreSources.map((source, i) => (
+                    <ScoreCell key={source.key} source={source} last={i === scoreSources.length - 1} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Signature Dishes — sourced from restaurant_highlighted_dishes,
                 which unions LLM-extracted mentions from TikTok captions,
