@@ -181,7 +181,7 @@ export default async function ExplorePage({
             if (liveCollections.length === 0) return null
             return (
               <section>
-                <SectionHeader label="Expertly Curated" title="Editorial Collections" />
+                <SectionHeader label="Expertly Curated" title="Categories" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {liveCollections.map((c) => (
                     <ExploreCollectionCard key={c.id} {...c} />

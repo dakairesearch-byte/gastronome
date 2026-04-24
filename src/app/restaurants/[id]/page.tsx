@@ -446,16 +446,34 @@ export default async function RestaurantPage({
                 empty dashboard box. */}
             {scoreSources.length > 0 && (
               <section>
-                <h2
-                  className="text-lg mb-3.5"
-                  style={{
-                    fontFamily: 'var(--font-heading)',
-                    fontWeight: 500,
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  Ratings Dashboard
-                </h2>
+                <div className="mb-3.5">
+                  <span
+                    className="text-xs uppercase block mb-2.5"
+                    style={{
+                      color: 'var(--color-accent)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.18em',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Aggregated Reviews
+                  </span>
+                  <h2
+                    className="text-2xl"
+                    style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 500,
+                      color: 'var(--color-text)',
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    Ratings Dashboard
+                  </h2>
+                  <div
+                    className="mt-3.5"
+                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                  />
+                </div>
                 <div
                   className="grid overflow-hidden"
                   style={{
@@ -482,26 +500,47 @@ export default async function RestaurantPage({
                 reviewers are talking about *which* dishes. */}
             {dishes.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3.5">
-                  <h2
-                    className="text-lg"
-                    style={{
-                      fontFamily: 'var(--font-heading)',
-                      fontWeight: 500,
-                      color: 'var(--color-text)',
-                    }}
-                  >
-                    What Reviewers Mention
-                  </h2>
-                  <span
-                    className="text-xs"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      fontFamily: 'var(--font-body)',
-                    }}
-                  >
-                    Top {dishes.length}
-                  </span>
+                <div className="mb-3.5">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <span
+                        className="text-xs uppercase block mb-2.5"
+                        style={{
+                          color: 'var(--color-accent)',
+                          fontFamily: 'var(--font-body)',
+                          letterSpacing: '0.18em',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Across reviews &amp; social
+                      </span>
+                      <h2
+                        className="text-2xl"
+                        style={{
+                          fontFamily: 'var(--font-heading)',
+                          fontWeight: 500,
+                          color: 'var(--color-text)',
+                          letterSpacing: '-0.005em',
+                        }}
+                      >
+                        What Reviewers Mention
+                      </h2>
+                    </div>
+                    <span
+                      className="text-[11px] uppercase pb-1"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.14em',
+                      }}
+                    >
+                      Top {dishes.length}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-3.5"
+                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                  />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {dishes.map((dish) => {
@@ -641,28 +680,49 @@ export default async function RestaurantPage({
 
             {/* On Social */}
             <section>
-              <div className="flex items-center justify-between mb-3.5">
-                <h2
-                  style={{
-                    fontFamily: 'var(--font-heading)',
-                    fontWeight: 500,
-                    fontSize: '18px',
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  On Social
-                </h2>
-                <span
-                  className="text-xs"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {videoCount > 0
-                    ? `${videoCount} video${videoCount !== 1 ? 's' : ''}`
-                    : 'TikTok & Instagram'}
-                </span>
+              <div className="mb-3.5">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <span
+                      className="text-xs uppercase block mb-2.5"
+                      style={{
+                        color: 'var(--color-accent)',
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.18em',
+                        fontWeight: 500,
+                      }}
+                    >
+                      TikTok &amp; Instagram
+                    </span>
+                    <h2
+                      className="text-2xl"
+                      style={{
+                        fontFamily: 'var(--font-heading)',
+                        fontWeight: 500,
+                        color: 'var(--color-text)',
+                        letterSpacing: '-0.005em',
+                      }}
+                    >
+                      On Social
+                    </h2>
+                  </div>
+                  {videoCount > 0 && (
+                    <span
+                      className="text-[11px] uppercase pb-1"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.14em',
+                      }}
+                    >
+                      {videoCount} video{videoCount !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="mt-3.5"
+                  style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                />
               </div>
               <VideoGallery restaurantId={restaurant.id} />
             </section>
@@ -670,23 +730,43 @@ export default async function RestaurantPage({
             {/* The Story */}
             {restaurant.description && (
               <section>
-                <h2
-                  className="text-lg mb-3.5"
-                  style={{
-                    fontFamily: 'var(--font-heading)',
-                    fontWeight: 500,
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  The Story
-                </h2>
+                <div className="mb-3.5">
+                  <span
+                    className="text-xs uppercase block mb-2.5"
+                    style={{
+                      color: 'var(--color-accent)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.18em',
+                      fontWeight: 500,
+                    }}
+                  >
+                    About
+                  </span>
+                  <h2
+                    className="text-2xl"
+                    style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 500,
+                      color: 'var(--color-text)',
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    The Story
+                  </h2>
+                  <div
+                    className="mt-3.5"
+                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                  />
+                </div>
                 <p
-                  className="text-sm leading-relaxed italic"
+                  className="italic"
                   style={{
-                    color: 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font-body)',
+                    color: 'var(--color-text)',
+                    fontFamily: 'var(--font-heading)',
                     fontWeight: 300,
-                    lineHeight: 1.7,
+                    fontSize: '18px',
+                    lineHeight: 1.65,
+                    maxWidth: '44rem',
                   }}
                 >
                   {restaurant.description}
@@ -744,11 +824,13 @@ export default async function RestaurantPage({
             {relatedRestaurants.length > 0 && (
               <div>
                 <h3
-                  className="text-sm mb-3"
+                  className="text-[11px] uppercase mb-4 pb-3"
                   style={{
-                    fontFamily: 'var(--font-heading)',
+                    fontFamily: 'var(--font-body)',
                     fontWeight: 500,
-                    color: 'var(--color-text)',
+                    color: 'var(--color-text-secondary)',
+                    letterSpacing: '0.14em',
+                    borderBottom: '1px solid var(--color-border)',
                   }}
                 >
                   Similar Restaurants
@@ -770,61 +852,74 @@ export default async function RestaurantPage({
 function ScoreCell({ source, last }: { source: ScoreSource; last: boolean }) {
   const hasRating = source.rating != null
 
+  const wrapper = source.url ? 'a' : 'div'
+  const linkProps = source.url
+    ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' as const }
+    : {}
+
+  const Tag = wrapper as React.ElementType
+
   return (
-    <div
-      className="flex flex-col items-center justify-center py-5 px-3 text-center"
+    <Tag
+      {...linkProps}
+      className="block py-5 px-4 transition-colors"
       style={{
         borderRight: last ? 'none' : '1px solid var(--color-border)',
       }}
     >
-      <div
-        className="w-[22px] h-[22px] flex items-center justify-center mb-2"
-        style={{
-          borderRadius: '4px',
-          backgroundColor: source.badgeBg,
-          fontFamily: 'var(--font-body)',
-          fontSize: '10px',
-          fontWeight: 700,
-          color: 'var(--color-text)',
-        }}
-      >
-        {source.icon}
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="w-[22px] h-[22px] flex items-center justify-center flex-shrink-0"
+          style={{
+            borderRadius: '4px',
+            backgroundColor: source.badgeBg,
+            fontFamily: 'var(--font-body)',
+            fontSize: '10px',
+            fontWeight: 700,
+            color: 'var(--color-text)',
+          }}
+        >
+          {source.icon}
+        </div>
+        <span
+          className="text-[10px] uppercase"
+          style={{
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.14em',
+            fontWeight: 500,
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          {source.label}
+        </span>
       </div>
-      <span
-        className="text-[10px] uppercase mb-1"
-        style={{
-          fontFamily: 'var(--font-body)',
-          letterSpacing: '0.1em',
-          fontWeight: 500,
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        {source.label}
-      </span>
       {hasRating ? (
         <>
-          <span
-            className="text-xl"
+          <div
             style={{
               fontFamily: 'var(--font-heading)',
+              fontSize: '1.875rem',
               fontWeight: 500,
+              lineHeight: 1,
               color: 'var(--color-text)',
+              letterSpacing: '-0.02em',
             }}
           >
             {source.rating!.toFixed(1)}
-          </span>
-          <span
-            className="text-[10px]"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            / {source.maxRating}
-          </span>
+            <span
+              style={{
+                fontSize: '14px',
+                color: 'var(--color-text-secondary)',
+                fontWeight: 400,
+                marginLeft: '2px',
+              }}
+            >
+              /{source.maxRating}
+            </span>
+          </div>
           {source.reviewCount != null && source.reviewCount > 0 && (
             <span
-              className="text-[10px] mt-0.5"
+              className="text-[11px] mt-1.5 block"
               style={{
                 fontFamily: 'var(--font-body)',
                 color: 'var(--color-text-secondary)',
@@ -836,9 +931,9 @@ function ScoreCell({ source, last }: { source: ScoreSource; last: boolean }) {
         </>
       ) : (
         <span
-          className="text-xl"
           style={{
             fontFamily: 'var(--font-heading)',
+            fontSize: '1.875rem',
             fontWeight: 400,
             color: 'var(--color-text-secondary)',
           }}
@@ -846,6 +941,6 @@ function ScoreCell({ source, last }: { source: ScoreSource; last: boolean }) {
           —
         </span>
       )}
-    </div>
+    </Tag>
   )
 }

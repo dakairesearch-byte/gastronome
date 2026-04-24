@@ -72,7 +72,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
       className="group block rounded-sm shadow-md overflow-hidden transition-all hover:shadow-2xl cursor-pointer"
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
-      <div className="overflow-hidden relative rounded-sm aspect-[3/4]">
+      <div className="overflow-hidden relative rounded-sm aspect-square">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
@@ -86,9 +86,9 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
           className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
         />
       </div>
-      <div className="p-5">
+      <div className="p-4">
         <p
-          className="text-xs uppercase tracking-widest mb-2"
+          className="text-xs uppercase tracking-widest mb-1.5"
           style={{
             color: 'var(--color-accent)',
             fontFamily: 'var(--font-body)',
@@ -101,7 +101,7 @@ export default function SuggestionCard({ restaurant }: SuggestionCardProps) {
             : 'Restaurant'}
         </p>
         <h3
-          className="text-xl mb-3"
+          className="text-base mb-2.5"
           style={{
             color: 'var(--color-text)',
             fontFamily: 'var(--font-heading)',

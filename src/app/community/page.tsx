@@ -1,17 +1,7 @@
 import { Users } from 'lucide-react'
-import CommunityWaitlistForm from '@/components/CommunityWaitlistForm'
 
 export const revalidate = 60
 
-/**
- * Community page — waitlist signup while the feature is in development.
- *
- * Previously a dead-end "Coming Soon" placeholder with no CTA, which
- * confused users who arrived via the primary nav (QA bug #7). The new
- * layout keeps the Figma aesthetic but adds a functional waitlist form
- * so visitors can express interest and Claude-the-team can close the
- * loop when the feature ships.
- */
 export default function CommunityPage() {
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
@@ -41,21 +31,22 @@ export default function CommunityPage() {
                 fontWeight: 500,
               }}
             >
-              Members Only · Early Access
+              Members Only
             </span>
           </div>
 
           <h1
-            className="text-5xl md:text-7xl mb-6"
             style={{
               color: 'var(--color-text)',
               fontFamily: 'var(--font-heading)',
               fontWeight: 400,
               letterSpacing: '-0.02em',
               lineHeight: 1.05,
+              fontSize: '2.25rem',
+              marginBottom: '24px',
             }}
           >
-            Join the Table
+            Coming Soon
           </h1>
 
           <div
@@ -64,7 +55,7 @@ export default function CommunityPage() {
           />
 
           <p
-            className="text-base md:text-lg leading-relaxed mb-10"
+            className="text-base md:text-lg leading-relaxed"
             style={{
               color: 'var(--color-text-secondary)',
               fontFamily: 'var(--font-body)',
@@ -72,13 +63,9 @@ export default function CommunityPage() {
               lineHeight: 1.7,
             }}
           >
-            We&apos;re building an invitation-only community for discerning food
-            enthusiasts — reviews you can trust, restaurant-nights with other
-            members, and early access to new openings. Add your email to the
-            waitlist and we&apos;ll reach out when your invite is ready.
+            An exclusive community for discerning food enthusiasts. Connect,
+            share, and discover exceptional dining experiences.
           </p>
-
-          <CommunityWaitlistForm />
         </div>
       </div>
     </div>
