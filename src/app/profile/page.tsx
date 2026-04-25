@@ -560,7 +560,7 @@ function CollectionSection({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={photo}
-                    alt=""
+                    alt={r.name}
                     className="w-14 h-14 object-cover rounded-sm flex-shrink-0"
                   />
                 ) : (

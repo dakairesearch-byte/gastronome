@@ -355,7 +355,7 @@ function CitiesStep({
                       <div key={r.id} className="flex items-center gap-2 flex-1 min-w-0 p-2 rounded-sm" style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
                         {photo && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photo} alt="" className="w-9 h-9 rounded-sm object-cover flex-shrink-0" />
+                          <img src={photo} alt={r.name} className="w-9 h-9 rounded-sm object-cover flex-shrink-0" />
                         )}
                         <div className="min-w-0">
                           <p className="text-xs truncate" style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{r.name}</p>

@@ -115,7 +115,7 @@ export default async function HomePage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={c.image}
-                    alt=""
+                    alt={`${c.name} collection`}
                     className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700"
                   />
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">

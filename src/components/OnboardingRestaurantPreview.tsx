@@ -1,9 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { MapPin } from 'lucide-react'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
 import type { Restaurant } from '@/types/database'
+
+const FALLBACK_PHOTO =
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80'
 
 interface OnboardingRestaurantPreviewProps {
   restaurant: Restaurant
@@ -17,7 +21,9 @@ interface OnboardingRestaurantPreviewProps {
 export default function OnboardingRestaurantPreview({
   restaurant,
 }: OnboardingRestaurantPreviewProps) {
-  const photoUrl = restaurant.photo_url || restaurant.google_photo_url
+  const photoUrl = restaurant.photo_url || restaurant.google_photo_url || FALLBACK_PHOTO
+  const [src, setSrc] = useState(photoUrl)
+  const [didFallback, setDidFallback] = useState(false)
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.james_beard_nominated ||
@@ -32,13 +38,17 @@ export default function OnboardingRestaurantPreview({
         border: '1px solid var(--color-border)',
       }}
     >
-      {photoUrl && (
-        <div className="relative aspect-video bg-gray-100">
-          <img
-            src={photoUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+      <div className="relative aspect-video bg-gray-100">
+        <img
+          src={src}
+          alt={`${restaurant.name} preview`}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => {
+            if (didFallback) return
+            setDidFallback(true)
+            setSrc(FALLBACK_PHOTO)
+          }}
+        />
           <span
             className="absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wide rounded-sm"
             style={{ backgroundColor: 'var(--color-primary)', opacity: 0.9, letterSpacing: '0.1em' }}
@@ -46,7 +56,6 @@ export default function OnboardingRestaurantPreview({
             Preview
           </span>
         </div>
-      )}
       <div className="p-4 space-y-2">
         <h4
           className="text-sm line-clamp-1"

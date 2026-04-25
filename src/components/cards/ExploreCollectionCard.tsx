@@ -1,4 +1,10 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
+
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'
 
 interface ExploreCollectionCardProps {
   title: string
@@ -21,6 +27,9 @@ export default function ExploreCollectionCard({
   curator,
   href,
 }: ExploreCollectionCardProps) {
+  const [src, setSrc] = useState(image)
+  const [didFallback, setDidFallback] = useState(false)
+
   return (
     <Link
       href={href}
@@ -30,9 +39,14 @@ export default function ExploreCollectionCard({
       <div className="overflow-hidden relative rounded-sm" style={{ height: '140px' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={image}
-          alt=""
+          src={src}
+          alt={`${title} collection`}
           className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
+          onError={() => {
+            if (didFallback) return
+            setDidFallback(true)
+            setSrc(FALLBACK_IMAGE)
+          }}
         />
       </div>
       <div className="p-6">

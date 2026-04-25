@@ -205,6 +205,7 @@ function NewReviewContent() {
 
       if (reviewError) {
         setError('Failed to create review: ' + reviewError.message)
+        setLoading(false)
         return
       }
 

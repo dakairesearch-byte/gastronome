@@ -293,7 +293,7 @@ export default async function RestaurantPage({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photoUrl}
-            alt=""
+            alt={`${restaurant.name} hero`}
             className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
         )}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 import {
   Sparkles,
   ArrowRight,
@@ -253,6 +254,18 @@ export default function OnboardingFlow() {
 
   return (
     <div className="w-full max-w-2xl">
+      {/* Logo */}
+      <div className="flex justify-center mb-6">
+        <Image
+          src="/Logo.jpg"
+          alt="Gastronome"
+          width={64}
+          height={64}
+          priority
+          className="h-16 w-16 object-contain"
+        />
+      </div>
+
       {/* Progress */}
       <div className="flex items-center justify-center gap-2 mb-6">
         {STEPS.map((_, i) => (

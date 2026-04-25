@@ -37,7 +37,7 @@ export default async function OnboardingPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 sm:p-6"
+      className="flex-1 flex items-center justify-center p-4 sm:p-6 py-12"
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       <OnboardingFlow />

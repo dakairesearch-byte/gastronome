@@ -137,6 +137,7 @@ export default function EditReviewPage() {
 
       if (updateError) {
         setError('Failed to update review: ' + updateError.message)
+        setSaving(false)
         return
       }
 

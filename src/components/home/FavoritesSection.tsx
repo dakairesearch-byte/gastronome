@@ -125,7 +125,7 @@ export default function FavoritesSection() {
           >
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo} alt="" className="w-20 h-20 object-cover rounded-sm" />
+              <img src={photo} alt={r.name} className="w-20 h-20 object-cover rounded-sm" />
             ) : (
               <div
                 className="w-20 h-20 rounded-sm flex items-center justify-center text-2xl font-bold"
