@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useFavorites } from '@/lib/collections'
+import { displayCuisine, getRestaurantPhotoUrl } from '@/lib/restaurant'
+import { formatRating } from '@/lib/format'
 import type { Restaurant } from '@/types/database'
 
 /**
@@ -114,8 +116,8 @@ export default function FavoritesSection() {
   return (
     <div className="space-y-3">
       {restaurants.map((r) => {
-        const photo = r.photo_url || r.google_photo_url || r.yelp_photo_url || null
-        const rating = r.google_rating ?? r.yelp_rating ?? null
+        const photo = getRestaurantPhotoUrl(r)
+        const rating = formatRating(r.google_rating ?? r.yelp_rating)
         return (
           <Link
             key={r.id}
@@ -123,17 +125,8 @@ export default function FavoritesSection() {
             className="flex items-center gap-5 p-5 cursor-pointer transition-all hover:shadow-lg rounded-sm"
             style={{ backgroundColor: 'var(--color-surface)' }}
           >
-            {photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo} alt={r.name} className="w-20 h-20 object-cover rounded-sm" />
-            ) : (
-              <div
-                className="w-20 h-20 rounded-sm flex items-center justify-center text-2xl font-bold"
-                style={{ backgroundColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-              >
-                {r.name.charAt(0)}
-              </div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo} alt={r.name} className="w-20 h-20 object-cover rounded-sm" />
             <div className="flex-1 min-w-0">
               <p
                 className="text-xs uppercase tracking-wider mb-1"
@@ -144,7 +137,7 @@ export default function FavoritesSection() {
                   fontWeight: 500,
                 }}
               >
-                {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                {displayCuisine(r.cuisine)}
               </p>
               <h3
                 className="text-lg truncate"
@@ -156,14 +149,14 @@ export default function FavoritesSection() {
               >
                 {r.name}
               </h3>
-              {rating != null && (
+              {rating && (
                 <div className="flex items-center gap-1.5 mt-1">
                   <Star className="h-4 w-4 fill-current" style={{ color: 'var(--color-primary)' }} />
                   <span
                     className="text-sm"
                     style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
                   >
-                    {rating.toFixed(1)}
+                    {rating}
                   </span>
                 </div>
               )}

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
+import { displayCuisine } from '@/lib/restaurant'
+import { formatRating } from '@/lib/format'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
 import Top10Trending from '@/components/explore/Top10Trending'
@@ -273,18 +275,21 @@ export default async function ExplorePage({
                   <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
                     {r.name}
                   </h3>
-                  {typeof r.google_rating === 'number' && (
-                    <span
-                      className="inline-flex items-center gap-1 text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                      aria-label={`${r.google_rating.toFixed(1)} stars`}
-                    >
-                      ★ {r.google_rating.toFixed(1)}
-                    </span>
-                  )}
+                  {(() => {
+                    const ratingStr = formatRating(r.google_rating)
+                    return ratingStr ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                        aria-label={`${ratingStr} stars`}
+                      >
+                        ★ {ratingStr}
+                      </span>
+                    ) : null
+                  })()}
                 </div>
                 <p className="mt-1 text-xs text-gray-500 truncate">
-                  {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                  {displayCuisine(r.cuisine)}
                   {r.neighborhood ? ` • ${r.neighborhood}` : ''}
                 </p>
               </Link>

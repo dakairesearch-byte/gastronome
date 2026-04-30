@@ -188,13 +188,19 @@ function NewReviewContent() {
         restaurantId = newRestaurant.id
       }
 
+      if (!user) {
+        setError('You must be signed in to post a review')
+        setLoading(false)
+        return
+      }
+
       // Create review
       const { data: createdReview, error: reviewError } = await supabase
         .from('reviews')
         .insert([
           {
             restaurant_id: restaurantId,
-            author_id: user!.id,
+            author_id: user.id,
             rating,
             title: reviewTitle,
             content: reviewContent,

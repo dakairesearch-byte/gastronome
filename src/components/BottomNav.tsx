@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Compass, Users, User } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
 
 /**
@@ -18,26 +17,7 @@ function isActivePath(pathname: string, path: string): boolean {
 
 export default function BottomNav() {
   const pathname = usePathname()
-  const [authed, setAuthed] = useState(false)
-
-  // Matches Navigation.tsx so the Profile tab links to settings when
-  // the user is signed in, and triggers the popup sign-in modal
-  // otherwise — keeping the bottom bar's entry point consistent across
-  // auth states.
-  useEffect(() => {
-    const supabase = createClient()
-    let active = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setAuthed(!!data.session?.user)
-    })
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (active) setAuthed(!!session?.user)
-    })
-    return () => {
-      active = false
-      listener.subscription.unsubscribe()
-    }
-  }, [])
+  const authed = !!useAuthUser()
 
   const navTabs = [
     { href: '/', icon: Home, label: 'Home' },

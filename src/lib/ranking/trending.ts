@@ -312,20 +312,6 @@ export const computeAllScores = cache(async function computeAllScores(
 // ---------- Public API ----------
 
 /**
- * Return the trending score for a single restaurant in a given window.
- * Score is normalized by the restaurant's city median and is comparable
- * only within the same call's `window`.
- */
-export async function trendingScore(
-  supabase: Supabase,
-  restaurantId: string,
-  options: TrendingOptions = {}
-): Promise<number> {
-  const scores = await computeAllScores(supabase, options.window ?? DEFAULT_WINDOW)
-  return scores.get(restaurantId)?.normalized_score ?? 0
-}
-
-/**
  * Return the top N trending restaurants by normalized score, optionally
  * filtered by city and/or cuisine. Each entry carries its rank (1-indexed)
  * and the raw event counts that fed its score.

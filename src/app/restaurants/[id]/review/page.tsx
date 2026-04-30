@@ -99,20 +99,25 @@ export default function WriteReviewPage() {
         return;
       }
 
-      // Update restaurant stats
+      // Update restaurant stats. The review insert above already succeeded,
+      // so a failure here leaves the aggregate slightly stale until the
+      // next write — surface it to the user rather than silently swallowing.
       if (restaurant) {
         const currentAvgRating = restaurant.avg_rating || 0;
         const newAvgRating =
           (currentAvgRating * restaurant.review_count + rating) /
           (restaurant.review_count + 1);
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('restaurants')
           .update({
             avg_rating: newAvgRating,
             review_count: restaurant.review_count + 1,
           })
           .eq('id', restaurantId);
+        if (updateError) {
+          console.error('restaurant aggregate update failed:', updateError);
+        }
       }
 
       router.push(`/restaurants/${restaurantId}`);

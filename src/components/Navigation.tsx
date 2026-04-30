@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Menu, User, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const navItems = [
   { path: '/', label: 'Home' },
@@ -29,25 +29,7 @@ export default function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-
-  // Lightweight auth check so the right-side icon links to /profile for
-  // signed-in users or /auth/login for everyone else. No profile
-  // dropdown; the Figma design keeps the header minimal.
-  useEffect(() => {
-    const supabase = createClient()
-    let active = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setUser(data.session?.user ?? null)
-    })
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (active) setUser(session?.user ?? null)
-    })
-    return () => {
-      active = false
-      listener.subscription.unsubscribe()
-    }
-  }, [])
+  const user = useAuthUser()
 
   // Close mobile menu on route change (React-safe derived-state pattern)
   const [tracked, setTracked] = useState(pathname)
@@ -59,7 +41,6 @@ export default function Navigation() {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    setUser(null)
     setMobileOpen(false)
     router.push('/')
   }

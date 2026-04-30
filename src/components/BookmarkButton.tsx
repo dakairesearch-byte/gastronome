@@ -9,9 +9,8 @@ import {
   useCollections,
   useFavorites,
 } from '@/lib/collections'
-import { createClient } from '@/lib/supabase/client'
+import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface BookmarkButtonProps {
   restaurantId: string
@@ -46,28 +45,11 @@ export default function BookmarkButton({
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const user = useAuthUser()
   const [toast, setToast] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const isFavorite = favorites.includes(restaurantId)
-
-  // Track auth state so Save can show a sign-in prompt instead of silently
-  // storing to localStorage when the user isn't logged in.
-  useEffect(() => {
-    const supabase = createClient()
-    let active = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (active) setUser(data.session?.user ?? null)
-    })
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (active) setUser(session?.user ?? null)
-    })
-    return () => {
-      active = false
-      listener.subscription.unsubscribe()
-    }
-  }, [])
 
   // Auto-dismiss toast after 2s.
   useEffect(() => {

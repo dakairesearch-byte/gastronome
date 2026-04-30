@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { MapPin } from 'lucide-react'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
+import {
+  displayCuisine,
+  fallbackPhotoForCuisine,
+  getRestaurantPhotoUrl,
+} from '@/lib/restaurant'
 import type { Restaurant } from '@/types/database'
-
-const FALLBACK_PHOTO =
-  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80'
 
 interface OnboardingRestaurantPreviewProps {
   restaurant: Restaurant
@@ -21,8 +23,7 @@ interface OnboardingRestaurantPreviewProps {
 export default function OnboardingRestaurantPreview({
   restaurant,
 }: OnboardingRestaurantPreviewProps) {
-  const photoUrl = restaurant.photo_url || restaurant.google_photo_url || FALLBACK_PHOTO
-  const [src, setSrc] = useState(photoUrl)
+  const [src, setSrc] = useState(() => getRestaurantPhotoUrl(restaurant))
   const [didFallback, setDidFallback] = useState(false)
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
@@ -46,7 +47,7 @@ export default function OnboardingRestaurantPreview({
           onError={() => {
             if (didFallback) return
             setDidFallback(true)
-            setSrc(FALLBACK_PHOTO)
+            setSrc(fallbackPhotoForCuisine(restaurant.cuisine))
           }}
         />
           <span
@@ -75,7 +76,7 @@ export default function OnboardingRestaurantPreview({
                 fontWeight: 500,
               }}
             >
-              {restaurant.cuisine}
+              {displayCuisine(restaurant.cuisine)}
             </span>
           )}
           <span

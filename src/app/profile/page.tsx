@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { displayCuisine, getRestaurantPhotoUrl } from '@/lib/restaurant'
+import { formatRating } from '@/lib/format'
 import type { City, Profile, Restaurant } from '@/types/database'
 import {
   createCollection,
@@ -544,8 +546,8 @@ function CollectionSection({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map((r) => {
-            const photo = r.photo_url || r.google_photo_url || r.yelp_photo_url
-            const rating = r.google_rating ?? r.yelp_rating ?? null
+            const photo = getRestaurantPhotoUrl(r)
+            const rating = formatRating(r.google_rating ?? r.yelp_rating)
             return (
               <Link
                 key={r.id}
@@ -556,24 +558,12 @@ function CollectionSection({
                   border: '1px solid var(--color-border)',
                 }}
               >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photo}
-                    alt={r.name}
-                    className="w-14 h-14 object-cover rounded-sm flex-shrink-0"
-                  />
-                ) : (
-                  <div
-                    className="w-14 h-14 rounded-sm flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {r.name.charAt(0)}
-                  </div>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo}
+                  alt={r.name}
+                  className="w-14 h-14 object-cover rounded-sm flex-shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[10px] uppercase mb-0.5"
@@ -584,7 +574,7 @@ function CollectionSection({
                       fontWeight: 500,
                     }}
                   >
-                    {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                    {displayCuisine(r.cuisine)}
                   </p>
                   <p
                     className="truncate text-sm"
@@ -603,14 +593,14 @@ function CollectionSection({
                       fontFamily: 'var(--font-body)',
                     }}
                   >
-                    {rating != null && (
+                    {rating && (
                       <>
                         <Star
                           size={11}
                           fill="currentColor"
                           style={{ color: 'var(--color-primary)' }}
                         />
-                        <span>{rating.toFixed(1)}</span>
+                        <span>{rating}</span>
                         <span className="mx-1">·</span>
                       </>
                     )}

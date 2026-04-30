@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Heart, Eye, Play, SlidersHorizontal, Music2, Camera } from 'lucide-react'
+import { formatCount } from '@/lib/format'
 import type { RestaurantVideo } from '@/types/database'
 import VideoEmbed from './VideoEmbed'
 
@@ -54,12 +55,6 @@ type SortOption = 'most_liked' | 'most_viewed' | 'newest'
 
 interface VideoGalleryProps {
   restaurantId: string
-}
-
-function formatCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`
-  return count.toLocaleString()
 }
 
 export default function VideoGallery({ restaurantId }: VideoGalleryProps) {

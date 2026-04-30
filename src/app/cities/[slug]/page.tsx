@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Award, MapPin, Star } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
+import { displayCuisine } from '@/lib/restaurant'
 import AccoladesBadges from '@/components/AccoladesBadges'
 import EmptyState from '@/components/EmptyState'
 import type { Restaurant } from '@/types/database'
@@ -320,7 +321,7 @@ export default async function CityPage({
                     {r.name}
                   </h3>
                   <p className="mt-1 text-xs text-gray-500 truncate">
-                    {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                    {displayCuisine(r.cuisine)}
                     {r.neighborhood ? ` • ${r.neighborhood}` : ''}
                   </p>
                   {trendingRank ? (

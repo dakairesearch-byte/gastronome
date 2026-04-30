@@ -1,15 +1,10 @@
 import { X, Heart, Eye, MessageCircle, ExternalLink } from 'lucide-react'
+import { formatCount } from '@/lib/format'
 import type { RestaurantVideo } from '@/types/database'
 
 interface VideoEmbedProps {
   video: RestaurantVideo
   onClose?: () => void
-}
-
-function formatCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`
-  return count.toLocaleString()
 }
 
 export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
