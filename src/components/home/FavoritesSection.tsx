@@ -19,9 +19,6 @@ import type { Restaurant } from '@/types/database'
  * after the store subscription fires, avoiding the hydration flash.
  */
 
-// Re-export for callers that used to import from this module.
-export { toggleFavorite, getFavorites } from '@/lib/collections'
-
 export default function FavoritesSection() {
   const ids = useFavorites()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
