@@ -73,7 +73,7 @@ export default async function CitiesPage() {
           .from('restaurants')
           .select('id', { count: 'exact', head: true })
           .ilike('city', city.name)
-          .or('james_beard_nominated.eq.true,james_beard_winner.eq.true'),
+          .eq('james_beard_winner', true),
         supabase
           .from('restaurants')
           .select('id', { count: 'exact', head: true })

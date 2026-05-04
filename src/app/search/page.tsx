@@ -287,11 +287,8 @@ function SearchContent() {
             q = q.gte('yelp_rating', filters.yelpMinRating)
           if (filters.yelpMinReviews > 0)
             q = q.gte('yelp_review_count', filters.yelpMinReviews)
-          if (filters.jamesBeard === 'winner') {
+          if (filters.jamesBeard === 'winner' || filters.jamesBeard === 'nominee') {
             q = q.eq('james_beard_winner', true)
-          } else if (filters.jamesBeard === 'nominee') {
-            // "Nominee" is inclusive of winner — a winner was nominated.
-            q = q.or('james_beard_winner.eq.true,james_beard_nominated.eq.true')
           }
           if (filters.eater38) q = q.eq('eater_38', true)
           return q
@@ -709,11 +706,9 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
   if (f.michelinStars.length || f.bibGourmand) {
     if (!starsOk && !bibOk) return false
   }
-  if (f.jamesBeard === 'winner' && !r.james_beard_winner) return false
   if (
-    f.jamesBeard === 'nominee' &&
-    !r.james_beard_winner &&
-    !r.james_beard_nominated
+    (f.jamesBeard === 'winner' || f.jamesBeard === 'nominee') &&
+    !r.james_beard_winner
   )
     return false
   if (f.eater38 && !r.eater_38) return false

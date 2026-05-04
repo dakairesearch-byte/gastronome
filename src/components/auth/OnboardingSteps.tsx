@@ -65,17 +65,23 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
   }, [supabase])
 
   useEffect(() => {
+    let active = true
     for (const name of selCities) {
       if (previews[name]) continue
       supabase
         .from('restaurants')
-        .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url')
-        .eq('city', name)
+        .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
+        .ilike('city', name)
+        .or('photo_url.not.is.null,google_photo_url.not.is.null')
         .order('google_rating', { ascending: false, nullsFirst: false })
         .limit(2)
         .then(({ data }) => {
+          if (!active) return
           setPreviews((p) => ({ ...p, [name]: (data ?? []) as Restaurant[] }))
         })
+    }
+    return () => {
+      active = false
     }
   }, [selCities, previews, supabase])
 
@@ -350,12 +356,29 @@ function CitiesStep({
                 </p>
                 <div className="flex gap-2">
                   {rows.map((r) => {
-                    const photo = r.photo_url || r.google_photo_url
+                    const photo =
+                      r.photo_url ||
+                      ((r as Restaurant & { photo_urls?: string[] | null }).photo_urls?.[0]) ||
+                      r.google_photo_url
                     return (
                       <div key={r.id} className="flex items-center gap-2 flex-1 min-w-0 p-2 rounded-sm" style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
-                        {photo && (
+                        {photo ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photo} alt={r.name} className="w-9 h-9 rounded-sm object-cover flex-shrink-0" />
+                          <img
+                            src={photo}
+                            alt={r.name}
+                            className="w-9 h-9 rounded-sm object-cover flex-shrink-0 bg-gray-100"
+                            loading="lazy"
+                            onError={(e) => {
+                              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div
+                            aria-hidden
+                            className="w-9 h-9 rounded-sm flex-shrink-0"
+                            style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}
+                          />
                         )}
                         <div className="min-w-0">
                           <p className="text-xs truncate" style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>{r.name}</p>

@@ -30,7 +30,7 @@ function applyAccoladeFilter(
   if (accolade === 'bib_gourmand')
     return rows.filter((r) => r.michelin_designation === 'bib_gourmand')
   if (accolade === 'james_beard')
-    return rows.filter((r) => r.james_beard_nominated || r.james_beard_winner)
+    return rows.filter((r) => r.james_beard_winner)
   if (accolade === 'eater_38') return rows.filter((r) => r.eater_38)
   return rows
 }
@@ -79,7 +79,7 @@ async function getCityData(slug: string) {
       .from('restaurants')
       .select('id', { count: 'exact', head: true })
       .ilike('city', city.name)
-      .or('james_beard_nominated.eq.true,james_beard_winner.eq.true'),
+      .eq('james_beard_winner', true),
     supabase
       .from('restaurants')
       .select('*')

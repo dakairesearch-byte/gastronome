@@ -207,11 +207,11 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
   const lats = items
     .map((r) => r.latitude)
-    .filter((v): v is number => typeof v === 'number')
+    .filter((v): v is number => Number.isFinite(v as number))
   const lngs = items
     .map((r) => r.longitude)
-    .filter((v): v is number => typeof v === 'number')
-  const bounds =
+    .filter((v): v is number => Number.isFinite(v as number))
+  const rawBounds =
     lats.length === items.length && lngs.length === items.length
       ? {
           minLat: Math.min(...lats),
@@ -219,6 +219,14 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           minLng: Math.min(...lngs),
           maxLng: Math.max(...lngs),
         }
+      : null
+  const bounds =
+    rawBounds &&
+    Number.isFinite(rawBounds.minLat) &&
+    Number.isFinite(rawBounds.maxLat) &&
+    Number.isFinite(rawBounds.minLng) &&
+    Number.isFinite(rawBounds.maxLng)
+      ? rawBounds
       : null
 
   return (

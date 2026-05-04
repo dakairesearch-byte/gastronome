@@ -100,10 +100,14 @@ export type Database = {
           michelin_stars: number
           michelin_designation: string | null
           michelin_url: string | null
-          james_beard_nominated: boolean
           james_beard_winner: boolean
           eater_38: boolean
+          eater_url: string | null
           accolades: Json
+          photo_urls: string[] | null
+          business_status: string | null
+          menu_format: string | null
+          menu_note: string | null
           last_fetched_at: string | null
           created_at: string
           updated_at: string
@@ -147,10 +151,14 @@ export type Database = {
           michelin_stars?: number
           michelin_designation?: string | null
           michelin_url?: string | null
-          james_beard_nominated?: boolean
           james_beard_winner?: boolean
           eater_38?: boolean
+          eater_url?: string | null
           accolades?: Json
+          photo_urls?: string[] | null
+          business_status?: string | null
+          menu_format?: string | null
+          menu_note?: string | null
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -194,10 +202,14 @@ export type Database = {
           michelin_stars?: number
           michelin_designation?: string | null
           michelin_url?: string | null
-          james_beard_nominated?: boolean
           james_beard_winner?: boolean
           eater_38?: boolean
+          eater_url?: string | null
           accolades?: Json
+          photo_urls?: string[] | null
+          business_status?: string | null
+          menu_format?: string | null
+          menu_note?: string | null
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -563,6 +575,249 @@ export type Database = {
           }
         ]
       }
+      restaurant_top_dishes: {
+        Row: {
+          id: string
+          restaurant_id: string
+          menu_item_id: string | null
+          dish_name: string
+          display_name: string | null
+          rank: number | null
+          score: number | null
+          tier: string | null
+          positive_count: number | null
+          negative_count: number | null
+          neutral_count: number | null
+          google_mentions: number | null
+          tiktok_mentions: number | null
+          instagram_mentions: number | null
+          total_mentions: number | null
+          sample_quote: string | null
+          sample_quote_source: string | null
+          price_cents: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          menu_item_id?: string | null
+          dish_name: string
+          display_name?: string | null
+          rank?: number | null
+          score?: number | null
+          tier?: string | null
+          positive_count?: number | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          google_mentions?: number | null
+          tiktok_mentions?: number | null
+          instagram_mentions?: number | null
+          total_mentions?: number | null
+          sample_quote?: string | null
+          sample_quote_source?: string | null
+          price_cents?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          menu_item_id?: string | null
+          dish_name?: string
+          display_name?: string | null
+          rank?: number | null
+          score?: number | null
+          tier?: string | null
+          positive_count?: number | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          google_mentions?: number | null
+          tiktok_mentions?: number | null
+          instagram_mentions?: number | null
+          total_mentions?: number | null
+          sample_quote?: string | null
+          sample_quote_source?: string | null
+          price_cents?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_menu_items: {
+        Row: {
+          id: string
+          restaurant_id: string
+          item_name: string
+          item_description: string | null
+          price_cents: number | null
+          source: string | null
+          is_food: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          item_name: string
+          item_description?: string | null
+          price_cents?: number | null
+          source?: string | null
+          is_food?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          item_name?: string
+          item_description?: string | null
+          price_cents?: number | null
+          source?: string | null
+          is_food?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_dish_signals: {
+        Row: {
+          id: string
+          restaurant_id: string
+          dish_name: string
+          mention_count: number | null
+          source: string | null
+          score: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          dish_name: string
+          mention_count?: number | null
+          source?: string | null
+          score?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          dish_name?: string
+          mention_count?: number | null
+          source?: string | null
+          score?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_michelin_history: {
+        Row: {
+          id: string
+          restaurant_id: string
+          year: number
+          designation: string | null
+          stars: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          year: number
+          designation?: string | null
+          stars?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          year?: number
+          designation?: string | null
+          stars?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_jbf_history: {
+        Row: {
+          id: string
+          restaurant_id: string
+          year: number
+          recognition: string
+          award_name: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          year: number
+          recognition: string
+          award_name?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          year?: number
+          recognition?: string
+          award_name?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_eater38_history: {
+        Row: {
+          id: string
+          restaurant_id: string
+          year: number
+          city: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          year: number
+          city?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          year?: number
+          city?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      restaurant_menu_fetches: {
+        Row: {
+          id: string
+          restaurant_id: string
+          source: string
+          status: string
+          error: string | null
+          item_count: number | null
+          fetched_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          source: string
+          status: string
+          error?: string | null
+          item_count?: number | null
+          fetched_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          source?: string
+          status?: string
+          error?: string | null
+          item_count?: number | null
+          fetched_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -588,6 +843,18 @@ export type Follow = Database['public']['Tables']['follows']['Row']
 export type RestaurantVideo = Database['public']['Tables']['restaurant_videos']['Row']
 export type City = Database['public']['Tables']['cities']['Row']
 export type FetchLog = Database['public']['Tables']['fetch_logs']['Row']
+export type RestaurantTopDish =
+  Database['public']['Tables']['restaurant_top_dishes']['Row']
+export type RestaurantMenuItem =
+  Database['public']['Tables']['restaurant_menu_items']['Row']
+export type RestaurantDishSignal =
+  Database['public']['Tables']['restaurant_dish_signals']['Row']
+export type RestaurantMichelinHistory =
+  Database['public']['Tables']['restaurant_michelin_history']['Row']
+export type RestaurantJbfHistory =
+  Database['public']['Tables']['restaurant_jbf_history']['Row']
+export type RestaurantEater38History =
+  Database['public']['Tables']['restaurant_eater38_history']['Row']
 
 // Aggregator-specific types
 export type Accolade = {

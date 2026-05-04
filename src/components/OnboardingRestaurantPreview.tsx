@@ -27,7 +27,7 @@ export default function OnboardingRestaurantPreview({
   const [didFallback, setDidFallback] = useState(false)
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
-    restaurant.james_beard_nominated ||
+    restaurant.james_beard_winner ||
     restaurant.eater_38
 
   return (

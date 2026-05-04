@@ -66,21 +66,33 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
   const [selectedVideo, setSelectedVideo] = useState<RestaurantVideo | null>(null)
 
   useEffect(() => {
+    let alive = true
+    const controller = new AbortController()
     async function fetchVideos() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/restaurants/videos?restaurantId=${encodeURIComponent(restaurantId)}`)
+        const res = await fetch(
+          `/api/restaurants/videos?restaurantId=${encodeURIComponent(restaurantId)}`,
+          { signal: controller.signal },
+        )
         if (!res.ok) throw new Error('Failed to fetch videos')
         const data = await res.json()
+        if (!alive) return
         setVideos(data)
       } catch (err) {
+        if (!alive) return
+        if ((err as Error)?.name === 'AbortError') return
         setError(err instanceof Error ? err.message : 'Failed to load videos')
       } finally {
-        setLoading(false)
+        if (alive) setLoading(false)
       }
     }
     fetchVideos()
+    return () => {
+      alive = false
+      controller.abort()
+    }
   }, [restaurantId])
 
   const handleCloseModal = useCallback(() => {

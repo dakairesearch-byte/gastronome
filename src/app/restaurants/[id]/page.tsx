@@ -280,7 +280,6 @@ export default async function RestaurantPage({
     restaurant.michelin_stars > 0 ||
     restaurant.michelin_designation ||
     restaurant.james_beard_winner ||
-    restaurant.james_beard_nominated ||
     restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
   const avgRating = restaurant.google_rating ?? restaurant.yelp_rating ?? null

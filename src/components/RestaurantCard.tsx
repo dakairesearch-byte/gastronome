@@ -10,7 +10,7 @@ interface RestaurantCardProps {
 
 function getBorderAccent(restaurant: Restaurant): string {
   if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) return 'border-l-4 border-l-red-400'
-  if (restaurant.james_beard_winner || restaurant.james_beard_nominated) return 'border-l-4 border-l-amber-400'
+  if (restaurant.james_beard_winner) return 'border-l-4 border-l-amber-400'
   if (restaurant.eater_38) return 'border-l-4 border-l-pink-400'
   return ''
 }
@@ -18,7 +18,7 @@ function getBorderAccent(restaurant: Restaurant): string {
 export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
-    restaurant.james_beard_nominated ||
+    restaurant.james_beard_winner ||
     restaurant.eater_38
 
   const borderAccent = getBorderAccent(restaurant)

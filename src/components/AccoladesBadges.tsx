@@ -1,6 +1,7 @@
 import { Star, Award, Utensils } from 'lucide-react'
 import type { Restaurant } from '@/types/database'
 
+
 const DESIGNATION_DISPLAY: Record<string, string> = {
   one_star: '1 Michelin Star',
   two_star: '2 Michelin Stars',
@@ -41,7 +42,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
       <BadgeLink key="michelin-stars" href={restaurant.michelin_url}>
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-sm">
           {Array.from({ length: restaurant.michelin_stars }).map((_, i) => (
-            <Star key={i} size={12} className="fill-white text-white" />
+            <Star key={`star-${restaurant.id}-${i}`} size={12} className="fill-white text-white" />
           ))}
           <span>Michelin {restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}</span>
         </span>
@@ -61,7 +62,8 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     )
   }
 
-  // James Beard
+  // James Beard — only render the winner badge; nominee/finalist info
+  // now lives in `restaurant_jbf_history`.
   if (restaurant.james_beard_winner) {
     badges.push(
       <span key="james-beard" className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-semibold">
@@ -69,22 +71,19 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
         <span>James Beard Winner</span>
       </span>
     )
-  } else if (restaurant.james_beard_nominated) {
-    badges.push(
-      <span key="james-beard" className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
-        <Award size={12} className="text-amber-500" />
-        <span>James Beard Nominee</span>
-      </span>
-    )
   }
 
   // Eater 38
   if (restaurant.eater_38) {
+    const eaterHref =
+      (restaurant as Restaurant & { eater_url?: string | null }).eater_url ?? null
     badges.push(
-      <span key="eater-38" className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-semibold">
-        <Utensils size={12} className="text-pink-500" />
-        <span>Eater 38</span>
-      </span>
+      <BadgeLink key="eater-38" href={eaterHref}>
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-semibold">
+          <Utensils size={12} className="text-pink-500" />
+          <span>Eater 38</span>
+        </span>
+      </BadgeLink>
     )
   }
 
