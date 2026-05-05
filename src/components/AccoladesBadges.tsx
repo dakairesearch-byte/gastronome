@@ -1,7 +1,6 @@
 import { Star, Award, Utensils } from 'lucide-react'
 import type { Restaurant } from '@/types/database'
 
-
 const DESIGNATION_DISPLAY: Record<string, string> = {
   one_star: '1 Michelin Star',
   two_star: '2 Michelin Stars',
@@ -42,7 +41,13 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
       <BadgeLink key="michelin-stars" href={restaurant.michelin_url}>
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-sm">
           {Array.from({ length: restaurant.michelin_stars }).map((_, i) => (
-            <Star key={`star-${restaurant.id}-${i}`} size={12} className="fill-white text-white" />
+            // Stable id keyed off the restaurant so the diffing keeps
+            // the same DOM nodes across re-renders that change star count.
+            <Star
+              key={`star-${restaurant.id}-${i}`}
+              size={12}
+              className="fill-white text-white"
+            />
           ))}
           <span>Michelin {restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}</span>
         </span>
@@ -62,8 +67,10 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     )
   }
 
-  // James Beard — only render the winner badge; nominee/finalist info
-  // now lives in `restaurant_jbf_history`.
+  // James Beard. The `james_beard_nominated` column was dropped in the
+  // award-history migration; nominee/finalist/semifinalist info now lives
+  // in `restaurant_jbf_history`. Only render the winner badge here â pages
+  // that want richer recognition status should join that history table.
   if (restaurant.james_beard_winner) {
     badges.push(
       <span key="james-beard" className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-semibold">
@@ -73,7 +80,9 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     )
   }
 
-  // Eater 38
+  // Eater 38 â wrap in BadgeLink so the badge is clickable through to the
+  // Eater list when we have an eater_url. BadgeLink falls back to a plain
+  // span when href is null, matching the Michelin/JBF pattern above.
   if (restaurant.eater_38) {
     const eaterHref =
       (restaurant as Restaurant & { eater_url?: string | null }).eater_url ?? null
