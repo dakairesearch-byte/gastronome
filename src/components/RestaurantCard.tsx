@@ -10,6 +10,7 @@ interface RestaurantCardProps {
 
 function getBorderAccent(restaurant: Restaurant): string {
   if (restaurant.michelin_stars > 0 || restaurant.michelin_designation) return 'border-l-4 border-l-red-400'
+  // `james_beard_nominated` was dropped â only winners get the accent now.
   if (restaurant.james_beard_winner) return 'border-l-4 border-l-amber-400'
   if (restaurant.eater_38) return 'border-l-4 border-l-pink-400'
   return ''
@@ -48,7 +49,7 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
             </div>
           </div>
 
-          {/* Accolade badges — own row below name */}
+          {/* Accolade badges â own row below name */}
           {hasAccolades && <AccoladesBadges restaurant={restaurant} maxBadges={3} />}
 
           {/* Source Ratings Bar */}
