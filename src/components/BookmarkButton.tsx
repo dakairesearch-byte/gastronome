@@ -9,16 +9,17 @@ import {
   useCollections,
   useFavorites,
 } from '@/lib/collections'
-import { useAuthUser } from '@/lib/hooks/useAuthUser'
+import { createClient } from '@/lib/supabase/client'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface BookmarkButtonProps {
   restaurantId: string
   /**
    * Presentation variant.
-   *   - `hero` (default) — translucent white-on-dark pill matching the
+   *   - `hero` (default) â translucent white-on-dark pill matching the
    *     dark hero on the restaurant detail page, sits next to Share.
-   *   - `card` — smaller, dark-on-light round icon for restaurant cards.
+   *   - `card` â smaller, dark-on-light round icon for restaurant cards.
    */
   variant?: 'hero' | 'card'
   className?: string
@@ -28,11 +29,11 @@ interface BookmarkButtonProps {
  * Bookmark toggle + "save to collection" popover.
  *
  * Primary tap: toggles the flat favorites list (shows up on the home
- * "Your Favorites" rail). A small ⌄ affordance opens a popover that
+ * "Your Favorites" rail). A small â affordance opens a popover that
  * lets users drop the restaurant into any named collection, or create
  * a new one inline.
  *
- * All state lives in `src/lib/collections.ts` under localStorage — no
+ * All state lives in `src/lib/collections.ts` under localStorage â no
  * auth / DB dependency yet, so bookmarks don't sync across devices.
  */
 export default function BookmarkButton({
@@ -45,11 +46,34 @@ export default function BookmarkButton({
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const user = useAuthUser()
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const isFavorite = favorites.includes(restaurantId)
+
+  // Track auth state so Save can show a sign-in prompt instead of silently
+  // storing to localStorage when the user isn't logged in.
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setUser(data.session?.user ?? null)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (active) setUser(session?.user ?? null)
+    })
+    return () => {
+      active = false
+      // Defensive: if onAuthStateChange's listener is missing or already
+      // torn down, don't throw on unmount.
+      try {
+        listener?.subscription?.unsubscribe?.()
+      } catch {
+        /* swallow â unmount path */
+      }
+    }
+  }, [])
 
   // Auto-dismiss toast after 2s.
   useEffect(() => {
@@ -107,7 +131,7 @@ export default function BookmarkButton({
     }
     try {
       const created = createCollection(trimmed)
-      // Auto-add the current restaurant to the newly-made collection —
+      // Auto-add the current restaurant to the newly-made collection â
       // the user clearly wanted it there; skipping the extra click.
       toggleInCollection(created.id, restaurantId)
       setNewName('')
@@ -153,7 +177,7 @@ export default function BookmarkButton({
         aria-label="Save to collection"
         className={chevronClass}
       >
-        ▾
+        â¾
       </button>
 
       {toast && (
@@ -180,7 +204,7 @@ export default function BookmarkButton({
               aria-label="Close"
               className="p-1 -mr-1 rounded-sm text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             >
-              ✕
+              â
             </button>
           </div>
 
@@ -229,7 +253,7 @@ export default function BookmarkButton({
                   }
                 }}
                 maxLength={80}
-                placeholder="New collection…"
+                placeholder="New collectionâ¦"
                 className="flex-1 px-3 py-2 rounded-md border border-gray-200 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
               <button
