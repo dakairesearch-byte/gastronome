@@ -345,26 +345,45 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
                           {r.name}
                         </h3>
 
-                        <div
-                          className="mt-1 flex items-center gap-2 text-xs"
-                          style={{
-                            color: 'var(--color-text-secondary)',
-                            fontFamily: 'var(--font-body)',
-                          }}
-                        >
-                          <span
-                            className="uppercase"
-                            style={{ letterSpacing: '0.14em' }}
-                          >
-                            {r.cuisine}
-                          </span>
-                          {r.neighborhood && (
-                            <>
-                              <span aria-hidden="true">•</span>
-                              <span>{r.neighborhood}</span>
-                            </>
-                          )}
-                        </div>
+                        {/* Subtitle row (cuisine • neighborhood) — render
+                            only when we have something meaningful to show.
+                            Several of the Michelin/JBF restaurants in our
+                            data have null cuisine + null neighborhood;
+                            previously this still emitted an empty
+                            `<div className="mt-1 flex items-center gap-2 text-xs">`
+                            with an empty span inside, which left a band
+                            of vertical whitespace between the name and the
+                            accolade pill that read as a layout bug. */}
+                        {(() => {
+                          const showCuisine =
+                            r.cuisine && r.cuisine !== 'Restaurant'
+                          const showNeighborhood = !!r.neighborhood
+                          if (!showCuisine && !showNeighborhood) return null
+                          return (
+                            <div
+                              className="mt-1 flex items-center gap-2 text-xs"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              {showCuisine && (
+                                <span
+                                  className="uppercase"
+                                  style={{ letterSpacing: '0.14em' }}
+                                >
+                                  {r.cuisine}
+                                </span>
+                              )}
+                              {showCuisine && showNeighborhood && (
+                                <span aria-hidden="true">•</span>
+                              )}
+                              {showNeighborhood && (
+                                <span>{r.neighborhood}</span>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {accolades.length > 0 && (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
