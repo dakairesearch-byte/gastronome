@@ -21,6 +21,20 @@ export const revalidate = 60
 // carry those semantics.
 const COLLECTIONS = [
   {
+    // Consensus Picks: scored by topConsensusPicks() — restaurants where
+    // Google, Yelp, TikTok, and Instagram all converge. Always capped at
+    // 20 by the algorithm, so the count short-circuits to 20 below
+    // rather than running a head:true query (no easy way to count the
+    // social-platforms join in head mode).
+    id: 'consensus-picks',
+    title: 'Consensus Picks',
+    description:
+      'The rare places where Google, Yelp, TikTok, and Instagram all agree.',
+    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80',
+    curator: 'Editorial',
+    href: '/explore?accolade=consensus_picks',
+  },
+  {
     id: 'hidden-gems',
     title: 'Hidden Gems',
     description: 'Highly-rated spots that still fly under the radar.',
@@ -144,6 +158,12 @@ export default async function ExplorePage({
         const url = new URL(c.href, 'https://placeholder.invalid')
         const accolade = url.searchParams.get('accolade')
         const cuisine = url.searchParams.get('cuisine')
+        // Consensus Picks is algorithm-backed, not a column predicate —
+        // the ranker always caps at 20, so short-circuit here rather
+        // than spinning up the social-platforms join just to count.
+        if (accolade === 'consensus_picks') {
+          return { ...c, count: 20 }
+        }
         let q = supabase
           .from('restaurants')
           .select('id', { count: 'exact', head: true })
@@ -196,10 +216,33 @@ export default async function ExplorePage({
     )
   }
 
+  // Consensus Picks early-return — algorithm-backed, doesn't fit the
+  // generic column-predicate query path. The scorer combines Google
+  // rating, Yelp rating, TikTok engagement, and Instagram engagement
+  // into a weighted composite and caps at 20. We render through the
+  // same filtered-results JSX as the other accolades by populating
+  // `filtered` and skipping the generic Supabase query.
+  let filtered: Restaurant[] = []
+  let filteredTotal: number | null = null
+
+  if (activeAccolade === 'consensus_picks') {
+    const { topConsensusPicks } = await import(
+      '@/lib/ranking/consensusPicks'
+    )
+    filtered = await topConsensusPicks(supabase, {
+      city: activeCity,
+      limit: 20,
+    })
+    filteredTotal = filtered.length
+  }
+
   // Filtered experience: push cuisine / accolade predicates INTO the DB
   // query so we don't silently drop rows past a hardcoded client-side cap
   // (QA pass 2: advertised "15 Hidden Gems" was actually 193; cap was 500
   // and the footer read "filtered from 500" even if the city had 2000).
+  // Skipped entirely for consensus_picks — that path was already handled
+  // above by the algorithmic ranker.
+  if (activeAccolade !== 'consensus_picks') {
   let query = supabase
     .from('restaurants')
     .select('*', { count: 'exact' })
@@ -218,8 +261,10 @@ export default async function ExplorePage({
   if (activeAccolade === 'hidden_gems')
     query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
 
-  const { data: rows, count: filteredTotal } = await query
-  const filtered = (rows ?? []) as Restaurant[]
+  const { data: rows, count } = await query
+  filtered = (rows ?? []) as Restaurant[]
+  filteredTotal = count ?? null
+  } // end if (activeAccolade !== 'consensus_picks')
   // Count of restaurants in the city (ignoring the filter) — used for
   // the "… of N total" footer.
   const { count: cityTotal } = await supabase
