@@ -403,6 +403,45 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
         </ol>
 
         {/* --- Map panel --- */}
+        {(() => {
+          // Center + zoom for the Google Maps Embed v1/view iframe. We fit
+          // the padded bbox the pins use; if bounds are missing/degenerate
+          // we fall back to a tasteful zoom-12 over the average so the
+          // iframe never renders at zoom-0 (the "ocean view" default).
+          const center = bounds
+            ? {
+                lat: (bounds.minLat + bounds.maxLat) / 2,
+                lng: (bounds.minLng + bounds.maxLng) / 2,
+              }
+            : null
+          const span = bounds
+            ? Math.max(
+                bounds.maxLat - bounds.minLat,
+                bounds.maxLng - bounds.minLng
+              )
+            : null
+          // Rough span→zoom mapping, biased so a single-city bbox renders
+          // around zoom 12–13. Web-Mercator-ish — close enough for the
+          // sidebar map; pins are positioned by our own bbox math anyway.
+          const zoom =
+            span == null
+              ? 12
+              : span > 0.4
+              ? 10
+              : span > 0.2
+              ? 11
+              : span > 0.1
+              ? 12
+              : span > 0.05
+              ? 13
+              : 14
+          const mapsKey =
+            process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ||
+            process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+          const embedSrc = center && mapsKey
+            ? `https://www.google.com/maps/embed/v1/view?key=${mapsKey}&center=${center.lat},${center.lng}&zoom=${zoom}&maptype=roadmap`
+            : null
+          return (
         <div
           className="hidden lg:block relative rounded-sm overflow-hidden"
           style={{
@@ -412,29 +451,47 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           role="img"
           aria-label={`Map with ${items.length} numbered pins showing trending restaurants in ${city}`}
         >
-          {/* Subtle grid lines, evoke a streetmap without being one. */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ opacity: 0.45 }}
-            aria-hidden
-          >
-            <defs>
-              <pattern
-                id="top10-grid"
-                width="64"
-                height="64"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 64 0 L 0 0 0 64"
-                  fill="none"
-                  stroke="var(--color-border, rgba(0,0,0,0.08))"
-                  strokeWidth="1"
-                />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#top10-grid)" />
-          </svg>
+          {/* Real Google Maps tile under the pins. `pointer-events: none`
+              keeps the iframe from intercepting clicks so the pins above
+              remain interactive — users still pan/zoom by clicking the
+              "View larger map" link inside the iframe controls (which we
+              hide via gestureHandling=none on the embed URL). */}
+          {embedSrc ? (
+            <iframe
+              title={`Map of trending restaurants in ${city}`}
+              src={embedSrc}
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ border: 0 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              aria-hidden
+            />
+          ) : (
+            // Fallback: subtle grid lines, evoke a streetmap without
+            // being one (used when we have no bbox or no Maps key).
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ opacity: 0.45 }}
+              aria-hidden
+            >
+              <defs>
+                <pattern
+                  id="top10-grid"
+                  width="64"
+                  height="64"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path
+                    d="M 64 0 L 0 0 0 64"
+                    fill="none"
+                    stroke="var(--color-border, rgba(0,0,0,0.08))"
+                    strokeWidth="1"
+                  />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#top10-grid)" />
+            </svg>
+          )}
 
           {items.map((r, i) => {
             const { x, y } = pinPosition(r, i, bounds)
@@ -486,6 +543,8 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
             {city}
           </div>
         </div>
+          )
+        })()}
       </div>
     </section>
   )
