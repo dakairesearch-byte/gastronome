@@ -219,9 +219,19 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
   const items = restaurants.slice(0, 10)
 
-  // `typeof NaN === 'number'` is true, so the previous guard let NaN
-  // coords through and the iframe URL ended up as `bbox=NaN,NaN,NaN,NaN`.
-  // Use Number.isFinite to also reject NaN, +Infinity, and -Infinity.
+  // Build bounds from whichever restaurants have valid coords. Previously
+  // we required every single restaurant in `items` to have a finite
+  // lat/lng, so a single missing-coords row in the trending list
+  // collapsed bounds to null and the whole map fell back to the SVG grid
+  // (and pins fell back to the deterministic scatter). In practice 1–2
+  // of the trending 10 often lack coords (no place_id yet), so we now
+  // build bounds from the rows that DO have coords as long as we have
+  // at least 2 finite points to span. Pins for coord-less rows continue
+  // to use FALLBACK_POSITIONS via pinPosition().
+  //
+  // `typeof NaN === 'number'` is true, so the previous filter using
+  // `typeof v === 'number'` let NaN through and produced bbox=NaN,…
+  // Number.isFinite is the right guard.
   const lats = items
     .map((r) => r.latitude)
     .filter((v): v is number => Number.isFinite(v as number))
@@ -229,7 +239,7 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
     .map((r) => r.longitude)
     .filter((v): v is number => Number.isFinite(v as number))
   const rawBounds =
-    lats.length === items.length && lngs.length === items.length
+    lats.length >= 2 && lngs.length >= 2
       ? {
           minLat: Math.min(...lats),
           maxLat: Math.max(...lats),
