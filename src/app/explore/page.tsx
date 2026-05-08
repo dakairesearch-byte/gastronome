@@ -21,12 +21,12 @@ export const revalidate = 60
 // carry those semantics.
 const COLLECTIONS = [
   {
-    id: 'hidden-gems',
-    title: 'Hidden Gems',
-    description: 'Highly-rated spots that still fly under the radar.',
+    id: 'consensus-picks',
+    title: 'Consensus Picks',
+    description: 'The rare places where Google, Yelp, and Beli all agree.',
     image: 'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
-    curator: 'Editorial',
-    href: '/explore?accolade=hidden_gems',
+    curator: 'Gastronome',
+    href: '/explore?accolade=consensus_picks',
   },
   {
     id: 'michelin-stars',
@@ -156,8 +156,11 @@ export default async function ExplorePage({
           // `james_beard_nominated` was dropped — winners only.
           q = q.eq('james_beard_winner', true)
         if (accolade === 'eater_38') q = q.eq('eater_38', true)
-        if (accolade === 'hidden_gems')
-          q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
+        if (accolade === 'consensus_picks')
+          q = q
+            .not('google_rating', 'is', null)
+            .not('yelp_rating', 'is', null)
+            .not('beli_score', 'is', null)
         const { count } = await q
         return { ...c, count: count ?? 0 }
       })
@@ -215,11 +218,31 @@ export default async function ExplorePage({
     // james_beard_nominated column was dropped; winners only.
     query = query.eq('james_beard_winner', true)
   if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
-  if (activeAccolade === 'hidden_gems')
-    query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
+  if (activeAccolade === 'consensus_picks') {
+    query = query
+      .not('google_rating', 'is', null)
+      .not('yelp_rating', 'is', null)
+      .not('beli_score', 'is', null)
+    // Consensus Picks are capped at 20 — the top restaurants where all
+    // three platforms agree. We can't do a composite ORDER BY via PostgREST
+    // so we fetch all qualifying rows and sort client-side below.
+  }
 
   const { data: rows, count: filteredTotal } = await query
-  const filtered = (rows ?? []) as Restaurant[]
+  let filtered = (rows ?? []) as Restaurant[]
+
+  // Consensus Picks: rank by composite score across all three platforms,
+  // then cap at 20. This is Gastronome's signature collection — the rare
+  // places where Google, Yelp, and Beli all agree.
+  if (activeAccolade === 'consensus_picks') {
+    filtered = filtered
+      .sort((a, b) => {
+        const scoreA = (Number(a.google_rating) || 0) + (Number(a.yelp_rating) || 0) + (Number(a.beli_score) || 0) / 2
+        const scoreB = (Number(b.google_rating) || 0) + (Number(b.yelp_rating) || 0) + (Number(b.beli_score) || 0) / 2
+        return scoreB - scoreA
+      })
+      .slice(0, 20)
+  }
   // Count of restaurants in the city (ignoring the filter) — used for
   // the "… of N total" footer.
   const { count: cityTotal } = await supabase
