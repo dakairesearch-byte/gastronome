@@ -141,7 +141,7 @@ function AccoladeBadge({ accolade }: { accolade: Accolade }) {
       </span>
     )
   }
-  if (accolade.kind === 'bib' || accolade.kind === 'michelin-other') {
+  if (accolade.kind === 'bib') {
     return (
       <span
         className={pill}
@@ -149,6 +149,22 @@ function AccoladeBadge({ accolade }: { accolade: Accolade }) {
         aria-label={accolade.label}
       >
         <BibGourmandIcon size={13} />
+      </span>
+    )
+  }
+  if (accolade.kind === 'michelin-other') {
+    // Non-bib non-star Michelin designation (Plate, Selected). The
+    // Bibendum silhouette is the Bib Gourmand mascot specifically and
+    // would be misleading here — Plate/Selected entries don't share
+    // that mark. Render a single Michelin rosette instead, matching
+    // how the Guide presents non-starred recommended restaurants.
+    return (
+      <span
+        className={pill}
+        title={accolade.label}
+        aria-label={accolade.label}
+      >
+        <MichelinStarIcon size={12} count={1} />
       </span>
     )
   }
