@@ -1,8 +1,6 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
-import { displayCuisine } from '@/lib/restaurant'
-import { formatRating } from '@/lib/format'
 import SectionHeader from '@/components/SectionHeader'
 import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
 import Top10Trending from '@/components/explore/Top10Trending'
@@ -154,7 +152,9 @@ export default async function ExplorePage({
         if (accolade === 'michelin_star') q = q.gt('michelin_stars', 0)
         if (accolade === 'bib_gourmand')
           q = q.eq('michelin_designation', 'bib_gourmand')
-        if (accolade === 'james_beard') q = q.eq('james_beard_winner', true)
+        if (accolade === 'james_beard')
+          // `james_beard_nominated` was dropped — winners only.
+          q = q.eq('james_beard_winner', true)
         if (accolade === 'eater_38') q = q.eq('eater_38', true)
         if (accolade === 'hidden_gems')
           q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
@@ -212,6 +212,7 @@ export default async function ExplorePage({
   if (activeAccolade === 'bib_gourmand')
     query = query.eq('michelin_designation', 'bib_gourmand')
   if (activeAccolade === 'james_beard')
+    // james_beard_nominated column was dropped; winners only.
     query = query.eq('james_beard_winner', true)
   if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
   if (activeAccolade === 'hidden_gems')
@@ -274,21 +275,18 @@ export default async function ExplorePage({
                   <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
                     {r.name}
                   </h3>
-                  {(() => {
-                    const ratingStr = formatRating(r.google_rating)
-                    return ratingStr ? (
-                      <span
-                        className="inline-flex items-center gap-1 text-xs"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                        aria-label={`${ratingStr} stars`}
-                      >
-                        ★ {ratingStr}
-                      </span>
-                    ) : null
-                  })()}
+                  {typeof r.google_rating === 'number' && (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      aria-label={`${r.google_rating.toFixed(1)} stars`}
+                    >
+                      ★ {r.google_rating.toFixed(1)}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-xs text-gray-500 truncate">
-                  {displayCuisine(r.cuisine)}
+                  {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
                   {r.neighborhood ? ` • ${r.neighborhood}` : ''}
                 </p>
               </Link>

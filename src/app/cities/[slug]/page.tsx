@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Award, MapPin, Star } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
-import { displayCuisine } from '@/lib/restaurant'
 import AccoladesBadges from '@/components/AccoladesBadges'
 import EmptyState from '@/components/EmptyState'
 import type { Restaurant } from '@/types/database'
@@ -30,6 +29,7 @@ function applyAccoladeFilter(
   if (accolade === 'bib_gourmand')
     return rows.filter((r) => r.michelin_designation === 'bib_gourmand')
   if (accolade === 'james_beard')
+    // `james_beard_nominated` column was dropped — winners only here.
     return rows.filter((r) => r.james_beard_winner)
   if (accolade === 'eater_38') return rows.filter((r) => r.eater_38)
   return rows
@@ -321,7 +321,7 @@ export default async function CityPage({
                     {r.name}
                   </h3>
                   <p className="mt-1 text-xs text-gray-500 truncate">
-                    {displayCuisine(r.cuisine)}
+                    {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
                     {r.neighborhood ? ` • ${r.neighborhood}` : ''}
                   </p>
                   {trendingRank ? (

@@ -1,14 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { MapPin } from 'lucide-react'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
-import {
-  displayCuisine,
-  fallbackPhotoForCuisine,
-  getRestaurantPhotoUrl,
-} from '@/lib/restaurant'
 import type { Restaurant } from '@/types/database'
 
 interface OnboardingRestaurantPreviewProps {
@@ -23,8 +17,15 @@ interface OnboardingRestaurantPreviewProps {
 export default function OnboardingRestaurantPreview({
   restaurant,
 }: OnboardingRestaurantPreviewProps) {
-  const [src, setSrc] = useState(() => getRestaurantPhotoUrl(restaurant))
-  const [didFallback, setDidFallback] = useState(false)
+  // Prefer the new `photo_urls[]` array (from enrichPlacesAndPhotos.ts)
+  // over the legacy single-URL columns since those Google Places
+  // photo-reference URLs frequently 403 once their API key rotates.
+  const photoUrl =
+    restaurant.photo_url ||
+    (restaurant.photo_urls && restaurant.photo_urls[0]) ||
+    restaurant.google_photo_url
+  // `james_beard_nominated` was dropped — check the winner flag only.
+  // Nominee/finalist signals now live in `restaurant_jbf_history`.
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.james_beard_winner ||
@@ -39,17 +40,18 @@ export default function OnboardingRestaurantPreview({
         border: '1px solid var(--color-border)',
       }}
     >
-      <div className="relative aspect-video bg-gray-100">
-        <img
-          src={src}
-          alt={`${restaurant.name} preview`}
-          className="absolute inset-0 w-full h-full object-cover"
-          onError={() => {
-            if (didFallback) return
-            setDidFallback(true)
-            setSrc(fallbackPhotoForCuisine(restaurant.cuisine))
-          }}
-        />
+      {photoUrl && (
+        <div className="relative aspect-video bg-gray-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoUrl}
+            alt=""
+            loading="lazy"
+            onError={(e) => {
+              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+            }}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <span
             className="absolute top-2 left-2 px-2 py-0.5 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wide rounded-sm"
             style={{ backgroundColor: 'var(--color-primary)', opacity: 0.9, letterSpacing: '0.1em' }}
@@ -57,6 +59,7 @@ export default function OnboardingRestaurantPreview({
             Preview
           </span>
         </div>
+      )}
       <div className="p-4 space-y-2">
         <h4
           className="text-sm line-clamp-1"
@@ -76,7 +79,7 @@ export default function OnboardingRestaurantPreview({
                 fontWeight: 500,
               }}
             >
-              {displayCuisine(restaurant.cuisine)}
+              {restaurant.cuisine}
             </span>
           )}
           <span

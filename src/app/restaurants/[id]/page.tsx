@@ -276,9 +276,10 @@ export default async function RestaurantPage({
 
   const { restaurant, relatedRestaurants, videoCount, dishes } = data
   const scoreSources = buildScoreSources(restaurant)
+  // `james_beard_nominated` was dropped — only the winner flag participates.
   const hasAccolades =
     restaurant.michelin_stars > 0 ||
-    restaurant.michelin_designation ||
+    !!restaurant.michelin_designation ||
     restaurant.james_beard_winner ||
     restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
@@ -292,7 +293,7 @@ export default async function RestaurantPage({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photoUrl}
-            alt={`${restaurant.name} hero`}
+            alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-30"
           />
         )}
@@ -787,13 +788,32 @@ export default async function RestaurantPage({
                 }}
               >
                 <div className="aspect-video bg-gray-100">
-                  <iframe
-                    title="Restaurant location"
-                    src={`https://www.google.com/maps?q=${restaurant.latitude},${restaurant.longitude}&z=15&output=embed`}
-                    className="w-full h-full border-0"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
+                  {/*
+                   * Use the Google Maps Embed API (requires NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY,
+                   * or falls back to the place-search key already in env). The legacy
+                   * `?q=lat,lng&output=embed` URL has been progressively returning
+                   * "We're sorry, but this URL is no longer supported" — the Embed
+                   * API is the supported path. Prefer the place_id when we have it
+                   * (richer info card); fall back to a lat/lng view otherwise.
+                   */}
+                  {(() => {
+                    const key =
+                      process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ||
+                      process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+                    const src = restaurant.google_place_id
+                      ? `https://www.google.com/maps/embed/v1/place?key=${key}&q=place_id:${restaurant.google_place_id}`
+                      : `https://www.google.com/maps/embed/v1/view?key=${key}&center=${restaurant.latitude},${restaurant.longitude}&zoom=15`
+                    return (
+                      <iframe
+                        title={`Map of ${restaurant.name}`}
+                        src={src}
+                        className="w-full h-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                      />
+                    )
+                  })()}
                 </div>
                 {(restaurant.google_url ||
                   (restaurant.latitude && restaurant.longitude)) && (

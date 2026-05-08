@@ -264,55 +264,88 @@ function SearchContent() {
         const wantDishes = filters.mode !== 'restaurants'
 
         /* -------------------- restaurant query -------------------- */
-        // Apply the shared filter set (everything except the Michelin
-        // accolade chips). Michelin is post-filtered because stars +
-        // bib gourmand needs a UNION that PostgREST's chained .eq() and
-        // .in() can't express in a single shot.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const applyCommonFilters = (query: any): any => {
-          let q = query
+        let restaurantData: Restaurant[] = []
+        if (wantRestaurants) {
+          let rq = supabase.from('restaurants').select('*')
+
           if (searchQuery.trim()) {
             const sanitized = searchQuery.replace(/[%_\\]/g, '')
-            q = q.or(
+            rq = rq.or(
               `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
             )
           }
-          if (filters.cities.length) q = q.in('city', filters.cities)
-          if (filters.cuisines.length) q = q.in('cuisine', filters.cuisines)
-          if (filters.googleMinRating > 0)
-            q = q.gte('google_rating', filters.googleMinRating)
-          if (filters.googleMinReviews > 0)
-            q = q.gte('google_review_count', filters.googleMinReviews)
-          if (filters.yelpMinRating > 0)
-            q = q.gte('yelp_rating', filters.yelpMinRating)
-          if (filters.yelpMinReviews > 0)
-            q = q.gte('yelp_review_count', filters.yelpMinReviews)
-          if (filters.jamesBeard === 'winner' || filters.jamesBeard === 'nominee') {
-            q = q.eq('james_beard_winner', true)
+          if (filters.cities.length) {
+            // Build an `.in()` on city — match values are exact (case-insensitive
+            // handled by Supabase? not always). Use a case-insensitive OR list
+            // so 'New York' and 'new york' both match.
+            rq = rq.in('city', filters.cities)
           }
-          if (filters.eater38) q = q.eq('eater_38', true)
-          return q
-        }
-
-        let restaurantData: Restaurant[] = []
-        if (wantRestaurants) {
-          // Primary branch: stars (or no Michelin filter) — bib alone is
-          // also handled here since we just .eq() the designation.
-          let rq = applyCommonFilters(supabase.from('restaurants').select('*'))
+          if (filters.cuisines.length) {
+            rq = rq.in('cuisine', filters.cuisines)
+          }
+          if (filters.googleMinRating > 0) {
+            rq = rq.gte('google_rating', filters.googleMinRating)
+          }
+          if (filters.googleMinReviews > 0) {
+            rq = rq.gte('google_review_count', filters.googleMinReviews)
+          }
+          if (filters.yelpMinRating > 0) {
+            rq = rq.gte('yelp_rating', filters.yelpMinRating)
+          }
+          if (filters.yelpMinReviews > 0) {
+            rq = rq.gte('yelp_review_count', filters.yelpMinReviews)
+          }
+          // Michelin: stars OR bib gourmand. Stars use .in() since it's a
+          // discrete set; bib is its own designation. If both are enabled
+          // we can't express the union cleanly in a single chained query,
+          // so we post-filter.
           if (filters.michelinStars.length) {
             rq = rq.in('michelin_stars', filters.michelinStars)
-          } else if (filters.bibGourmand) {
+          }
+          if (filters.bibGourmand && !filters.michelinStars.length) {
             rq = rq.eq('michelin_designation', 'bib_gourmand')
           }
+          if (filters.jamesBeard === 'winner' || filters.jamesBeard === 'nominee') {
+            // `james_beard_nominated` was dropped; nominee filter degrades
+            // gracefully to winners-only until JBF history is wired in.
+            rq = rq.eq('james_beard_winner', true)
+          }
+          if (filters.eater38) {
+            rq = rq.eq('eater_38', true)
+          }
+
           const { data } = await rq.order('name', { ascending: true }).limit(40)
           restaurantData = (data ?? []) as Restaurant[]
 
-          // Combined branch: stars + bib gourmand → UNION via a second
-          // query, deduped by id and stitched into the result list.
+          // Union of Michelin stars + bib gourmand requires a follow-up
+          // query since we can't AND/OR these in a single chain.
           if (filters.michelinStars.length && filters.bibGourmand) {
-            const bq = applyCommonFilters(
-              supabase.from('restaurants').select('*')
-            ).eq('michelin_designation', 'bib_gourmand')
+            let bq = supabase
+              .from('restaurants')
+              .select('*')
+              .eq('michelin_designation', 'bib_gourmand')
+            if (searchQuery.trim()) {
+              const sanitized = searchQuery.replace(/[%_\\]/g, '')
+              bq = bq.or(
+                `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
+              )
+            }
+            if (filters.cities.length) bq = bq.in('city', filters.cities)
+            if (filters.cuisines.length) bq = bq.in('cuisine', filters.cuisines)
+            if (filters.googleMinRating > 0)
+              bq = bq.gte('google_rating', filters.googleMinRating)
+            if (filters.googleMinReviews > 0)
+              bq = bq.gte('google_review_count', filters.googleMinReviews)
+            if (filters.yelpMinRating > 0)
+              bq = bq.gte('yelp_rating', filters.yelpMinRating)
+            if (filters.yelpMinReviews > 0)
+              bq = bq.gte('yelp_review_count', filters.yelpMinReviews)
+            if (filters.jamesBeard === 'winner')
+              bq = bq.eq('james_beard_winner', true)
+            else if (filters.jamesBeard === 'nominee')
+              // `james_beard_nominated` was dropped — winners only.
+              bq = bq.eq('james_beard_winner', true)
+            if (filters.eater38) bq = bq.eq('eater_38', true)
             const { data: bibRows } = await bq
               .order('name', { ascending: true })
               .limit(40)
@@ -706,6 +739,8 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
   if (f.michelinStars.length || f.bibGourmand) {
     if (!starsOk && !bibOk) return false
   }
+  // `james_beard_nominated` was dropped; both filter values use the
+  // winner column until JBF history is wired in.
   if (
     (f.jamesBeard === 'winner' || f.jamesBeard === 'nominee') &&
     !r.james_beard_winner

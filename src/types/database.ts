@@ -104,9 +104,14 @@ export type Database = {
           eater_38: boolean
           eater_url: string | null
           accolades: Json
+          // Top-3 photo URLs from enrichPlacesAndPhotos.ts (lh3.googleusercontent.com).
           photo_urls: string[] | null
+          // Lifecycle: 'OPERATIONAL' | 'CLOSED_PERMANENTLY' | 'CLOSED_TEMPORARILY'.
           business_status: string | null
+          // Menu structure hint for tasting-menu temples that don't publish a la carte:
+          // 'a_la_carte' | 'tasting_menu' | 'seasonal_tasting' | 'omakase' | 'prix_fixe' | etc.
           menu_format: string | null
+          // Free-form note shown under "Recommended" when menu_format !== 'a_la_carte'.
           menu_note: string | null
           last_fetched_at: string | null
           created_at: string
@@ -575,6 +580,10 @@ export type Database = {
           }
         ]
       }
+      /* ----------------------------------------------------------------- */
+      /* Tables added in later migrations. Hand-maintained until the       */
+      /* Supabase generator picks them up.                                 */
+      /* ----------------------------------------------------------------- */
       restaurant_top_dishes: {
         Row: {
           id: string

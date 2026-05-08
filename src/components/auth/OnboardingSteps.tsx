@@ -68,6 +68,13 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
     let active = true
     for (const name of selCities) {
       if (previews[name]) continue
+      // Bug: was `.eq('city', name)` — case-sensitive exact match. If the
+      // cities table label drifts from the value stored on `restaurants.city`
+      // (e.g. "Bay Area" vs "San Francisco"), the previews silently empty
+      // and the block renders no photos at all.
+      // Also gate to rows that *have* a usable photo so we never render the
+      // empty image placeholder, and add `photo_urls` (the new array column
+      // populated by enrichPlacesAndPhotos.ts) as another fallback source.
       supabase
         .from('restaurants')
         .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
@@ -356,9 +363,14 @@ function CitiesStep({
                 </p>
                 <div className="flex gap-2">
                   {rows.map((r) => {
+                    // Try every photo source we have. `photo_urls` is the
+                    // top-3-photos array populated by enrichPlacesAndPhotos.ts;
+                    // it's the freshest source and stores `lh3.googleusercontent.com`
+                    // CDN URLs that don't expire (unlike `places.googleusercontent.com`
+                    // photo-reference URLs which 403 once the API key rotates).
                     const photo =
                       r.photo_url ||
-                      ((r as Restaurant & { photo_urls?: string[] | null }).photo_urls?.[0]) ||
+                      (r.photo_urls && r.photo_urls[0]) ||
                       r.google_photo_url
                     return (
                       <div key={r.id} className="flex items-center gap-2 flex-1 min-w-0 p-2 rounded-sm" style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
@@ -366,10 +378,13 @@ function CitiesStep({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={photo}
-                            alt={r.name}
+                            alt=""
                             className="w-9 h-9 rounded-sm object-cover flex-shrink-0 bg-gray-100"
                             loading="lazy"
                             onError={(e) => {
+                              // If the URL 403s/404s, hide the broken-image
+                              // glyph rather than letting it render as the
+                              // browser's default missing-image icon.
                               ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                             }}
                           />

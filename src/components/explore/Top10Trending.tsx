@@ -103,11 +103,13 @@ function getAccolades(r: Restaurant): Accolade[] {
       label: 'Michelin Guide',
     })
   }
+  // `james_beard_nominated` was dropped — only winners get the badge.
+  // Nominee/finalist signals now live in `restaurant_jbf_history`.
   if (r.james_beard_winner) {
     out.push({
       key: 'james-beard',
       kind: 'james-beard',
-      label: r.james_beard_winner ? 'James Beard Winner' : 'James Beard Nominee',
+      label: 'James Beard Winner',
     })
   }
   if (r.eater_38) {
@@ -120,15 +122,22 @@ function AccoladeBadge({ accolade }: { accolade: Accolade }) {
   const pill =
     'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-white border border-gray-200'
   if (accolade.kind === 'michelin-stars') {
+    // Render the count-aware multi-star asset directly (one image, properly
+    // proportioned for 1/2/3 stars) instead of stacking N copies of the
+    // single-star SVG with a flex gap. The single-star SVGs include their
+    // own internal whitespace, so 3 of them spaced by `gap-1` produced a
+    // pill ~2x wider than 1-star pills and looked uneven next to the
+    // other accolade pills in the trending row. The multi-star asset has
+    // no internal whitespace between rosettes so the spacing reads tight
+    // and consistent across 1/2/3 stars. Use no flex gap on this pill.
+    const count = (Math.min(Math.max(accolade.stars, 1), 3) as 1 | 2 | 3)
     return (
       <span
-        className={pill}
+        className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-white border border-gray-200"
         title={accolade.label}
         aria-label={accolade.label}
       >
-        {Array.from({ length: accolade.stars }).map((_, i) => (
-          <MichelinStarIcon key={i} size={12} />
-        ))}
+        <MichelinStarIcon size={12} count={count} />
       </span>
     )
   }
@@ -184,15 +193,20 @@ function pinPosition(
     typeof r.latitude === 'number' &&
     typeof r.longitude === 'number'
   ) {
-    const lngRange = bounds.maxLng - bounds.minLng || 1
+    const lngRange = bounds.maxLng - bounds.minLng
+    const latRange = bounds.maxLat - bounds.minLat
+    // Degenerate bbox — a single restaurant, or several rows that share
+    // exact coordinates. Fall back to the scatter so pins don't all
+    // stack on the panel's left edge.
+    if (lngRange === 0 || latRange === 0) {
+      return FALLBACK_POSITIONS[index % FALLBACK_POSITIONS.length]
+    }
     const minY = latToMercatorY(bounds.minLat)
     const maxY = latToMercatorY(bounds.maxLat)
     const yRange = maxY - minY || 1
-    // 5% padding — must match the iframe bbox padding above so pins
-    // align with the OpenStreetMap render. (5/110 ≈ 4.55%, rounded to 5
-    // for visual cushion.)
-    const x = 5 + ((r.longitude - bounds.minLng) / lngRange) * 90
-    const y = 5 + (1 - (latToMercatorY(r.latitude) - minY) / yRange) * 90
+    // 10% padding inside the panel so pins never sit on the border.
+    const x = 10 + ((r.longitude - bounds.minLng) / lngRange) * 80
+    const y = 10 + (1 - (latToMercatorY(r.latitude) - minY) / yRange) * 80
     return { x, y }
   }
   return FALLBACK_POSITIONS[index % FALLBACK_POSITIONS.length]
@@ -205,6 +219,9 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
   const items = restaurants.slice(0, 10)
 
+  // `typeof NaN === 'number'` is true, so the previous guard let NaN
+  // coords through and the iframe URL ended up as `bbox=NaN,NaN,NaN,NaN`.
+  // Use Number.isFinite to also reject NaN, +Infinity, and -Infinity.
   const lats = items
     .map((r) => r.latitude)
     .filter((v): v is number => Number.isFinite(v as number))
@@ -220,6 +237,9 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           maxLng: Math.max(...lngs),
         }
       : null
+  // Defensive: even if every input was a number, Math.min/max could
+  // return finite-but-degenerate values; reject explicitly so callers
+  // can fall back to the deterministic scatter.
   const bounds =
     rawBounds &&
     Number.isFinite(rawBounds.minLat) &&
@@ -392,58 +412,29 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           role="img"
           aria-label={`Map with ${items.length} numbered pins showing trending restaurants in ${city}`}
         >
-          {/* Real OpenStreetMap centered on the bbox of the visible
-              restaurants. No API key required, dynamic per city. The pin
-              overlay below uses the *same* bounds, so pins stay aligned
-              with the rendered streets/landmarks. We pad the bbox by 5%
-              to match the pin layout's 10% inset and avoid pins sitting
-              on the map's exact edge.
-
-              Falls back to a beige+grid SVG when no restaurant has a
-              lat/lng (caller may pre-populate; never expected in prod). */}
-          {bounds && Number.isFinite(bounds.minLat) ? (() => {
-            const lngPad = Math.max(0.005, (bounds.maxLng - bounds.minLng) * 0.05)
-            const latPad = Math.max(0.005, (bounds.maxLat - bounds.minLat) * 0.05)
-            const bbox = [
-              bounds.minLng - lngPad,
-              bounds.minLat - latPad,
-              bounds.maxLng + lngPad,
-              bounds.maxLat + latPad,
-            ].join(',')
-            return (
-              <iframe
-                title={`Map of trending restaurants in ${city}`}
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik`}
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ border: 0 }}
-                loading="lazy"
-                aria-hidden
-              />
-            )
-          })() : (
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ opacity: 0.45 }}
-              aria-hidden
-            >
-              <defs>
-                <pattern
-                  id="top10-grid"
-                  width="64"
-                  height="64"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <path
-                    d="M 64 0 L 0 0 0 64"
-                    fill="none"
-                    stroke="var(--color-border, rgba(0,0,0,0.08))"
-                    strokeWidth="1"
-                  />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#top10-grid)" />
-            </svg>
-          )}
+          {/* Subtle grid lines, evoke a streetmap without being one. */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ opacity: 0.45 }}
+            aria-hidden
+          >
+            <defs>
+              <pattern
+                id="top10-grid"
+                width="64"
+                height="64"
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M 64 0 L 0 0 0 64"
+                  fill="none"
+                  stroke="var(--color-border, rgba(0,0,0,0.08))"
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#top10-grid)" />
+          </svg>
 
           {items.map((r, i) => {
             const { x, y } = pinPosition(r, i, bounds)

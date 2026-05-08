@@ -48,14 +48,10 @@ export default async function CitiesPage() {
 
   const perCity = await Promise.all(
     cities.map(async (city) => {
-      // Michelin = stars > 0 OR any designation (bib/selected/etc). The
-      // single OR query is the source of truth — we used to also issue
-      // separate "stars > 0" and "designation not null" head-counts as
-      // a fallback for the OR, but the OR has been reliable in practice
-      // and the extra queries doubled the per-city RTT for nothing.
       const [
         totalRes,
-        michelinRes,
+        michelinStarRes,
+        michelinDesigRes,
         jbRes,
         eater38Res,
         sampleRes,
@@ -68,11 +64,17 @@ export default async function CitiesPage() {
           .from('restaurants')
           .select('id', { count: 'exact', head: true })
           .ilike('city', city.name)
-          .or('michelin_stars.gt.0,michelin_designation.not.is.null'),
+          .gt('michelin_stars', 0),
         supabase
           .from('restaurants')
           .select('id', { count: 'exact', head: true })
           .ilike('city', city.name)
+          .not('michelin_designation', 'is', null),
+        supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city.name)
+          // `james_beard_nominated` column was dropped — winners only here.
           .eq('james_beard_winner', true),
         supabase
           .from('restaurants')
@@ -87,6 +89,17 @@ export default async function CitiesPage() {
           .ilike('city', city.name)
           .limit(500),
       ])
+
+      // Michelin = stars > 0 OR any designation (bib/selected/etc).
+      // We count the union with UNION-like math: stars is a strict subset of
+      // "has designation" when designation='one_star'/etc is set, but since
+      // upstream data may have stars without a designation string, use max
+      // of the two counts as an approximation. Better: count with an OR.
+      const { count: michelinCount } = await supabase
+        .from('restaurants')
+        .select('id', { count: 'exact', head: true })
+        .ilike('city', city.name)
+        .or('michelin_stars.gt.0,michelin_designation.not.is.null')
 
       const sample = (sampleRes.data ?? []) as Array<{
         google_rating: number | null
@@ -113,7 +126,9 @@ export default async function CitiesPage() {
         name: city.name,
         total: totalRes.count ?? 0,
         stats: {
-          michelinCount: michelinRes.count ?? 0,
+          michelinCount:
+            michelinCount ??
+            Math.max(michelinStarRes.count ?? 0, michelinDesigRes.count ?? 0),
           jamesBeardCount: jbRes.count ?? 0,
           eater38Count: eater38Res.count ?? 0,
           avgRating,
