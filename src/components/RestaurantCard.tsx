@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
@@ -113,7 +116,16 @@ function HeroVariant({
   restaurant: Restaurant
   borderAccent: string
 }) {
-  const photo = getHeroPhoto(restaurant)
+  const initialPhoto = getHeroPhoto(restaurant)
+  // Track image-load state so we can swap to the accolade-tinted
+  // gradient if the upstream photo URL fails. Important because the
+  // photo proxy at /api/photos/places/... can transiently fail
+  // (Google quota, expired refs, network) — without this fallback
+  // the card renders an empty gray box with just the alt text. We
+  // still hint at the restaurant identity via the first letter on
+  // the gradient so the card has visual presence.
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const photo = photoFailed ? null : initialPhoto
   const showCuisine =
     restaurant.cuisine &&
     restaurant.cuisine !== 'Restaurant' &&
@@ -142,6 +154,7 @@ function HeroVariant({
               alt={restaurant.name}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
+              onError={() => setPhotoFailed(true)}
             />
           ) : (
             <div
@@ -169,7 +182,10 @@ function HeroVariant({
         {/* Body */}
         <div className="p-4 flex-1 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-bold text-gray-900 text-base line-clamp-1 min-w-0 flex-1 group-hover:text-emerald-600 transition-colors">
+            <h3
+              className="font-bold text-gray-900 text-base leading-snug line-clamp-2 min-w-0 flex-1 group-hover:text-emerald-600 transition-colors"
+              title={restaurant.name}
+            >
               {restaurant.name}
             </h3>
 

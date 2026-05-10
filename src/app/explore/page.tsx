@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import SectionHeader from '@/components/SectionHeader'
@@ -464,15 +465,35 @@ export default async function ExplorePage({
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       <ExploreSearchBar cities={cities} initialCity={activeCity} />
 
-      <CategoryFilters
-        cities={cities}
-        cuisines={cuisines}
-        currentCity={activeCity}
-        currentAccolade={activeAccolade}
-        currentStars={activeStars}
-        currentCuisine={activeCuisine}
-        currentSort={activeSort}
-      />
+      {/* Suspense boundary: CategoryFilters uses next/navigation's
+          useSearchParams() which Next.js requires be wrapped in
+          Suspense, otherwise the page deopts to fully dynamic
+          rendering AND can throw React #418 hydration warnings on
+          first paint. The fallback is just the rail's chrome so
+          there's no layout shift while client-side params resolve. */}
+      <Suspense
+        fallback={
+          <div
+            className="sticky top-0 z-30 border-b backdrop-blur-md"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              borderColor: 'var(--color-border)',
+              height: 56,
+            }}
+            aria-hidden
+          />
+        }
+      >
+        <CategoryFilters
+          cities={cities}
+          cuisines={cuisines}
+          currentCity={activeCity}
+          currentAccolade={activeAccolade}
+          currentStars={activeStars}
+          currentCuisine={activeCuisine}
+          currentSort={activeSort}
+        />
+      </Suspense>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <div className="mb-6 flex items-center justify-between">
