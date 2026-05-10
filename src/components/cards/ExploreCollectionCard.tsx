@@ -13,19 +13,31 @@ interface ExploreCollectionCardProps {
   count: number
   curator: string
   href: string
+  /** Optional 1/2/3 star breakdown rendered as a third line under the
+   *  count. Only set for the Michelin Stars tile so the user can see
+   *  the prestige distribution in the active city before clicking in.
+   */
+  breakdown?: { one: number; two: number; three: number } | null
 }
 
 /**
- * Figma collection card: photo + title + description + curator + count.
- * Used on the Explore page's "Editorial Collections" section.
+ * Categories tile — photo + title + curator + count, optionally with a
+ * Michelin star-count breakdown.
+ *
+ * Tightened from the original Figma editorial size (140px image, p-6
+ * body, full description paragraph) so 4 tiles fit per row on desktop
+ * and the Categories grid stops dwarfing the rest of the page. The
+ * description used to live here too, but with 7 categories it pushed
+ * the grid below the fold; the title alone is descriptive enough for
+ * "Michelin Stars", "Bib Gourmand", "Eater 38".
  */
 export default function ExploreCollectionCard({
   title,
-  description,
   image,
   count,
   curator,
   href,
+  breakdown,
 }: ExploreCollectionCardProps) {
   const [src, setSrc] = useState(image)
   const [didFallback, setDidFallback] = useState(false)
@@ -33,10 +45,13 @@ export default function ExploreCollectionCard({
   return (
     <Link
       href={href}
-      className="group block rounded-sm shadow-md overflow-hidden transition-all hover:shadow-2xl cursor-pointer"
+      className="group block rounded-sm shadow-sm overflow-hidden transition-all hover:shadow-xl cursor-pointer h-full"
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
-      <div className="overflow-hidden relative rounded-sm" style={{ height: '140px' }}>
+      <div
+        className="overflow-hidden relative rounded-sm"
+        style={{ height: '108px' }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
@@ -49,9 +64,9 @@ export default function ExploreCollectionCard({
           }}
         />
       </div>
-      <div className="p-6">
+      <div className="p-4">
         <h3
-          className="text-2xl mb-3"
+          className="text-lg mb-2"
           style={{
             color: 'var(--color-text)',
             fontFamily: 'var(--font-heading)',
@@ -60,26 +75,36 @@ export default function ExploreCollectionCard({
         >
           {title}
         </h3>
-        <p
-          className="text-sm leading-relaxed mb-5"
-          style={{
-            color: 'var(--color-text-secondary)',
-            fontFamily: 'var(--font-body)',
-            lineHeight: '1.6',
-          }}
-        >
-          {description}
-        </p>
-        <div
-          className="flex items-center justify-between pt-4 border-t"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          <span
-            className="text-xs uppercase tracking-wider"
+
+        {breakdown && (
+          <p
+            className="text-xs mb-2"
             style={{
               color: 'var(--color-text-secondary)',
               fontFamily: 'var(--font-body)',
-              letterSpacing: '0.08em',
+            }}
+            aria-label={`Michelin breakdown: ${breakdown.three} three-star, ${breakdown.two} two-star, ${breakdown.one} one-star`}
+          >
+            {breakdown.three > 0 && (
+              <span className="mr-2">★★★ {breakdown.three}</span>
+            )}
+            {breakdown.two > 0 && (
+              <span className="mr-2">★★ {breakdown.two}</span>
+            )}
+            {breakdown.one > 0 && <span>★ {breakdown.one}</span>}
+          </p>
+        )}
+
+        <div
+          className="flex items-center justify-between pt-3 border-t"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <span
+            className="text-[10px] uppercase tracking-wider"
+            style={{
+              color: 'var(--color-text-secondary)',
+              fontFamily: 'var(--font-body)',
+              letterSpacing: '0.10em',
             }}
           >
             {curator}

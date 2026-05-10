@@ -20,11 +20,22 @@ const RATE_LIMIT_MS = 100; // 100ms between requests to stay under quota
 
 // City -> state mapping for Google Places search query
 const CITY_STATE_MAP: Record<string, string> = {
+  'Austin': 'TX',
+  'Chicago': 'IL',
+  'Los Angeles': 'CA',
   'Miami': 'FL',
   'New York': 'NY',
-  'Los Angeles': 'CA',
-  'Chicago': 'IL',
   'San Francisco': 'CA',
+  // Long-tail cities present in the catalog
+  'Brooklyn': 'NY', 'Queens': 'NY', 'Bronx': 'NY', 'Long Island City': 'NY',
+  'Hollywood': 'CA', 'Beverly Hills': 'CA', 'Santa Monica': 'CA',
+  'Culver City': 'CA', 'Pasadena': 'CA', 'Venice': 'CA',
+  'Oakland': 'CA', 'Berkeley': 'CA', 'San Jose': 'CA', 'Palo Alto': 'CA',
+  'Menlo Park': 'CA', 'Atherton': 'CA', 'Woodside': 'CA',
+  'Napa': 'CA', 'Yountville': 'CA', 'Sonoma': 'CA', 'Healdsburg': 'CA',
+  'Calistoga': 'CA', 'Saint Helena': 'CA', 'Rutherford': 'CA',
+  'Sebastopol': 'CA', 'Elk': 'CA',
+  'Miami Beach': 'FL',
 };
 
 interface PlaceResult {
@@ -41,6 +52,7 @@ interface PlaceResult {
   photos?: Array<{ name: string }>;
   googleMapsUri?: string;
   editorialSummary?: { text: string };
+  businessStatus?: string;
 }
 
 const PRICE_MAP: Record<string, number> = {
@@ -66,15 +78,22 @@ function extractCuisine(types: string[]): string | null {
   return primary;
 }
 
-async function searchPlace(name: string, city: string): Promise<PlaceResult | null> {
+async function searchPlace(name: string, city: string, address?: string | null): Promise<PlaceResult | null> {
   const state = CITY_STATE_MAP[city] || '';
   const fieldMask = [
     'places.id', 'places.displayName', 'places.formattedAddress',
     'places.location', 'places.rating', 'places.userRatingCount',
     'places.priceLevel', 'places.types', 'places.nationalPhoneNumber',
     'places.websiteUri', 'places.photos', 'places.googleMapsUri',
-    'places.editorialSummary',
+    'places.editorialSummary', 'places.businessStatus',
   ].join(',');
+
+  // Address-aware query: when we already have a street address, search by
+  // "{name}, {address}" instead of "{name} restaurant {city}, {state}". This
+  // pins ambiguous chain/branch names to the correct location.
+  const textQuery = address
+    ? `${name}, ${address}`
+    : `${name} restaurant ${city}, ${state}`;
 
   const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
@@ -84,7 +103,7 @@ async function searchPlace(name: string, city: string): Promise<PlaceResult | nu
       'X-Goog-FieldMask': fieldMask,
     },
     body: JSON.stringify({
-      textQuery: `${name} restaurant ${city}, ${state}`,
+      textQuery,
       maxResultCount: 1,
     }),
   });
@@ -104,10 +123,11 @@ function getPhotoUrl(photoName: string, maxWidth = 800): string {
 }
 
 async function enrich() {
-  // Get all restaurants without google_place_id
+  // Get all restaurants without google_place_id. Pull `address` so we can pass
+  // it as a locationBias to the Places search when staging gave us one.
   const { data: restaurants, error } = await supabase
     .from('restaurants')
-    .select('id, name, city')
+    .select('id, name, city, address')
     .is('google_place_id', null)
     .order('city')
     .limit(1000);
@@ -124,7 +144,7 @@ async function enrich() {
 
   for (const restaurant of restaurants) {
     try {
-      const place = await searchPlace(restaurant.name, restaurant.city);
+      const place = await searchPlace(restaurant.name, restaurant.city, restaurant.address);
 
       if (!place) {
         console.warn(`  No result for: ${restaurant.name} (${restaurant.city})`);
@@ -152,6 +172,7 @@ async function enrich() {
         google_photo_url: photoUrl,
         photo_url: photoUrl, // Use as primary photo until we have better sources
         description: place.editorialSummary?.text || null,
+        business_status: place.businessStatus || null,
         last_fetched_at: new Date().toISOString(),
       };
 

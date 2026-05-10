@@ -6,6 +6,8 @@ import ExploreSearchBar from '@/components/explore/ExploreSearchBar'
 import Top10Trending from '@/components/explore/Top10Trending'
 import ExploreCollectionCard from '@/components/cards/ExploreCollectionCard'
 import EmptyState from '@/components/EmptyState'
+import CategoryFilters from '@/components/explore/CategoryFilters'
+import RestaurantCard from '@/components/RestaurantCard'
 import { MapPin } from 'lucide-react'
 import type { Restaurant } from '@/types/database'
 
@@ -90,6 +92,23 @@ interface SearchParamsInput {
   city?: string
   cuisine?: string
   accolade?: string
+  /** Michelin Stars page only — accepts "1", "2", "3", anything else
+   *  is treated as no filter. */
+  stars?: string
+  /** "az" sorts alphabetically; anything else (including absent) keeps
+   *  the default top-rated sort. */
+  sort?: string
+}
+
+// Friendly category labels used in headings and section titles. Kept
+// in sync with `COLLECTIONS` titles so the UI doesn't drift.
+const ACCOLADE_TITLES: Record<string, string> = {
+  michelin_star: 'Michelin Stars',
+  bib_gourmand: 'Bib Gourmand',
+  james_beard: 'James Beard Spotlight',
+  eater_38: 'Eater 38',
+  hidden_gems: 'Hidden Gems',
+  consensus_picks: 'Consensus Picks',
 }
 
 // NOTE: filter logic used to live here as `applyAccoladeFilter` /
@@ -112,17 +131,56 @@ export default async function ExplorePage({
     .order('restaurant_count', { ascending: false })
   const cities = (cityRows ?? []).map((c) => c.name)
 
-  // Pick the active city: URL param wins, else first city from DB, else
-  // the hard-coded default. Matching is case-insensitive so shareable
-  // links like `/explore?city=new%20york` still resolve.
+  // Default city resolution:
+  //   1. URL param (case-insensitive match against the cities table)
+  //   2. URL param verbatim if it didn't match (custom city)
+  //   3. Logged-in user's profile.home_city
+  //   4. First city from DB / hard-coded default
+  // Step 3 is the new piece — previously the page always defaulted to
+  // whatever city had the most restaurants, even for users who had
+  // explicitly set their home city during onboarding.
   const requestedCity = raw.city?.trim()
   const matchedCity =
     requestedCity &&
     cities.find((c) => c.toLowerCase() === requestedCity.toLowerCase())
-  const activeCity = matchedCity || requestedCity || cities[0] || DEFAULT_CITY
+
+  let homeCity: string | null = null
+  if (!requestedCity) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('home_city')
+        .eq('id', user.id)
+        .single()
+      const candidate = profile?.home_city?.trim() ?? null
+      // Resolve to the canonical name in the cities table when possible
+      // so headings render with consistent casing.
+      if (candidate) {
+        homeCity =
+          cities.find((c) => c.toLowerCase() === candidate.toLowerCase()) ||
+          candidate
+      }
+    }
+  }
+
+  const activeCity =
+    matchedCity ||
+    requestedCity ||
+    homeCity ||
+    cities[0] ||
+    DEFAULT_CITY
 
   const activeCuisine = raw.cuisine?.trim() || null
   const activeAccolade = raw.accolade?.trim() || null
+  const parsedStars = Number.parseInt(raw.stars ?? '', 10)
+  const activeStars: 1 | 2 | 3 | null =
+    parsedStars === 1 || parsedStars === 2 || parsedStars === 3
+      ? parsedStars
+      : null
+  const activeSort: 'top' | 'az' = raw.sort === 'az' ? 'az' : 'top'
   const isFiltering = Boolean(activeCuisine || activeAccolade)
 
   // Unfiltered experience: Top 10 trending + editorial collection cards.
@@ -183,6 +241,30 @@ export default async function ExplorePage({
       })
     )
 
+    // Star-count breakdown for the Michelin Stars tile so the user can
+    // see at a glance how the city's starred entries split across 1/2/3
+    // stars before clicking in. Returns null when the tile is absent or
+    // there are no starred entries in the active city.
+    let michelinBreakdown: { one: number; two: number; three: number } | null = null
+    const michelinTile = collectionCounts.find((c) => c.id === 'michelin-stars')
+    if (michelinTile && michelinTile.count > 0) {
+      const buckets = await Promise.all(
+        [1, 2, 3].map(async (n) => {
+          const { count } = await supabase
+            .from('restaurants')
+            .select('id', { count: 'exact', head: true })
+            .ilike('city', activeCity)
+            .eq('michelin_stars', n)
+          return count ?? 0
+        })
+      )
+      michelinBreakdown = {
+        one: buckets[0],
+        two: buckets[1],
+        three: buckets[2],
+      }
+    }
+
     return (
       <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
         <ExploreSearchBar cities={cities} initialCity={activeCity} />
@@ -203,9 +285,20 @@ export default async function ExplorePage({
             return (
               <section>
                 <SectionHeader label="Expertly Curated" title="Categories" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* 4-up on lg (was 3-up). With 7 categories and the
+                    description paragraph dropped on the tile itself, 4
+                    columns fit above the fold on a 1440 viewport. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {liveCollections.map((c) => (
-                    <ExploreCollectionCard key={c.id} {...c} />
+                    <ExploreCollectionCard
+                      key={c.id}
+                      {...c}
+                      breakdown={
+                        c.id === 'michelin-stars' && michelinBreakdown
+                          ? michelinBreakdown
+                          : null
+                      }
+                    />
                   ))}
                 </div>
               </section>
@@ -243,28 +336,62 @@ export default async function ExplorePage({
   // Skipped entirely for consensus_picks — that path was already handled
   // above by the algorithmic ranker.
   if (activeAccolade !== 'consensus_picks') {
-  let query = supabase
-    .from('restaurants')
-    .select('*', { count: 'exact' })
-    .ilike('city', activeCity)
-    .order('google_rating', { ascending: false, nullsFirst: false })
-    .limit(500)
+    let query = supabase
+      .from('restaurants')
+      .select('*', { count: 'exact' })
+      .ilike('city', activeCity)
+      .limit(500)
 
-  if (activeCuisine) query = query.ilike('cuisine', activeCuisine)
-  if (activeAccolade === 'michelin_star') query = query.gt('michelin_stars', 0)
-  if (activeAccolade === 'bib_gourmand')
-    query = query.eq('michelin_designation', 'bib_gourmand')
-  if (activeAccolade === 'james_beard')
-    // james_beard_nominated column was dropped; winners only.
-    query = query.eq('james_beard_winner', true)
-  if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
-  if (activeAccolade === 'hidden_gems')
-    query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
+    // Sort: top-rated by default, A–Z when explicitly requested.
+    if (activeSort === 'az') {
+      query = query.order('name', { ascending: true })
+    } else {
+      query = query.order('google_rating', {
+        ascending: false,
+        nullsFirst: false,
+      })
+    }
 
-  const { data: rows, count } = await query
-  filtered = (rows ?? []) as Restaurant[]
-  filteredTotal = count ?? null
-  } // end if (activeAccolade !== 'consensus_picks')
+    if (activeCuisine) query = query.ilike('cuisine', activeCuisine)
+    if (activeAccolade === 'michelin_star') {
+      // When the user picks a specific star count, narrow to that
+      // bucket; otherwise show all starred (1/2/3) entries.
+      if (activeStars != null) {
+        query = query.eq('michelin_stars', activeStars)
+      } else {
+        query = query.gt('michelin_stars', 0)
+      }
+    }
+    if (activeAccolade === 'bib_gourmand')
+      query = query.eq('michelin_designation', 'bib_gourmand')
+    if (activeAccolade === 'james_beard')
+      // james_beard_nominated column was dropped; winners only.
+      query = query.eq('james_beard_winner', true)
+    if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
+    if (activeAccolade === 'hidden_gems')
+      query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
+
+    const { data: rows, count } = await query
+    filtered = (rows ?? []) as Restaurant[]
+    filteredTotal = count ?? null
+  }
+
+  // Cuisine list for the filter dropdown — distinct cuisines that
+  // actually appear in the live filtered set, so we never offer
+  // options that lead to an empty page. Skips "Restaurant" /
+  // "Fine Dining" because they're catch-all venue types, not
+  // cuisines, and would otherwise dominate the dropdown.
+  const cuisines = Array.from(
+    new Set(
+      filtered
+        .map((r) => r.cuisine)
+        .filter(
+          (c): c is string =>
+            !!c && c !== 'Restaurant' && c !== 'Fine Dining'
+        )
+    )
+  ).sort()
+
   // Count of restaurants in the city (ignoring the filter) — used for
   // the "… of N total" footer.
   const { count: cityTotal } = await supabase
@@ -280,13 +407,38 @@ export default async function ExplorePage({
   )
   const heading =
     matching?.title ||
+    (activeAccolade ? ACCOLADE_TITLES[activeAccolade] : null) ||
     [activeCuisine, activeAccolade?.replace(/_/g, ' ')].filter(Boolean).join(' · ')
+
+  // Group results by Michelin star count when we're on the Michelin
+  // page with no specific star filter. This replaces the wall of 100+
+  // identical-looking cards with three clearly-labeled bands so the
+  // user can scan the most prestigious tier first. When the user picks
+  // a specific star count the grouping collapses to a single section.
+  const showMichelinGrouping =
+    activeAccolade === 'michelin_star' && activeStars == null
+  const michelinGroups = showMichelinGrouping
+    ? ([3, 2, 1] as const).map((n) => ({
+        stars: n,
+        items: filtered.filter((r) => r.michelin_stars === n),
+      }))
+    : []
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       <ExploreSearchBar cities={cities} initialCity={activeCity} />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+      <CategoryFilters
+        cities={cities}
+        cuisines={cuisines}
+        currentCity={activeCity}
+        currentAccolade={activeAccolade}
+        currentStars={activeStars}
+        currentCuisine={activeCuisine}
+        currentSort={activeSort}
+      />
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <div className="mb-6 flex items-center justify-between">
           <SectionHeader label={activeCity.toUpperCase()} title={heading || 'Filtered'} />
           <Link
@@ -298,7 +450,7 @@ export default async function ExplorePage({
           </Link>
         </div>
 
-        <p className="text-xs mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+        <p className="text-xs mb-8" style={{ color: 'var(--color-text-secondary)' }}>
           {filteredTotal ?? filtered.length} matching · {cityTotal ?? '—'} {activeCity} restaurants total
         </p>
 
@@ -306,35 +458,39 @@ export default async function ExplorePage({
           <EmptyState
             icon={MapPin}
             title="No matches"
-            description="Try a different collection or clear the filter to see all trending restaurants."
+            description="Try a different filter or clear them all to see every restaurant in this city."
           />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((r) => (
-              <Link
-                key={r.id}
-                href={`/restaurants/${r.id}`}
-                className="group block rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-300 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                    {r.name}
-                  </h3>
-                  {typeof r.google_rating === 'number' && (
-                    <span
-                      className="inline-flex items-center gap-1 text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                      aria-label={`${r.google_rating.toFixed(1)} stars`}
+        ) : showMichelinGrouping ? (
+          <div className="space-y-12">
+            {michelinGroups.map((g) => {
+              if (g.items.length === 0) return null
+              return (
+                <section key={g.stars}>
+                  <div className="flex items-baseline gap-3 mb-4">
+                    <h2
+                      className="text-2xl font-bold"
+                      style={{ fontFamily: 'var(--font-heading)' }}
                     >
-                      ★ {r.google_rating.toFixed(1)}
+                      {'★'.repeat(g.stars)}{' '}
+                      {g.stars === 1 ? 'One Star' : g.stars === 2 ? 'Two Stars' : 'Three Stars'}
+                    </h2>
+                    <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {g.items.length}
                     </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-gray-500 truncate">
-                  {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
-                  {r.neighborhood ? ` • ${r.neighborhood}` : ''}
-                </p>
-              </Link>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {g.items.map((r) => (
+                      <RestaurantCard key={r.id} restaurant={r} variant="hero" />
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map((r) => (
+              <RestaurantCard key={r.id} restaurant={r} variant="hero" />
             ))}
           </div>
         )}
