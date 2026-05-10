@@ -5,9 +5,38 @@ import { Heart, Eye, Play, SlidersHorizontal, Music2, Camera } from 'lucide-reac
 import type { RestaurantVideo } from '@/types/database'
 import VideoEmbed from './VideoEmbed'
 
+/**
+ * Derives a public preview image URL for a video when our cached
+ * `thumbnail_url` is missing (which is common for Instagram Reels because
+ * IG's CDN URLs are short-lived and our scraped values often expire).
+ *
+ * Instagram serves a permanent cover image at `/{p|reel}/{shortcode}/media/?size=l`
+ * that doesn't require auth and is safe to embed in <img>.
+ *
+ * TikTok has no equivalent unauthenticated image URL, so we still fall
+ * back to the gradient + caption tile for missing TikTok thumbs.
+ */
+function derivePublicThumb(video: RestaurantVideo): string | null {
+  if (video.platform === 'instagram' && video.video_id) {
+    return `https://www.instagram.com/p/${video.video_id}/media/?size=l`
+  }
+  return null
+}
+
 function VideoThumbnail({ video }: { video: RestaurantVideo }) {
+  // We track two URLs: the primary one we'd like to show, and a fallback
+  // we use if the primary fails (e.g., expired CDN URL).
+  const primarySrc = video.thumbnail_url || derivePublicThumb(video)
+  const fallbackSrc =
+    video.thumbnail_url && video.thumbnail_url !== derivePublicThumb(video)
+      ? derivePublicThumb(video)
+      : null
+
+  const [src, setSrc] = useState<string | null>(primarySrc)
+  const [triedFallback, setTriedFallback] = useState(false)
   const [failed, setFailed] = useState(false)
-  const showFallback = !video.thumbnail_url || failed
+
+  const showFallback = !src || failed
 
   if (showFallback) {
     const isTikTok = video.platform === 'tiktok'
@@ -41,9 +70,22 @@ function VideoThumbnail({ video }: { video: RestaurantVideo }) {
 
   return (
     <img
-      src={video.thumbnail_url!}
+      src={src!}
       alt={video.caption || 'Video thumbnail'}
-      onError={() => setFailed(true)}
+      // Instagram's `/media/?size=l` 302-redirects to a CDN URL on a
+      // different origin; setting referrerPolicy avoids edge cases where
+      // the request is dropped due to a referrer-restriction.
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      onError={() => {
+        // Try the IG public-cover fallback once before giving up.
+        if (!triedFallback && fallbackSrc) {
+          setTriedFallback(true)
+          setSrc(fallbackSrc)
+        } else {
+          setFailed(true)
+        }
+      }}
       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
     />
   )
@@ -137,7 +179,7 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
         <div className="h-8 bg-gray-100 rounded-lg w-48 animate-pulse" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="aspect-[9/16] md:aspect-[3/4] lg:aspect-[4/5] max-h-[400px] bg-gray-100 rounded-xl animate-pulse" />
+            <div key={i} className="aspect-[9/16] max-h-[420px] bg-gray-100 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -218,13 +260,17 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
         </div>
       </div>
 
-      {/* Video grid */}
+      {/* Video grid — TikTok and Instagram Reels are both 9:16, so the tile
+          aspect matches the source video on every breakpoint to avoid the
+          letterbox/crop-jump that happened with the old per-breakpoint
+          aspect ratios. max-h cap keeps a single mobile tile from eating the
+          whole viewport. */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 max-w-6xl">
         {filteredVideos.map((video) => (
           <button
             key={video.id}
             onClick={() => setSelectedVideo(video)}
-            className="group relative aspect-[9/16] md:aspect-[3/4] lg:aspect-[4/5] max-h-[400px] rounded-xl overflow-hidden bg-gray-100 text-left"
+            className="group relative aspect-[9/16] max-h-[420px] rounded-xl overflow-hidden bg-gray-100 text-left"
           >
             <VideoThumbnail video={video} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
