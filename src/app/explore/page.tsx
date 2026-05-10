@@ -377,20 +377,56 @@ export default async function ExplorePage({
   }
 
   // Cuisine list for the filter dropdown — distinct cuisines that
-  // actually appear in the live filtered set, so we never offer
-  // options that lead to an empty page. Skips "Restaurant" /
-  // "Fine Dining" because they're catch-all venue types, not
-  // cuisines, and would otherwise dominate the dropdown.
-  const cuisines = Array.from(
-    new Set(
-      filtered
-        .map((r) => r.cuisine)
-        .filter(
-          (c): c is string =>
-            !!c && c !== 'Restaurant' && c !== 'Fine Dining'
-        )
-    )
-  ).sort()
+  // appear in the active city × accolade combination, IGNORING the
+  // current cuisine filter. Building this from `filtered` was wrong:
+  // once the user picked "French", `filtered` only contained French
+  // rows, so the dropdown collapsed to just "French" and the user
+  // couldn't switch to another cuisine without clearing filters
+  // first. The fix runs a separate light query that applies the same
+  // city + accolade predicates but skips the cuisine predicate.
+  // Skips "Restaurant" / "Fine Dining" because they're catch-all
+  // venue types, not cuisines.
+  let cuisines: string[] = []
+  if (activeAccolade && activeAccolade !== 'consensus_picks') {
+    let cuisineQuery = supabase
+      .from('restaurants')
+      .select('cuisine')
+      .ilike('city', activeCity)
+      .not('cuisine', 'is', null)
+      .limit(2000)
+    if (activeAccolade === 'michelin_star') {
+      // Star count filter is applied here too — picking ★★★ should
+      // restrict the cuisines list to cuisines that have at least one
+      // 3-star match in the city, otherwise the dropdown would offer
+      // options that lead to an empty page.
+      if (activeStars != null) {
+        cuisineQuery = cuisineQuery.eq('michelin_stars', activeStars)
+      } else {
+        cuisineQuery = cuisineQuery.gt('michelin_stars', 0)
+      }
+    }
+    if (activeAccolade === 'bib_gourmand')
+      cuisineQuery = cuisineQuery.eq('michelin_designation', 'bib_gourmand')
+    if (activeAccolade === 'james_beard')
+      cuisineQuery = cuisineQuery.eq('james_beard_winner', true)
+    if (activeAccolade === 'eater_38')
+      cuisineQuery = cuisineQuery.eq('eater_38', true)
+    if (activeAccolade === 'hidden_gems')
+      cuisineQuery = cuisineQuery
+        .gte('google_rating', 4.3)
+        .lte('google_review_count', 500)
+    const { data: cuisineRows } = await cuisineQuery
+    cuisines = Array.from(
+      new Set(
+        (cuisineRows ?? [])
+          .map((r) => r.cuisine as string | null)
+          .filter(
+            (c): c is string =>
+              !!c && c !== 'Restaurant' && c !== 'Fine Dining'
+          )
+      )
+    ).sort()
+  }
 
   // Count of restaurants in the city (ignoring the filter) — used for
   // the "… of N total" footer.
