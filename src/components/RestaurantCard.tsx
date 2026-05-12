@@ -33,6 +33,36 @@ function getBorderAccent(restaurant: Restaurant): string {
 }
 
 /**
+ * Map the integer price_range column (1-4, sourced from Google
+ * Places `priceLevel` PRICE_LEVEL_INEXPENSIVE..VERY_EXPENSIVE) to the
+ * conventional $ / $$ / $$$ / $$$$ string. Returns null when the value
+ * is missing or out of range so callers can skip rendering rather
+ * than showing a placeholder.
+ */
+function formatPriceLevel(
+  range: number | null | undefined,
+): '$' | '$$' | '$$$' | '$$$$' | null {
+  if (range === 1) return '$'
+  if (range === 2) return '$$'
+  if (range === 3) return '$$$'
+  if (range === 4) return '$$$$'
+  return null
+}
+
+const PRICE_LEVEL_LABEL: Record<number, string> = {
+  1: 'Inexpensive',
+  2: 'Moderate',
+  3: 'Expensive',
+  4: 'Very expensive',
+}
+
+function priceLevelAriaLabel(range: number | null | undefined): string {
+  return range && PRICE_LEVEL_LABEL[range]
+    ? `Price: ${PRICE_LEVEL_LABEL[range]}`
+    : 'Price unknown'
+}
+
+/**
  * Photo fallback chain used elsewhere in the codebase
  * (FavoritesSection, OnboardingRestaurantPreview, …):
  *   photo_url → photo_urls[0] → google_photo_url → null.
@@ -139,6 +169,7 @@ function HeroVariant({
     restaurant.michelin_designation ||
     restaurant.james_beard_winner ||
     restaurant.eater_38
+  const priceLevel = formatPriceLevel(restaurant.price_range)
 
   return (
     <Link href={`/restaurants/${restaurant.id}`} className="block h-full">
@@ -215,15 +246,29 @@ function HeroVariant({
             </div>
           </div>
 
-          {/* Subtitle: cuisine pill (when meaningful) + neighborhood.
-              Dropping the city — the user is already filtered to one
-              city via CategoryFilters, so repeating it on every card is
-              just noise. */}
-          {(showCuisine || restaurant.neighborhood) && (
+          {/* Subtitle: cuisine pill (when meaningful) + price level +
+              neighborhood. Dropping the city — the user is already
+              filtered to one city via CategoryFilters, so repeating
+              it on every card is just noise. Price level renders as
+              $ / $$ / $$$ / $$$$ from restaurants.price_range (the
+              column Google's priceLevel field already maps to). When
+              price is unknown we omit it rather than show "?" — a
+              card with a known cuisine and unknown price should not
+              be visually penalized. */}
+          {(showCuisine || restaurant.neighborhood || priceLevel) && (
             <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
               {showCuisine && (
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-medium">
                   {restaurant.cuisine}
+                </span>
+              )}
+              {priceLevel && (
+                <span
+                  className="font-semibold text-gray-700"
+                  aria-label={priceLevelAriaLabel(restaurant.price_range)}
+                  title={priceLevelAriaLabel(restaurant.price_range)}
+                >
+                  {priceLevel}
                 </span>
               )}
               {restaurant.neighborhood && (
