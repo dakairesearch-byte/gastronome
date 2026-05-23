@@ -24,3 +24,14 @@
 ---
 
 ## Archived: cycles 1–10 + design-ux cycle 11 → STATE-archive-2026-05.md
+
+## This cycle: 2026-05-23 (6-lane check: all no-op)
+
+## Per-agent status (combined check)
+- **data-steward**: no-op. BACKLOG Now `[steward]` `.env.example` done; Later items (computeTopDishes UPSERT, seed pipeline) deferred. No new scrape work queued.
+- **schema-guardian**: no-op. BACKLOG Next `[schema]` is read-only audit (migration `20260415140000` consistency); no new migrations or schema changes queued.
+- **ranking-specialist**: no-op. No `[ranking]` Now items. BACKLOG Next is audit-only (weights + signals documentation); no formula or weight changes.
+- **performance**: no-op. Bundle audit deferred until cities Now fix lands; no performance blockers or findings to report.
+- **feature-builder**: no-op. BACKLOG Now `[builder]` done (mojibake fix, cycle 2). Vitest backfill queued but not promoted to Now.
+- **design-ux**: no-op. No `[design]` Now items. BACKLOG Next is critique-only (cities index a11y + hierarchy); no layout changes proposed.
+
