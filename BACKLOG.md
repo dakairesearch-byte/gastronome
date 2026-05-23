@@ -31,6 +31,7 @@
 
 - [hunter] **P2** `src/components/OnboardingFlow.tsx:232-239` — verified: error propagation is correct. The outer try/catch at :249 handles thrown rejections and the :241 check handles Supabase-returned errors. No fix needed.
 - [builder] `requireAdminUser` in `src/lib/auth/admin.ts` is already a shared reusable function imported by both admin routes. No middleware conversion needed for 2 routes.
+- [hunter] **P2** `scripts/_auditAwards.ts:37,53,57` — references dropped `james_beard_nominated` column that no longer exists on `restaurants` table (per CLAUDE.md landmine); script is marked throwaway but will crash with column-not-found error when run. Fix: either delete the file (it's audit-only, not in deploy path) OR remove the three lines querying `james_beard_nominated` and the conditional branches that depend on it. Related: `scripts/seedRestaurants.ts:118` still writes the dropped column (BACKLOG Later item).
 
 ---
 

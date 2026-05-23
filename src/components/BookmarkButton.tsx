@@ -177,7 +177,7 @@ export default function BookmarkButton({
         aria-label="Save to collection"
         className={chevronClass}
       >
-        â¾
+        ▾
       </button>
 
       {toast && (
@@ -204,7 +204,7 @@ export default function BookmarkButton({
               aria-label="Close"
               className="p-1 -mr-1 rounded-sm text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             >
-              â
+              ×
             </button>
           </div>
 
@@ -253,7 +253,7 @@ export default function BookmarkButton({
                   }
                 }}
                 maxLength={80}
-                placeholder="New collectionâ¦"
+                placeholder="New collection…"
                 className="flex-1 px-3 py-2 rounded-md border border-gray-200 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               />
               <button
