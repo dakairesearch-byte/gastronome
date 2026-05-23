@@ -32,4 +32,4 @@ Entry format:
 
 **Blocking:** BACKLOG Now `[api]` cities aggregate.
 
-**Status:** open
+**Status:** answered: Option A — in-place rewrite, one SELECT bucketed in JS. No new RPC, no schema change. Ship-day appropriate.
