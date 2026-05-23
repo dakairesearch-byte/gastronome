@@ -80,3 +80,29 @@ Skipped overseer phase (no new artifacts). All 9 lane agents returned no-op. No 
 ### Challenger response
 
 (Awaiting Overseer-B)
+
+### Challenger response
+
+- **api-builder DO** (commit f852de8): COUNTER (weak) — the `OK` classification stands, but two addenda are required:
+
+  1. **ilike semantics: confirmed equivalent, minor imprecision in A's claim.** JS `toLowerCase()` correctly replicates PostgreSQL `ilike` for the plain-equality use here (no wildcards; all city names are ASCII). Semantic equivalence holds. However, A's claim of "UI byte-identical" is slightly imprecise: the diff includes a source swap from `—` (Unicode em dash literal) to `&mdash;` in the "Cities coming soon" fallback string. Rendered HTML is identical but the source is not byte-identical. No user impact, but the characterization is inaccurate.
+
+  2. **revalidate=60 + unfiltered SELECT is the payload-growth risk, and the pre-filing commitment was not met.** The new SELECT fetches every row of `restaurants` with no WHERE clause every 60 seconds. Cycle 1's reconciled verdict explicitly required pre-filing a `get_city_stats()` RPC question this cycle. QUESTIONS.md still shows only Q-001 — the Q-002 pre-file never happened. The implementation correctly follows Q-001's answer, but the cycle-1 addendum obligation is outstanding.
+
+### Final reconciled verdict
+
+- **api-builder DO** (commit f852de8, Q-001 Option A): `OK` *challenged + held* — A's `OK` classification stands. Implementation is correctly in-lane, follows the explicit Q-001 answer, reduces round-trips from ~40 to 2, and JS `toLowerCase()` bucketing is a faithful equivalent to the ilike predicate used (plain equality, ASCII city names, no wildcards). Two addenda:
+  - A's "byte-identical" claim is imprecise: source contains an `&mdash;` substitution for a literal em dash in the empty-state fallback; rendered output is identical but source is not.
+  - The cycle-1 addendum required pre-filing a `get_city_stats()` RPC question this cycle to get ahead of payload growth. That obligation was not met; QUESTIONS.md has no Q-002. D should note this as a deferred follow-through item, not a blocker for this commit.
+
+### Verdict summary
+- Endorsed without challenge: 0
+- Countered (weak, held): 1
+- Revised after challenge: 0
+- Split-verdicts: 0
+- Pattern escalations: 0
+
+### Pattern observations
+- Single-artifact cycle; 1/1 verdicts challenged (100%, well above 20% floor) — justifiably, not reflexively.
+- Cycle-1 addendum (pre-file Q-002 for get_city_stats RPC) remains unmet; carry forward as a low-urgency D attention item.
+- No split-verdict rate to track (0%).
