@@ -2,26 +2,34 @@
 
 > Size limit: keep only the last 2 cycles inline. Older entries roll to STATE-archive-<YYYY-MM>.md (see CLAUDE.md "Coordination file size limits").
 
-## Last cycle: 2026-05-23 (cycle 1 — dry-run, no source edits applied)
+## Last cycle: 2026-05-23 (cycle 3 — code-reviewer no-op)
 
-## Per-agent status (cycle 1)
-- **data-steward**: DO proposal — create `/.env.example` documenting 5 deploy-time vars; pending orchestrator apply.
-- **schema-guardian**: no-op (no [schema] in Now).
-- **api-builder**: ASK — filed Q-001 (cities aggregate shape: A in-place rewrite / B new RPC / C materialized view); recommends A; blocked on D.
-- **ranking-specialist**: no-op (no [ranking] in Now; audit task is in Next, not promoted).
-- **performance**: no-op (no [perf] in Now; cities perf is now [api]'s problem).
-- **bug-hunter**: 5 findings (2× P1, 3× P2) appended to Suggestions; no P0; no TRUNCATE+INSERT / missing-WHERE / N+1 inside scope.
-- **code-reviewer**: PR #18 review — REQUEST CHANGES (1× P0 operator-precedence bug in composite score, 2× P1 lane/gate violation + count mismatch, 1× P2 missing test).
-- **feature-builder**: DO proposal — 3-char substitution in `src/components/BookmarkButton.tsx` (L180 ▾, L207 ×, L256 …); pending orchestrator apply.
-- **design-ux**: no-op (no [design] in Now; Chrome MCP unreachable anyway).
-- **overseer-a**: pending (Phase 2).
-- **overseer-b**: pending (Phase 2).
-
-## Last cycle token cost
-Estimated Phase 1: ~220K input + ~5K output ≈ 225K across 9 agents (avg ~25K each). Within 250K cycle budget.
+## Per-agent status (cycle 3)
+- **code-reviewer**: no-op (no open PRs to review; PR #18 still under revision from cycle 2; `claude/fix-broken-buttons-Lfy44` branch at HEAD/remote parity = no new PR created yet).
+- **design-ux**: no-op (no [design] in Now; cities-index critique in Next, not promoted; no design-relevant src/app, src/components, or design/ changes this cycle).
 
 ## Open PRs
-- PR #18 — "Replace Hidden Gems with Consensus Picks collection" (open, draft=false). Code-reviewer P0 verdict: REQUEST CHANGES.
+- PR #18 — "Replace Hidden Gems with Consensus Picks collection" (open, under revision). No new PRs reviewed this cycle.
 
 ## Blockers
-- BACKLOG Now `[api]` (cities aggregate) blocked on Q-001.
+- Q-001 awaiting D approval on Option A payload addendum (overseer-b noted ~500+ NYC rows per 60s revalidate).
+
+---
+
+## Previous cycle: 2026-05-23 (cycle 2 — execution phase)
+
+## Per-agent status (cycle 2)
+- **data-steward**: no-op (cycle 1 DO approved; awaiting apply).
+- **schema-guardian**: no-op (no [schema] in Now).
+- **api-builder**: executing on Q-001 Answer — implementing Option A (in-place rewrite, no RPC/index).
+- **ranking-specialist**: no-op (audit task in Next, not promoted).
+- **performance**: no-op (bundle-size audit awaits cities fix completion; no perf regressions detected; no [perf] in Now).
+- **bug-hunter**: monitoring for new latent bugs.
+- **code-reviewer**: PR #18 under revision per REQUEST CHANGES.
+- **feature-builder**: executing on mojibake fix in BookmarkButton.tsx (override-approved by overseer-b).
+- **design-ux**: no-op (no [design] in Now).
+- **overseer-a**: auditing Phase 2 execution.
+- **overseer-b**: reconciling.
+
+## Last cycle token cost
+Phase 1 ≈ 225K; Phase 2 TBD.
