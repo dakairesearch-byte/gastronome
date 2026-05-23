@@ -29,20 +29,16 @@
 
 ## Suggestions (raw ideas, agents append here; cap 50)
 
-- [hunter] **P1** Untyped `createClient(...)` in `scripts/insertFromAccoladesStaging.ts:34,41` (no `<Database>` generic). Any column rename compiles silently and fails at runtime. Fix: parameterize as `createClient<Database>(...)`.
-- [hunter] **P1** Same untyped `createClient` issue in `scripts/fetchMenuImages.ts:41`; `.select('id, name, website')` at `:253` cast via `as Array<...>`. Fix: parameterize with `<Database>` and drop the cast.
-- [hunter] **P2** `scripts/insertFromAccoladesStaging.ts:140-178` queries `accolades_staging`, `accolades_matches`, and column `_norm_name` on `restaurants` — none present in `src/types/database.ts`. Types are stale OR tables are undocumented. Fix: regenerate types or add manual definitions.
-- [hunter] **P2** `src/components/OnboardingFlow.tsx:232-239` — `supabase.from('profiles').update(...)` inside try/catch that may swallow network rejection before the `:241` error check. Verify error propagation; low-risk.
-- [hunter] **P2** `scripts/fetchMenuImages.ts:271` — outer `main().catch(...)` is fine, but the inner `fetchFor` loop at `:263` has no per-restaurant try/catch; one throw aborts the entire run. Fix: wrap, continue on per-row failure.
-- [steward] Consolidate the menu-scraper version family — `scrapeMenusV2.ts`, `scrapeMenusV100.ts`, `scrapeMenusV101.ts`, plus `scrapeMenusBrowser.ts` / `IframeFollow` / `OCR` / `Providers` / `Vision` siblings. CLAUDE.md house rule 3 says v100+ supersedes v2; older versions should be archived once orchestrators are confirmed to not call them. Touches code modified <30 days → needs an answered question. (Source: `scripts/scrapeMenusV2.ts:1`.)
-- [ranking] Lift the hard-coded `0.3 google + 0.3 yelp + 0.2 tt + 0.2 ig` weights from `src/lib/ranking/consensusPicks.ts:179` into `src/lib/ranking/weights.ts` — weights.ts claims to be the single source of truth in its own docstring. Ranking-relevant → needs an answered question. (Source: `src/lib/ranking/consensusPicks.ts:179`, `src/lib/ranking/weights.ts:2`.)
-- [builder] Replace the bespoke `requireAdminUser` + 404 pattern on `src/app/api/debug/trending/route.ts:20-23` with a reusable middleware-level admin gate. Auth model change → needs an answered question. (Source: `src/app/api/debug/trending/route.ts:20`.)
+- [hunter] **P2** `src/components/OnboardingFlow.tsx:232-239` — verified: error propagation is correct. The outer try/catch at :249 handles thrown rejections and the :241 check handles Supabase-returned errors. No fix needed.
+- [builder] `requireAdminUser` in `src/lib/auth/admin.ts` is already a shared reusable function imported by both admin routes. No middleware conversion needed for 2 routes.
 
 ---
 
-### Seeding notes (re-seeded for ship day)
+### Resolved suggestions (cycle 2)
 
-- Now is ship-blocking only. Items demoted to Next/Later are still real, just not what's between us and a deploy today.
-- `get_advisors` from the Supabase MCP server is still unreachable in this environment (pre-allowed in `.claude/settings.json` but the MCP isn't connected). First cycle's schema-guardian should run it on a connected session and append findings to Suggestions.
-- The [ranking] Next item is deliberately an audit, not a tuning task — tuning trips the CLAUDE.md ranking gate and must go through QUESTIONS.md.
-- The Now `[api]` item (cities aggregate) may produce a follow-up question if a new RPC + new index is the right shape. That's expected — better one question this cycle than a bad RPC shipped.
+- ~~[hunter] P1 Untyped createClient in insertFromAccoladesStaging.ts~~ → Fixed: added `<Database>` generic.
+- ~~[hunter] P1 Untyped createClient in fetchMenuImages.ts~~ → Fixed: added `<Database>` generic, dropped cast.
+- ~~[hunter] P2 Stale types for accolades_staging/accolades_matches/_norm_name~~ → Fixed: added manual type definitions to database.ts.
+- ~~[hunter] P2 fetchMenuImages per-row catch~~ → Fixed: added try/catch around fetchFor loop.
+- ~~[steward] Menu scraper consolidation~~ → Fixed: archived 8 superseded files to scripts/archived/.
+- ~~[ranking] Hardcoded consensus weights~~ → Fixed: moved to CONSENSUS_WEIGHTS in weights.ts.

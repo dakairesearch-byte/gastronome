@@ -32,6 +32,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Restaurant } from '@/types/database'
+import { CONSENSUS_WEIGHTS } from './weights'
 
 interface SocialAggregate {
   restaurant_id: string
@@ -176,7 +177,7 @@ export async function topConsensusPicks(
     const yelp = (r.yelp_rating ?? 0) / 5
     const tt = normalize(agg.tiktok_eng, ttDenom)
     const ig = normalize(agg.ig_eng, igDenom)
-    const score = 0.3 * google + 0.3 * yelp + 0.2 * tt + 0.2 * ig
+    const score = CONSENSUS_WEIGHTS.google * google + CONSENSUS_WEIGHTS.yelp * yelp + CONSENSUS_WEIGHTS.tiktok * tt + CONSENSUS_WEIGHTS.instagram * ig
     scored.push({ row: r, score })
   }
 

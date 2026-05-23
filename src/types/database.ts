@@ -66,6 +66,7 @@ export type Database = {
           name: string
           cuisine: string
           city: string
+          state: string | null
           address: string | null
           phone: string | null
           website: string | null
@@ -113,6 +114,7 @@ export type Database = {
           menu_format: string | null
           // Free-form note shown under "Recommended" when menu_format !== 'a_la_carte'.
           menu_note: string | null
+          _norm_name: string | null
           last_fetched_at: string | null
           created_at: string
           updated_at: string
@@ -122,6 +124,7 @@ export type Database = {
           name: string
           cuisine: string
           city: string
+          state?: string | null
           address?: string | null
           phone?: string | null
           website?: string | null
@@ -164,6 +167,7 @@ export type Database = {
           business_status?: string | null
           menu_format?: string | null
           menu_note?: string | null
+          _norm_name?: string | null
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -173,6 +177,7 @@ export type Database = {
           name?: string
           cuisine?: string
           city?: string
+          state?: string | null
           address?: string | null
           phone?: string | null
           website?: string | null
@@ -215,6 +220,7 @@ export type Database = {
           business_status?: string | null
           menu_format?: string | null
           menu_note?: string | null
+          _norm_name?: string | null
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -826,6 +832,77 @@ export type Database = {
           fetched_at?: string
         }
         Relationships: []
+      }
+      accolades_staging: {
+        Row: {
+          id: number
+          source: string
+          list_name: string | null
+          city: string
+          name: string
+          normalized_name: string
+          address: string | null
+          url: string | null
+          source_url: string | null
+          year: number | null
+        }
+        Insert: {
+          id?: number
+          source: string
+          list_name?: string | null
+          city: string
+          name: string
+          normalized_name: string
+          address?: string | null
+          url?: string | null
+          source_url?: string | null
+          year?: number | null
+        }
+        Update: {
+          id?: number
+          source?: string
+          list_name?: string | null
+          city?: string
+          name?: string
+          normalized_name?: string
+          address?: string | null
+          url?: string | null
+          source_url?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      accolades_matches: {
+        Row: {
+          id: number
+          staging_id: number
+          restaurant_id: string
+          match_score: number
+          match_method: string
+        }
+        Insert: {
+          id?: number
+          staging_id: number
+          restaurant_id: string
+          match_score: number
+          match_method: string
+        }
+        Update: {
+          id?: number
+          staging_id?: number
+          restaurant_id?: string
+          match_score?: number
+          match_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accolades_matches_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

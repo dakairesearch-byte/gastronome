@@ -36,3 +36,10 @@ export const WINDOW_HOURS: Record<Window, number> = {
 }
 
 export const DEFAULT_WINDOW: Window = '7d'
+
+export const CONSENSUS_WEIGHTS = {
+  google: 0.3,
+  yelp: 0.3,
+  tiktok: 0.2,
+  instagram: 0.2,
+} as const
