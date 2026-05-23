@@ -2,7 +2,12 @@
 
 > Size limit: keep only the last 2 cycles inline. Older entries roll to STATE-archive-<YYYY-MM>.md (see CLAUDE.md "Coordination file size limits").
 
-## Last cycle: 2026-05-23 (cycle 5 — feature-builder applies BookmarkButton mojibake fix)
+## Last cycle: 2026-05-23 (cycle 6 — schema-guardian no-op; no [schema] in Now)
+
+## Per-agent status (cycle 6)
+- **schema-guardian**: no-op (no [schema] item in Now; no answered schema questions; git log on supabase/ + src/types/ since 2026-05-16 shows only type regen from prior cycle). Prior drift finding (accolades_staging, accolades_matches, state, _norm_name without migrations) stands but requires promotion of a schema change item to Now before action.
+
+## Previous cycle: 2026-05-23 (cycle 5 — feature-builder applies BookmarkButton mojibake fix)
 
 ## Per-agent status (cycle 5)
 - **feature-builder**: DONE (IMPLEMENT MODE) — applied mojibake fix to `src/components/BookmarkButton.tsx`. Replaced 3 double-encoded byte sequences in JSX: `\xc3\xa2\xc2\x96\xc2\xbe` → `▾` (U+25BE, line 180 chevron), `\xc3\xa2\xc2\x9c\xc2\x95` → `×` (U+00D7, line 207 close button), `\xc3\xa2\xc2\x80\xc2\xa6` → `…` (U+2026, line 256 placeholder). `grep -P '[\x80-\xff]'` no longer matches any JSX lines (remaining hits are JSDoc/inline comments, out-of-scope per spec). Pre-existing typecheck errors unchanged (missing npm packages in sandbox). BACKLOG `[builder]` mojibake Now item complete.
