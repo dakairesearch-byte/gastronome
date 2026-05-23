@@ -2,30 +2,21 @@
 
 > Size limit: keep only the last 2 cycles inline. Older entries roll to STATE-archive-<YYYY-MM>.md (see CLAUDE.md "Coordination file size limits").
 
-## Last cycle: 2026-05-23 (feature-builder no-op)
+## Last cycle: 2026-05-23 (api-builder — Q-001 implementation)
 
-## Per-agent status (feature-builder this cycle)
-- **feature-builder**: no-op. Pre-flight: (a) git log since 2026-05-22 on `src/app/` + `src/components/` — only e5b629c (BookmarkButton mojibake, cycle 2, done per user context); (b) BACKLOG Now has no `[builder]` items — mojibake fix done, Vitest backfill not promoted; (c) QUESTIONS.md — no answered `[builder]` questions. Nothing actionable.
-
----
-
-## Previous cycle: 2026-05-23 (cycle 7 — bug-hunter column audit)
-
-## Per-agent status (cycle 7)
-- **bug-hunter**: Completed BACKLOG Next [hunter] item — column reference audit across `src/` and `scripts/`. Verified: all `.select()`, `.update()`, `.eq()`, `.order()` column names are present in `src/types/database.ts`. Scanned explore page, search route, restaurant detail, cities slug, profile pages, and top scripts (insertFromAccoladesStaging, enrichWithGooglePlaces). No stale column references found. N+1 patterns checked — all `.map(async ...)` are wrapped in `Promise.all()` for parallelization. Error handling verified on async paths (try/catch present). Rate limiting confirmed on Google Places (100ms). Known issues remain: `seedRestaurants.ts:118` and `_auditAwards.ts:37,53,57` write/reference dropped `james_beard_nominated` (BACKLOG Later items). No NEW P0/P1/P2 findings.
+## Per-agent status (api-builder this cycle)
+- **api-builder**: Implemented Q-001 Option A (answered: Option A, in-place rewrite). Rewrote `src/app/cities/page.tsx` to replace the per-city `Promise.all` fan-out (8 queries/city, ~40 round-trips for 5 cities) with exactly 2 round-trips: (1) `cities` SELECT, (2) one `restaurants` SELECT of `city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine` — all cities bucketed in JS using case-insensitive key match (same semantics as `ilike`). Michelin union logic preserved via JS filter (`michelin_stars > 0 || michelin_designation !== null`). Avg rating and top cuisines computed over full city bucket (not a 500-row sample). UI JSX is byte-identical. TypeScript check: only pre-existing repo-wide env errors (missing `next`/`react`/`lucide-react` declarations); zero errors introduced by this change. BACKLOG Now `[api]` item marked done.
 
 ## Open PRs
 - PR #18 — "Replace Hidden Gems with Consensus Picks collection" (open, under revision).
 - Branch `claude/fix-broken-buttons-Lfy44` has `.env.example` commit; draft PR needs manual creation.
 
 ## Blockers
-- Q-001 awaiting D approval on Option A/B/C for cities aggregate shape. `[api]` Now lane fully blocked until D answers.
+- None. Q-001 unblocked and shipped.
 
 ---
 
-## Archived: cycles 1–10 + design-ux cycle 11 → STATE-archive-2026-05.md
-
-## This cycle: 2026-05-23 (6-lane check: all no-op)
+## Previous cycle: 2026-05-23 (6-lane check: all no-op)
 
 ## Per-agent status (combined check)
 - **data-steward**: no-op. BACKLOG Now `[steward]` `.env.example` done; Later items (computeTopDishes UPSERT, seed pipeline) deferred. No new scrape work queued.
@@ -35,3 +26,6 @@
 - **feature-builder**: no-op. BACKLOG Now `[builder]` done (mojibake fix, cycle 2). Vitest backfill queued but not promoted to Now.
 - **design-ux**: no-op. No `[design]` Now items. BACKLOG Next is critique-only (cities index a11y + hierarchy); no layout changes proposed.
 
+---
+
+## Archived: cycles 1–10 + design-ux cycle 11 → STATE-archive-2026-05.md
