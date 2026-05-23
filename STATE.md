@@ -23,18 +23,4 @@
 
 ---
 
-## Previous cycle: 2026-05-23 (cycle 11 — design-ux no-op)
-
-## Per-agent status (cycle 11)
-- **design-ux**: no-op. Pre-flight checks: (a) git log on `src/app/`, `src/components/`, `design/` since last cycle — no new commits; (b) BACKLOG `[design]` item (cities-index critique) is in Next, not Now — not promoted; (c) QUESTIONS.md — no answered `[design]` questions. All three gates empty; exiting without action.
-
-## Open PRs
-- PR #18 — "Replace Hidden Gems with Consensus Picks collection" (open, under revision).
-- Branch `claude/fix-broken-buttons-Lfy44` has `.env.example` commit; draft PR needs manual creation.
-
-## Blockers
-- Q-001 awaiting D approval on Option A/B/C for cities aggregate shape. `[api]` Now lane fully blocked until D answers.
-
----
-
-## Archived: cycles 1–10 → STATE-archive-2026-05.md
+## Archived: cycles 1–10 + design-ux cycle 11 → STATE-archive-2026-05.md

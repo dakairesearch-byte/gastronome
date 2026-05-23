@@ -65,3 +65,8 @@
 
 ## Archived cycle 8: 2026-05-23 (code-reviewer no-op)
 - **code-reviewer**: no-op (pre-flight check: no commits since 2026-05-23; no open PRs to review; PR #18 remains under revision from prior cycles; `claude/fix-broken-buttons-Lfy44` branch unchanged since cycle 4; zero items in BACKLOG [reviewer] lane).
+
+---
+
+## Archived design-ux cycle 11: 2026-05-23 (no-op)
+- **design-ux**: no-op. Pre-flight checks: git log on src/app/, src/components/, design/ since last cycle — no new commits; BACKLOG [design] item (cities-index critique) is in Next, not Now; QUESTIONS.md — no answered [design] questions.
