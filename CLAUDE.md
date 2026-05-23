@@ -147,11 +147,104 @@ public/
 
 ## Pointers
 
-<!-- TODO: BACKLOG.md, STATE.md, and .claude/agents/ are referenced in
-     project docs but do not exist in this repo yet. Create them when
-     the multi-agent lane workflow is set up. -->
-
 - `src/types/database.ts` — canonical type definitions for all Supabase tables.
 - `src/lib/ranking/trending.ts` — trending score algorithm (30-day window, engagement-weighted).
 - `src/lib/restaurant.ts` — photo URL fallback chain, cuisine display, fallback images.
 - `supabase/migrations/` — migration history; the aggregator pivot (`001_`) is the foundational schema.
+- `BACKLOG.md` — input queue for work items and Suggestions from agents.
+- `STATE.md` — agent activity log (last 2 cycles inline; older archived).
+- `QUESTIONS.md` — decision-gate questions awaiting answers.
+
+---
+
+## Agent lineup
+
+Nine specialist lanes plus two reconciling overseers:
+
+| Agent                | Lane scope                                                  | Writes to                         |
+|----------------------|-------------------------------------------------------------|-----------------------------------|
+| data-steward         | Scrapers, backfills, coverage pivots                        | `scripts/`                        |
+| schema-guardian      | Migrations, indexes, types, RLS                             | `supabase/`                       |
+| api-builder          | Supabase RPC, edge functions, server actions                | `api/`, `supabase/functions/`     |
+| ranking-specialist   | Ranking algorithm, weights, scoring (**never without an answered question**) | `app/lib/ranking/` |
+| performance          | Bundle size, query latency, web vitals (read-only)          | Findings only                     |
+| bug-hunter           | Read-only latent-bug scan                                   | `BACKLOG.md` only                 |
+| code-reviewer        | PR review (never merges)                                    | Review comments only              |
+| feature-builder      | Frontend implementation                                     | `app/`                            |
+| design-ux            | Design proposals + a11y critique                            | `design/proposals/`               |
+| overseer-a           | First-pass auditor                                          | `OVERSEER_LOG.md` only            |
+| overseer-b           | Challenger; produces reconciled verdict                     | `OVERSEER_LOG.md` only            |
+
+Lane boundaries are strict. If an agent spots work belonging to another
+lane, it files a Suggestion tagged with that lane — never crosses.
+
+---
+
+## Decision gates — when to ASK vs DO
+
+**ASK** (write to QUESTIONS.md, pause the thread):
+- Any user-visible UI change (copy, layout, color, component, screen, interaction)
+- Any data operation touching >50 rows in production
+- Any new scrape estimated >30 min or >100 restaurants
+- Any schema change (CREATE/ALTER/DROP table or column)
+- Any awards rescrape (history matters; never overwrite without confirmation)
+- Any change to ranking formula, weights, or input signals — even 1%
+- Any new database index on a table >100k rows
+- Any new or modified RLS policy
+- Any new or modified edge function auth model
+- Any change affecting bundle size >10% or LCP >100ms
+- Any new external API integration or rate-limit budget change
+- Picking between 2+ viable approaches with meaningful tradeoffs
+- Any deletion of code touched in the last 30 days, even if "obviously dead"
+
+**DO** (act, then report in STATE.md):
+- Read-only investigation
+- Test additions, comments, behavior-preserving refactors
+- Bug fixes with clear root cause and no UI surface area
+- Data backfills <50 rows from existing pivot tables (no new scrapes)
+- CREATE INDEX on a small table (<100k rows)
+- Type regeneration after an approved migration
+- Following an explicit prior answer in QUESTIONS.md (cite the question ID)
+
+When in doubt, ASK. A blocked agent waiting is cheaper than an agent
+shipping the wrong thing.
+
+---
+
+## Two-overseer reconciliation protocol
+
+After the nine lane agents return, two overseers run sequentially:
+
+**Overseer-A (Auditor)** — applies Decision Gates and lane rules, produces
+initial verdict per QUESTIONS.md entry, draft PR, and Suggestion:
+`OK | NEEDS-REVISION | WRONG-GATE | FLAGGED | LANE-VIOLATION | DEDUPE | DROP`.
+
+**Overseer-B (Challenger)** — reads A's verdict and must either `ENDORSE`
+(with reason) or `COUNTER` (with proposed alternative + reason). B must
+counter at least 20% of A's verdicts per cycle; if B endorses everything,
+escalate "all-endorse cycle" as a sign A is miscalibrated.
+
+Reconciliation (B performs): B endorsed → A stands. B countered, A
+stronger → "challenged + held". B countered, B stronger → "revised after
+challenge". Genuinely 50/50 → "split-verdict"; D breaks the tie via the
+digest. Output: ONE reconciled verdict per item in `OVERSEER_LOG.md`.
+
+Hard rules: overseers are read-only, no new opinions about what to build,
+never edit BACKLOG.md work items or QUESTIONS.md entries, never override
+D's prior decisions. "Clean cycle" is valid output. Overseer-B must be a
+sincere adversary, not a reflexive contrarian.
+
+---
+
+## Coordination file size limits
+
+| File              | Inline cap               | Archive target                          |
+|-------------------|--------------------------|------------------------------------------|
+| `STATE.md`        | Last 2 cycles            | `STATE-archive-<YYYY-MM>.md` monthly    |
+| `OVERSEER_LOG.md` | Last 5 cycles            | `OVERSEER-archive-<YYYY-MM>.md`         |
+| `QUESTIONS.md`    | Answered <14 days        | `QUESTIONS-archive-<YYYY-MM>.md`        |
+| `BACKLOG.md`      | 50 most recent Suggestions | Drop older                             |
+
+Every agent must rotate-then-read when over the limit. This is a hard
+rule — unbounded log growth is the single biggest token waste in
+multi-agent setups.

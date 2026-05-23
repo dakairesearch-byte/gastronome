@@ -1,0 +1,25 @@
+# Scheduled-task prompts for Cowork (or equivalent cron-driven Claude runner).
+#
+# Background: mcp__scheduled-tasks was unavailable when the setup ran, so
+# these prompts couldn't be registered programmatically. Paste them into
+# the scheduler manually — but do NOT enable until you've watched at least
+# one /sweep cycle run by hand first.
+#
+# Working directory in both prompts assumes the local clone path is
+# /Users/dn/Documents/Claude/Projects/Food\ Review\ App. Edit the path
+# before pasting if your local checkout lives elsewhere.
+
+# ──────────────────────────────────────────────────────────────────────
+# Task A — sweep-light  (high-frequency lanes only)
+# cronExpression: "0 8,18 * * *"   (08:00 and 18:00 daily)
+# ──────────────────────────────────────────────────────────────────────
+
+cd /Users/dn/Documents/Claude/Projects/Food\ Review\ App and run a /sweep variant that includes ONLY these lane agents in Phase 1: data-steward, bug-hunter, code-reviewer, feature-builder. Skip the other five lanes entirely. Run overseers per Phase 1.5/2 rules. Post the digest.
+
+# ──────────────────────────────────────────────────────────────────────
+# Task B — sweep-full  (all 11)
+# cronExpression: "0 8 * * *"      (08:00 daily — replaces sweep-light's
+#                                   08:00 slot on the day it runs)
+# ──────────────────────────────────────────────────────────────────────
+
+cd /Users/dn/Documents/Claude/Projects/Food\ Review\ App and run the full /sweep with all 9 lane agents and both overseers. Post the digest. Note: this effectively replaces sweep-light's 8am slot on the days it runs.

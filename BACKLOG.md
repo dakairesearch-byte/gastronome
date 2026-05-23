@@ -1,0 +1,45 @@
+# Backlog
+
+> Size limit: Suggestions section capped at 50 most recent. Drop older.
+
+## Now (active this cycle — exactly 3 items)
+
+- [ ] [builder] Fix visible UI mojibake in `src/components/BookmarkButton.tsx` — lines 180 (`â¾`), 207 (`â`), 256 (`â¦`) are inside rendered JSX (chevron expand button, popover close button, "New collection…" placeholder). Every user who taps Save on a restaurant detail page sees these garbage characters. Acceptance: visual check of the bookmark popover shows correct glyphs (chevron / × / ellipsis); `grep -P '[\x80-\xff]' src/components/BookmarkButton.tsx` returns no matches inside JSX (comments are out-of-scope for this item — they're a separate Later entry). (Source: `src/components/BookmarkButton.tsx:180`, `:207`, `:256`.)
+- [ ] [api] Replace the per-city `count: 'exact'` fan-out on `src/app/cities/page.tsx:49-99` with a single aggregate query — today each city fires 8 queries (6 fanned `count: 'exact'`, 1 sample, 1 union-OR Michelin count) wrapped in `Promise.all` across N cities, so a 5-city render hits Supabase ~40 times with sequential-scan counts. Real ship blocker: page is slow on first load and brittle under any connection-pool pressure. Acceptance: cities index page completes in ≤2 round-trips total; rendered UI is byte-identical to today; a smoke render shows the same totals as the slug page (the city-detail page is the consistency anchor). Preferred shape: one `restaurants` SELECT with `city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine` bucketed in JS, OR a new RPC `get_city_stats()` returning `(city, total, michelin_count, jbf_count, eater38_count, avg_rating, top_cuisines)`. ASK first if RPC + new index needed. (Source: `src/app/cities/page.tsx:49`.)
+- [ ] [steward] Add `/.env.example` documenting every var Vercel needs at deploy time — repo currently ships zero `.env*` files at the root, so a fresh Vercel project will silently boot with the Supabase proxy throwing on first request (and Google Places autocomplete failing closed). Per CLAUDE.md "Env vars required": `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (scripts only — never ship to client), `GOOGLE_PLACES_API_KEY` (server), `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` (client autocomplete). Acceptance: `.env.example` exists at repo root with all 5 vars, each annotated required/optional + server/client + one-line purpose; `.gitignore` already excludes `.env.local` (verify). No real secrets committed — example values only. (Source: `CLAUDE.md` "Env vars required" section + `ls -la .env*` returns nothing.)
+
+## Next (queued — exactly 7 items, one per non-reviewer lane)
+
+- [ ] [schema] Audit that migration `20260415140000_drop_legacy_ranking_rpcs.sql` is consistent with the codebase — confirm no `.rpc('get_placed_restaurants' | 'get_trending_restaurants' | …)` call site survives in `src/`. Read-only audit, no DDL. Acceptance: a findings note in STATE.md listing zero remaining call sites, or a steward Suggestion if any are found. (Source: `supabase/migrations/20260415140000_drop_legacy_ranking_rpcs.sql`.)
+- [ ] [api] Add Vitest coverage for `src/app/api/restaurants/search/route.ts` — route has zero tests today and handles four failure branches (empty query, DB error, Google error, merge). Acceptance: tests cover empty-query, DB-only success, DB+Google merge, and DB-error branches. (Source: `src/app/api/restaurants/search/route.ts:1`.)
+- [ ] [ranking] Audit current weights and document signals — write `design/proposals/ranking-audit-<date>.md` cataloguing every input signal (`videos`, `reviews`, `photos` from `src/lib/ranking/weights.ts:12`; `google_rating`, `yelp_rating`, `tiktok_eng`, `ig_eng` from `src/lib/ranking/consensusPicks.ts:179`), the weight values today, what table feeds each signal, and where rollups happen. No formula or weight changes. Required before any tuning question can be answered safely. (Source: `src/lib/ranking/weights.ts:12`, `src/lib/ranking/consensusPicks.ts:179`.)
+- [ ] [perf] Bundle-size audit — run `next build` (after the cities Now fix lands so the audit reflects current shape) and inspect the route-by-route output for any first-load JS >250KB or any single chunk >500KB. Top 3 offenders → findings note in BACKLOG Suggestions with file:line of the offending dynamic import or wide dependency. Read-only. (Source: `package.json` `build` script + `next.config.ts`.)
+- [ ] [builder] Backfill Vitest coverage for `src/lib/ranking/consensusPicks.ts` — only `src/lib/ranking/trending.test.ts` exists today; consensusPicks (wired into homepage + explore) has none. Pure test addition, no behavior change. Acceptance: tests cover the four-signal scoring at line 179, the platform-floor disqualifier at line 174, and the log-normalization at lines 164-167. (Source: `src/lib/ranking/consensusPicks.ts:170`.)
+- [ ] [design] Critique the cities index page (`src/app/cities/page.tsx:157-289`) — write `design/proposals/cities-index-critique-<date>.md` covering visual hierarchy, a11y of the stat-pill cluster (color-only differentiation between Michelin / JBF / Eater), and scannability on mobile. Proposal only; any actual layout change requires an answered question. (Source: `src/app/cities/page.tsx:157`.)
+- [ ] [hunter] Verify every column referenced anywhere under `src/` and `scripts/` is present in `src/types/database.ts` — the JBF column landmine showed drops can outlive their references for weeks. Use the type file as source of truth (per CLAUDE.md) and append a Suggestion per stale column found. Read-only, findings-only. (Source: `src/types/database.ts` cross-checked against `from('restaurants').select | .eq | .update` call sites.)
+
+## Later (icebox — exactly 3 items)
+
+- [ ] [steward] Fix computeTopDishes to UPSERT instead of TRUNCATE+INSERT — `scripts/computeTopDishes.ts:1190` calls `.delete().neq('restaurant_id', '00000000-…')` followed by bulk INSERT, which is the documented CLAUDE.md landmine: chip-only restaurants get wiped on overnight rebuild. Demoted from Now because the script isn't running on a live schedule today; ship-day priority is user-facing surfaces. Move back to Now the moment any scheduled rebuild reactivates. (Source: `scripts/computeTopDishes.ts:1190`.)
+- [ ] [steward] Strip dropped `james_beard_nominated` from the seed pipeline — `scripts/seedRestaurants.ts:118` and `scripts/seed.sh:55` still write the dropped column, so the next seed run will 4xx from PostgREST. Demoted from Now because seeds are not part of today's deploy path; reactivate the moment a seed run is scheduled. (Source: `scripts/seedRestaurants.ts:118`, `scripts/seed.sh:55`.)
+- [ ] [builder] De-mojibake the JSDoc + inline comments in `src/components/brands/BrandIcons.tsx` (lines 54, 62, 71, 98, 128, 138, 189, 196) and `src/components/AccoladesBadges.tsx:72,83` — em-dashes render as `â` and ellipses as `â¦` in source comments. Not user-visible (comments only) so demoted from Now. Acceptance: `grep -P '[\x80-\xff]'` clean on both files. (Source: `src/components/brands/BrandIcons.tsx:54`.)
+
+## In review
+(items moved here when PRs are open)
+
+## Suggestions (raw ideas, agents append here; cap 50)
+
+- [hunter] **P2** `src/components/OnboardingFlow.tsx:232-239` — verified: error propagation is correct. The outer try/catch at :249 handles thrown rejections and the :241 check handles Supabase-returned errors. No fix needed.
+- [builder] `requireAdminUser` in `src/lib/auth/admin.ts` is already a shared reusable function imported by both admin routes. No middleware conversion needed for 2 routes.
+- [hunter] **P2** `scripts/_auditAwards.ts:37,53,57` — references dropped `james_beard_nominated` column that no longer exists on `restaurants` table (per CLAUDE.md landmine); script is marked throwaway but will crash with column-not-found error when run. Fix: either delete the file (it's audit-only, not in deploy path) OR remove the three lines querying `james_beard_nominated` and the conditional branches that depend on it. Related: `scripts/seedRestaurants.ts:118` still writes the dropped column (BACKLOG Later item).
+
+---
+
+### Resolved suggestions (cycle 2)
+
+- ~~[hunter] P1 Untyped createClient in insertFromAccoladesStaging.ts~~ → Fixed: added `<Database>` generic.
+- ~~[hunter] P1 Untyped createClient in fetchMenuImages.ts~~ → Fixed: added `<Database>` generic, dropped cast.
+- ~~[hunter] P2 Stale types for accolades_staging/accolades_matches/_norm_name~~ → Fixed: added manual type definitions to database.ts.
+- ~~[hunter] P2 fetchMenuImages per-row catch~~ → Fixed: added try/catch around fetchFor loop.
+- ~~[steward] Menu scraper consolidation~~ → Fixed: archived 8 superseded files to scripts/archived/.
+- ~~[ranking] Hardcoded consensus weights~~ → Fixed: moved to CONSENSUS_WEIGHTS in weights.ts.

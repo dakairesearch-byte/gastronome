@@ -21,6 +21,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../src/types/database'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -38,7 +39,7 @@ const SUPA_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!SUPA_URL || !SUPA_KEY) { console.error('Missing Supabase env'); process.exit(1) }
-const supabase = createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } })
+const supabase = createClient<Database>(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } })
 
 // ---------- args ----------
 
@@ -254,15 +255,19 @@ async function main() {
     .select('id, name, website')
     .in('id', IDS)
   if (error) { console.error(error); process.exit(1) }
-  const restaurants = data as Array<{ id: string; name: string; website: string | null }>
+  const restaurants = data!
 
   fs.mkdirSync(OUT_DIR, { recursive: true })
   const manifests: Manifest[] = []
   for (const r of restaurants) {
-    process.stderr.write(`Fetching ${r.name}...\n`)
-    const m = await fetchFor(r)
-    manifests.push(m)
-    process.stderr.write(`  ${m.status} — ${m.images.length}/${IMAGE_BUDGET} images, ${m.pages_visited} pages\n`)
+    try {
+      process.stderr.write(`Fetching ${r.name}...\n`)
+      const m = await fetchFor(r)
+      manifests.push(m)
+      process.stderr.write(`  ${m.status} — ${m.images.length}/${IMAGE_BUDGET} images, ${m.pages_visited} pages\n`)
+    } catch (err) {
+      process.stderr.write(`  FAILED: ${err instanceof Error ? err.message : err}\n`)
+    }
   }
 
   console.log(JSON.stringify(manifests, null, 2))

@@ -20,6 +20,7 @@
  *   - ACCOLADES_GAP_REPORT.md (workspace root)
  */
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../src/types/database'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -31,7 +32,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const s = createClient(
+const s = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   { auth: { persistSession: false } }
