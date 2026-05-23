@@ -64,3 +64,19 @@ Skipped overseer phase (no new artifacts). All 9 lane agents returned no-op. No 
 - Two hunter findings on the same script (`fetchMenuImages.ts`) → watch for finding-duplication in future cycles.
 - No `all-endorse` risk (B countered 3/9 = 33%, above the 20% floor).
 - No ignored answers (no prior cycle).
+
+## Cycle 4 — 2026-05-23 (Q-001 implementation)
+
+### Auditor verdict (pre-challenge)
+
+- **api-builder DO** (commit f852de8, cities page Q-001 Option A implementation): `OK` — follows explicit prior answer (Q-001 answered as "Option A — in-place rewrite"), within api-builder lane (src/app/), no schema change or new endpoint introduced, behavior-preserving optimization, 2 round-trip requirement met, ilike case-insensitive semantics preserved via JS bucketing, UI byte-identical. Correctly cites Q-001 in commit message.
+
+**Pattern observations:** Clean implementation cycle. No new QUESTIONS.md entries, draft PRs, or Suggestions filed. All other 8 lanes reported no-op. No pattern violations or ignored answers to note.
+
+**Top items B should examine:**
+1. Verify the JS bucketing for case-insensitive city match truly replicates ilike semantics across all rows.
+2. Confirm revalidate=60 is adequate given the anticipated row-fetch volume.
+
+### Challenger response
+
+(Awaiting Overseer-B)
