@@ -45,11 +45,13 @@ export default async function CitiesPage() {
   // We build a set of lower-cased city names from the active cities list and
   // filter the single result set in-memory. This keeps the round-trip count to
   // exactly 2 regardless of how many cities are active.
-  const cityNamesLower = new Set(cities.map((c) => c.name.toLowerCase()))
+  const cityNames = cities.map((c) => c.name)
+  const cityNamesLower = new Set(cityNames.map((n) => n.toLowerCase()))
 
   const { data: rawRestaurants } = await supabase
     .from('restaurants')
     .select('city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine')
+    .in('city', cityNames)
 
   type RestaurantRow = {
     city: string
