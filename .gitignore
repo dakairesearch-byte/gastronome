@@ -45,6 +45,9 @@ supabase/.temp/
 next-env.d.ts
 .env.local
 
+# mcp config (session-specific tokens)
+.mcp.json
+
 # one-off scrape/debug scratch scripts (sandbox-only, not production)
 /scripts/debug*.ts
 /scripts/testScrapeChips.ts
