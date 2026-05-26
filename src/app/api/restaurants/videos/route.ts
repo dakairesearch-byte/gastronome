@@ -24,12 +24,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerSupabaseClient()
 
     // IG rows are manually curated via the admin UI, so they don't need to
-    // clear the 500-likes popularity threshold that TikTok rows do.
+    // clear the 100-likes popularity threshold that TikTok rows do.
     let query = supabase
       .from('restaurant_videos')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .or('like_count.gte.500,platform.eq.instagram')
+      .or('like_count.gte.100,platform.eq.instagram')
       .order('like_count', { ascending: false })
       .limit(20)
 
