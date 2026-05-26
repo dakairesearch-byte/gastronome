@@ -31,12 +31,24 @@ function isExempt(pathname: string): boolean {
   )
 }
 
+// TEMPORARY — UI/UX sweep v2 2026-05-26 ONLY. Revert immediately after
+// screenshots are captured. Allows ?__preview=<token> to bypass the auth
+// redirect so the sweep can capture authenticated product surfaces.
+const SWEEP_PREVIEW_TOKEN_V2_2026_05_26 = '0966e3b0359c1bef357259a1f7d7e5c5'
+
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
+
+  if (
+    request.nextUrl.searchParams.get('__preview') ===
+    SWEEP_PREVIEW_TOKEN_V2_2026_05_26
+  ) {
+    return response
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
