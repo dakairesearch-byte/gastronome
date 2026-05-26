@@ -109,15 +109,37 @@ Added `.mcp.json` to gitignore — this file contains session-specific MCP beare
 
 ---
 
-## Production Issue: Cities Page Timeout
+## Production Issue: Cities Page Stats Truncation
 
-**Symptom**: After deploying the cities page rewrite, `gastronome.city/cities` timed out.
+**Symptom**: The cities page rendered for unauthenticated traffic but every per-city stat (Michelin count, James Beard count, Eater 38 count, avg rating, top cuisines) was systematically undercounted by 30–40%.
 
-**Root cause**: The bulk restaurants SELECT had no WHERE clause filtering by city. It pulled ALL restaurants globally, which exceeded PostgREST's default 1000-row response cap. The query returned a truncated (incomplete) result set, and the downstream JS bucketing produced wrong/empty stats. In some cases the query itself timed out.
+**Root cause**: PostgREST enforces a server-side row cap (default 1000) that is **not overridable by `.limit()` or `.range()` ceilings**. The bulk restaurants SELECT — even after adding `.in('city', cityNames)` in commit `b782184` — silently truncated to 1000 rows even though 1597 restaurants matched. JS bucketing then computed stats from a ~63% sample. Per-city counts ran:
 
-**Fix**: Added `.in('city', cityNames)` to scope the query to only restaurants in active cities. This keeps the result set well under the 1000-row cap.
+| City | Truncated (shown) | True count |
+|---|---:|---:|
+| Austin | 106 | 163 |
+| Chicago | 169 | 252 |
+| Los Angeles | 169 | 265 |
+| Miami | 101 | 156 |
+| New York | 309 | 519 |
+| San Francisco | 146 | 242 |
+| **Total** | **1000** | **1597** |
 
-**Status**: Fix is on `main` (commit `b782184`) and pushed. **Not yet visually confirmed** — the cloud sandbox can't reach `gastronome.city` due to network restrictions. Please verify the `/cities` page loads correctly in a browser.
+The earlier "fix" (`.in('city', cityNames)`) was necessary but not sufficient — it kept the WHERE clause correct but did nothing about the cap.
+
+**Real fix**: Replace the single SELECT with a paginated `.range(start, start+999)` loop that stops on a short read. 2 round trips today (1000 + 597), scales linearly as the catalog grows. Verified locally: returns all 1597 rows in ~460ms. No schema change, honors Q-001's Option A decision.
+
+**Status**: Real fix committed and pushed. Visually verifying via Chrome MCP — middleware cold-start 504s (see below) made the first navigation slow, but subsequent loads serve the corrected stats.
+
+---
+
+## Production Issue: Middleware Cold-Start 504
+
+**Symptom**: First request to any page after the Vercel serverless function went cold returned `504: GATEWAY_TIMEOUT` with code `MIDDLEWARE_INVOCATION_TIMEOUT`. Affected exempt routes (`/onboarding`) and gated routes alike. Subsequent requests within the warm window worked fine.
+
+**Root cause**: `src/lib/supabase/middleware.ts` unconditionally awaits `supabase.auth.getUser()` on every request, including exempt paths. `getUser()` performs an HTTP round-trip to Supabase to verify the JWT. On a cold Vercel instance, function init plus the Supabase call exceeded the middleware invocation budget, returning 504 before any response could be produced.
+
+**Fix**: Race `supabase.auth.getUser()` against a 3s timeout (`Promise.race`). On timeout, treat as unauthenticated — gated routes still redirect to `/onboarding`, exempt routes render normally. The next warm request re-runs the check and lands real users on their intended page. Preserves full `getUser()` security on the warm path; degrades to anonymous on cold start instead of returning a hard 504.
 
 ---
 
@@ -144,7 +166,8 @@ Four multi-agent sweep cycles were executed:
 ## Known Issues & Pending Work
 
 ### Must Verify
-- **Cities page**: Confirm `gastronome.city/cities` loads correctly after the timeout fix. Open it in a browser and check that all cities show correct restaurant counts and stats.
+- **Cities page**: Sign in and visually confirm the corrected stats render on `gastronome.vercel.app/cities`. Local Supabase query verified per-city counts match `count(*)`, but the rendered page hasn't been spot-checked end-to-end against an authenticated session.
+- **Middleware cold start**: After 30+ min of no traffic, hit `gastronome.vercel.app/onboarding` and confirm it returns 200 within the 3s budget instead of 504.
 
 ### Low Priority
 - **Q-002 pre-file**: Overseer-B noted that a future `get_city_stats()` RPC question should be pre-filed for when the cities page needs to scale beyond JS bucketing. Not urgent — current approach works for the foreseeable city count.

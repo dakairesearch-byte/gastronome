@@ -62,10 +62,19 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh auth token
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refresh auth token. Race against a 3s timeout: on a cold Vercel
+  // serverless instance, function init plus the Supabase round-trip can
+  // exceed the middleware invocation budget, producing 504
+  // `MIDDLEWARE_INVOCATION_TIMEOUT` errors for the first user. Treating a
+  // timeout as "no user" degrades to the unauthenticated path (redirect to
+  // /onboarding for gated routes, render normally for exempt routes) — the
+  // next warm request re-runs the check and lands the user where they
+  // belong.
+  const AUTH_TIMEOUT_MS = 3000
+  const user = await Promise.race([
+    supabase.auth.getUser().then(({ data }) => data.user),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), AUTH_TIMEOUT_MS)),
+  ])
 
   const pathname = request.nextUrl.pathname
   const exempt = isExempt(pathname)

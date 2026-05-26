@@ -37,21 +37,17 @@ export default async function CitiesPage() {
 
   const cities = (citiesData ?? []) as City[]
 
-  // Round-trip 2: one bulk SELECT across all restaurants for the columns we
-  // need to derive per-city stats. No per-city fan-out — we bucket in JS
-  // using the same case-insensitive match that `.ilike('city', name)` applies,
-  // so tallies agree with the slug page.
+  // Round-trip 2+: paginated bulk SELECT across all restaurants in active
+  // cities, then bucket in JS using the same case-insensitive match that
+  // `.ilike('city', name)` applies — tallies agree with the slug page.
   //
-  // We build a set of lower-cased city names from the active cities list and
-  // filter the single result set in-memory. This keeps the round-trip count to
-  // exactly 2 regardless of how many cities are active.
+  // PostgREST enforces a server-side row cap (default 1000) regardless of
+  // `.limit()` or `.range()` ceiling. A single `.in('city', cityNames)`
+  // SELECT silently truncated to 1000 rows even when 1597 matched, so every
+  // city's stats came from a ~63% sample. We page through `.range(start, end)`
+  // and stop on a short read to recover all matching rows.
   const cityNames = cities.map((c) => c.name)
   const cityNamesLower = new Set(cityNames.map((n) => n.toLowerCase()))
-
-  const { data: rawRestaurants } = await supabase
-    .from('restaurants')
-    .select('city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine')
-    .in('city', cityNames)
 
   type RestaurantRow = {
     city: string
@@ -63,7 +59,18 @@ export default async function CitiesPage() {
     cuisine: string
   }
 
-  const restaurants = (rawRestaurants ?? []) as RestaurantRow[]
+  const PAGE_SIZE = 1000
+  const restaurants: RestaurantRow[] = []
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const { data: page } = await supabase
+      .from('restaurants')
+      .select('city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine')
+      .in('city', cityNames)
+      .range(start, start + PAGE_SIZE - 1)
+    const rows = (page ?? []) as RestaurantRow[]
+    restaurants.push(...rows)
+    if (rows.length < PAGE_SIZE) break
+  }
 
   // Bucket by lower-cased city name, matching only active cities.
   const buckets = new Map<string, RestaurantRow[]>()
