@@ -280,11 +280,17 @@ export default function SearchFiltersSidebar({
               <JamesBeardIcon size={14} title="James Beard" />
               James Beard
             </span>
-            <div className="grid grid-cols-3 gap-1 p-0.5 bg-gray-100 rounded-md">
+            <div className="grid grid-cols-2 gap-1 p-0.5 bg-gray-100 rounded-md">
               {(
                 [
                   { key: 'any', label: 'Any' },
-                  { key: 'nominee', label: 'Nominee' },
+                  // "Nominee" option removed for now — the
+                  // `james_beard_nominated` column was dropped, and the
+                  // backend silently treated "nominee" === "winner".
+                  // Nominee/finalist/semifinalist now lives in
+                  // `restaurant_jbf_history`; when that's joined into
+                  // the filter, the option can come back. Until then,
+                  // the UI must not lie about what it returns.
                   { key: 'winner', label: 'Winner' },
                 ] as { key: 'any' | 'nominee' | 'winner'; label: string }[]
               ).map(({ key, label }) => {

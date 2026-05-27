@@ -94,7 +94,10 @@ export default function RecentSearches() {
           className="text-sm py-4"
           style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
         >
-          Your recent searches will appear here.
+          {/* Reframed from passive system-speak ("will appear here") to
+              an active suggestion. Sweep v2 microcopy QW. */}
+          Try a cuisine, neighborhood, or dish in the search bar above —
+          we&rsquo;ll keep your recent searches handy here.
         </p>
       </div>
     )

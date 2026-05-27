@@ -314,7 +314,14 @@ function SearchContent() {
             rq = rq.eq('eater_38', true)
           }
 
-          const { data } = await rq.order('name', { ascending: true }).limit(40)
+          // Sort by quality signal — Google rating then review count —
+          // rather than alphabetical. Alphabetical defeated the entire
+          // ranking value prop (e.g. a 3.2-rated "A Restaurant" outranked
+          // a 4.7-rated "Z Restaurant"). Sweep v2 search P1.
+          const { data } = await rq
+            .order('google_rating', { ascending: false, nullsFirst: false })
+            .order('google_review_count', { ascending: false, nullsFirst: false })
+            .limit(40)
           restaurantData = (data ?? []) as Restaurant[]
 
           // Union of Michelin stars + bib gourmand requires a follow-up
@@ -347,7 +354,8 @@ function SearchContent() {
               bq = bq.eq('james_beard_winner', true)
             if (filters.eater38) bq = bq.eq('eater_38', true)
             const { data: bibRows } = await bq
-              .order('name', { ascending: true })
+              .order('google_rating', { ascending: false, nullsFirst: false })
+              .order('google_review_count', { ascending: false, nullsFirst: false })
               .limit(40)
             const seen = new Set(restaurantData.map((r) => r.id))
             for (const row of (bibRows ?? []) as Restaurant[]) {
@@ -437,11 +445,20 @@ function SearchContent() {
   /*  Handlers                                                           */
   /* ------------------------------------------------------------------ */
 
+  // "Reset all" used to wipe both filters AND the search query, which
+  // matched the button text "Reset all" too literally — users called it
+  // "Clear filters" and were surprised when their query disappeared too.
+  // Now it only clears filters and leaves the query alone. Sweep v2
+  // filtering QW: "Reset all also wipes the search query — should only
+  // clear filters."
   const handleResetAll = () => {
     setFilters(DEFAULT_FILTERS)
-    setSearchQuery('')
     writeStoredFilters(DEFAULT_FILTERS)
-    router.replace(pathname, { scroll: false })
+    // Preserve `q` in the URL when present so the search query stays.
+    const next = searchQuery.trim()
+      ? `${pathname}?q=${encodeURIComponent(searchQuery)}`
+      : pathname
+    router.replace(next, { scroll: false })
   }
 
   const totalRestaurants = restaurants.length + googlePlaces.length
@@ -702,7 +719,13 @@ function SearchContent() {
                 onClick={() => setMobileFiltersOpen(false)}
                 className="w-full py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
               >
-                Apply filters
+                {/* Show the live result count so users don't close the
+                    sheet and discover zero results. Sweep v2 P1. */}
+                {loading
+                  ? 'Searching…'
+                  : totalRestaurants + dishes.length === 0
+                    ? 'No matches — adjust filters'
+                    : `Show ${totalRestaurants + dishes.length} ${totalRestaurants + dishes.length === 1 ? 'result' : 'results'}`}
               </button>
             </div>
           </div>
@@ -750,9 +773,48 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
   return true
 }
 
+/**
+ * Server shell rendered before SearchContent hydrates. The previous
+ * Suspense fallback was a featureless blank div, so cold loads and
+ * crawlers saw nothing — including no nav, no heading, no search bar
+ * — until client JS hydrated. Sweep v2 loading-states Alarming.
+ *
+ * This shell renders the page heading and a static "search loading"
+ * affordance so users on slow connections (and SEO crawlers) get a
+ * real first paint.
+ */
+function SearchShell() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        <h1
+          className="text-3xl mb-2"
+          style={{
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 700,
+            color: 'var(--color-text)',
+          }}
+        >
+          Search
+        </h1>
+        <p
+          className="text-sm mb-6"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          Find restaurants by name, cuisine, or city — or search dishes directly.
+        </p>
+        <div className="animate-shimmer h-12 rounded-xl max-w-2xl" />
+      </div>
+    </div>
+  )
+}
+
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen" />}>
+    <Suspense fallback={<SearchShell />}>
       <SearchContent />
     </Suspense>
   )

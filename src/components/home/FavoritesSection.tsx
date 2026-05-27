@@ -93,7 +93,11 @@ export default function FavoritesSection() {
           className="text-sm mb-3"
           style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
         >
-          No favorites yet. Explore restaurants and tap the heart to save them.
+          {/* Copy fix: previous version said "tap the heart" but the
+              actual save control is a bookmark icon. Reframed as an
+              invitation rather than a flagged absence. */}
+          Saved restaurants land here. Tap the bookmark on any card to
+          start your list.
         </p>
         <Link
           href="/explore"
@@ -104,7 +108,7 @@ export default function FavoritesSection() {
             backgroundColor: 'var(--color-primary)',
           }}
         >
-          Start exploring
+          Find restaurants to save
         </Link>
       </div>
     )
