@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
+import Link from 'next/link'
 import {
   Sparkles,
   ArrowRight,
@@ -43,6 +44,12 @@ import type { User } from '@supabase/supabase-js'
 
 type StepKey = 'problem' | 'solution' | 'city' | 'account'
 const STEPS: StepKey[] = ['problem', 'solution', 'city', 'account']
+const STEP_LABELS: Record<StepKey, string> = {
+  problem: 'Problem',
+  solution: 'Solution',
+  city: 'City',
+  account: 'Sign up',
+}
 
 export default function OnboardingFlow() {
   const router = useRouter()
@@ -100,9 +107,13 @@ export default function OnboardingFlow() {
     }
   }, [supabase])
 
+  // City step used to be a hard block — Continue stayed disabled until
+  // a city was selected, so users in unsupported cities (or who just
+  // wanted to look first) were stuck. Now `canProceed` is always true
+  // on the city step; an unselected city just defers home-city setup.
+  // Sweep v2 onboarding P0.
   const canProceed = (() => {
-    if (step === 'problem' || step === 'solution') return true
-    if (step === 'city') return !!selectedCity
+    if (step === 'problem' || step === 'solution' || step === 'city') return true
     return true
   })()
 
@@ -266,21 +277,33 @@ export default function OnboardingFlow() {
         />
       </div>
 
-      {/* Progress */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        {STEPS.map((_, i) => (
-          <span
-            key={i}
-            className="rounded-full transition-all"
-            style={{
-              width: i === stepIndex ? 28 : 8,
-              height: 6,
-              backgroundColor:
-                i <= stepIndex ? 'var(--color-primary)' : 'var(--color-border)',
-            }}
-          />
+      {/* Progress — given role + label so AT users know what the dots
+          mean. Each dot carries a step name as a visually-hidden text
+          so the position becomes meaningful ("step 1 of 4: Problem")
+          rather than an unlabeled bar. Sweep v2 onboarding QW. */}
+      <ol
+        className="flex items-center justify-center gap-2 mb-6"
+        role="list"
+        aria-label={`Step ${stepIndex + 1} of ${STEPS.length}`}
+      >
+        {STEPS.map((stepName, i) => (
+          <li key={stepName}>
+            <span
+              className="block rounded-full transition-all"
+              style={{
+                width: i === stepIndex ? 28 : 8,
+                height: 6,
+                backgroundColor:
+                  i <= stepIndex ? 'var(--color-primary)' : 'var(--color-border)',
+              }}
+              aria-current={i === stepIndex ? 'step' : undefined}
+            />
+            <span className="sr-only">
+              Step {i + 1} of {STEPS.length}: {STEP_LABELS[stepName]}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
 
       <div
         className="rounded-sm shadow-xl overflow-hidden"
@@ -417,9 +440,11 @@ export default function OnboardingFlow() {
           )}
       </div>
 
-      {/* Sign-in escape hatch — only visible on pane 4's sign-up form,
-          so returning users don't have to walk through the pitch again. */}
-      {step === 'account' && !user && !awaitingConfirmation && (
+      {/* Sign-in escape hatch — now visible on EVERY pane, not just
+          pane 4's signup form. Returning users (cleared cookies,
+          incognito) previously had to click through three pitch screens
+          before they could log in. Sweep v2 onboarding P0. */}
+      {!user && !awaitingConfirmation && (
         <p
           className="text-center text-xs mt-4"
           style={{
@@ -428,7 +453,10 @@ export default function OnboardingFlow() {
           }}
         >
           Already have an account?{' '}
-          <a
+          {/* Use Next.js Link instead of a raw <a> so the navigation
+              stays client-side and avoids a middleware round-trip that
+              could bounce returning users back through onboarding. */}
+          <Link
             href="/auth/login"
             style={{
               color: 'var(--color-primary)',
@@ -437,7 +465,7 @@ export default function OnboardingFlow() {
             }}
           >
             Sign in
-          </a>
+          </Link>
         </p>
       )}
     </div>
@@ -702,7 +730,7 @@ function CityStep({
         })}
       </div>
 
-      {selected && (
+      {selected ? (
         <div
           className="mt-6 p-4 rounded-sm text-center"
           style={{
@@ -717,13 +745,28 @@ function CityStep({
               fontFamily: 'var(--font-body)',
             }}
           >
-            <MapPin size={14} style={{ color: 'var(--color-primary)' }} />
+            <MapPin size={14} style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
             <span>
               Exploring{' '}
               <span style={{ fontWeight: 500 }}>{selected}</span>
             </span>
           </p>
         </div>
+      ) : (
+        /* Skip-for-now affordance — sweep v2 onboarding P0. Users whose
+           city isn't in the 6-city list were stuck; this lets them
+           proceed and pick a city later from settings. */
+        <p
+          className="mt-6 text-center text-xs"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          Not seeing your city? You can continue without picking — we&rsquo;ll
+          show trending in New York and you can change it later in your
+          profile.
+        </p>
       )}
     </div>
   )

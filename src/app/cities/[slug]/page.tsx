@@ -209,7 +209,11 @@ export default async function CityPage({
       </div>
 
       {/* Filters */}
-      <div className="sticky top-14 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+      {/* Sticky filter bar's top offset matches the new shorter
+          Navigation header (h-16 on mobile, h-20 on desktop). Previous
+          top-14 was a leftover from the h-28 header and the filter bar
+          slid behind the nav on scroll. Sweep v2 navigation QW. */}
+      <div className="sticky top-16 md:top-20 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 space-y-2">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {[

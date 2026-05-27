@@ -29,11 +29,20 @@ export default async function CitiesPage() {
   const supabase = await createServerSupabaseClient()
 
   // Round-trip 1: fetch active cities.
-  const { data: citiesData } = await supabase
+  // Check the error explicitly — a DB outage previously looked identical
+  // to "no data yet" because the error object was discarded. Sweep v2
+  // error-states P1. Logging surfaces the failure to server logs;
+  // returning an empty list lets the page render the empty-state copy
+  // instead of crashing.
+  const { data: citiesData, error: citiesError } = await supabase
     .from('cities')
     .select('*')
     .eq('is_active', true)
     .order('name', { ascending: true })
+
+  if (citiesError) {
+    console.error('[cities] fetch failed:', citiesError)
+  }
 
   const cities = (citiesData ?? []) as City[]
 
@@ -59,14 +68,22 @@ export default async function CitiesPage() {
     cuisine: string
   }
 
+  // Paginated bulk SELECT. Check the error per page — a mid-fetch
+  // failure used to silently produce partial stats (under-reporting
+  // Michelin/JBF/Eater counts) because errors were swallowed. Sweep v2
+  // error-states P1.
   const PAGE_SIZE = 1000
   const restaurants: RestaurantRow[] = []
   for (let start = 0; ; start += PAGE_SIZE) {
-    const { data: page } = await supabase
+    const { data: page, error: pageError } = await supabase
       .from('restaurants')
       .select('city, michelin_stars, michelin_designation, james_beard_winner, eater_38, google_rating, cuisine')
       .in('city', cityNames)
       .range(start, start + PAGE_SIZE - 1)
+    if (pageError) {
+      console.error(`[cities] page ${start} fetch failed:`, pageError)
+      break
+    }
     const rows = (page ?? []) as RestaurantRow[]
     restaurants.push(...rows)
     if (rows.length < PAGE_SIZE) break
@@ -147,9 +164,13 @@ export default async function CitiesPage() {
       <div className="bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin size={22} className="text-emerald-400" />
+            <MapPin size={22} className="text-emerald-400" aria-hidden="true" />
+            {/* Title was "Explore Cities" which name-clashed with the
+                "Explore" nav item, making the two surfaces look like
+                duplicates. Renamed to plain "Cities" since the route
+                is /cities and the nav label is now "Cities" too. */}
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Explore Cities
+              Cities
             </h1>
           </div>
           <p className="text-gray-400 text-sm">
