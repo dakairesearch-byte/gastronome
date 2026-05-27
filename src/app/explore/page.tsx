@@ -192,7 +192,16 @@ export default async function ExplorePage({
       limit: 10,
     })
 
-    const top10: Restaurant[] = [...trending]
+    // Keep trending rows typed so the Top10Trending component sees
+    // trending_counts on the algorithm-ranked rows. The rating-DESC
+    // fallback rows DON'T have counts attached, and the component
+    // labels them "Also highly rated" instead of mixing them silently
+    // into the trending-branded list (sweep v2 alarming finding).
+    type RankedRestaurant = Restaurant & {
+      trending_counts?: { videos: number; reviews: number; photos: number }
+      trending_score?: number
+    }
+    const top10: RankedRestaurant[] = [...trending]
     if (top10.length < 10) {
       const existing = new Set(top10.map((r) => r.id))
       const { data } = await supabase

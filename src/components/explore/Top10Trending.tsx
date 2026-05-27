@@ -36,9 +36,20 @@ import {
 } from '@/components/brands/BrandIcons'
 import type { Restaurant } from '@/types/database'
 
+/**
+ * Optional trending-signal counts attached by `topTrendingRestaurants`.
+ * Fallback (rating-sorted) rows won't carry these; we use their absence
+ * to render an "Also highly rated" label so users can tell which rows
+ * came from the trending algorithm vs. the padding fallback.
+ */
+type RankedRestaurant = Restaurant & {
+  trending_counts?: { videos: number; reviews: number; photos: number }
+  trending_score?: number
+}
+
 interface Top10TrendingProps {
   city: string
-  restaurants: Restaurant[]
+  restaurants: RankedRestaurant[]
 }
 
 /** Deterministic fallback positions (percent of panel), used when a
@@ -392,6 +403,52 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
                             ))}
                           </div>
                         )}
+
+                        {/* Trending-signal caption.
+                            - Rows ranked by trending_score carry
+                              trending_counts; we surface a one-line
+                              "12 videos · 30d" so users see WHY this
+                              ranks where it does, instead of only the
+                              raw Google rating to its right (which can
+                              read as a contradiction). Sweep v2 P1.
+                            - Rows added by the rating-DESC fallback
+                              don't carry counts — label them "Also
+                              highly rated" so the fallback isn't
+                              silently mixed into a trending-branded
+                              list. Sweep v2 ranking-visualization
+                              Alarming. */}
+                        {(() => {
+                          const counts = r.trending_counts
+                          if (!counts) {
+                            return (
+                              <p
+                                className="mt-1.5 text-[11px] italic"
+                                style={{
+                                  color: 'var(--color-text-secondary)',
+                                  fontFamily: 'var(--font-body)',
+                                }}
+                              >
+                                Also highly rated
+                              </p>
+                            )
+                          }
+                          const parts: string[] = []
+                          if (counts.videos > 0) parts.push(`${counts.videos} ${counts.videos === 1 ? 'video' : 'videos'}`)
+                          if (counts.reviews > 0) parts.push(`${counts.reviews} ${counts.reviews === 1 ? 'review' : 'reviews'}`)
+                          if (counts.photos > 0) parts.push(`${counts.photos} ${counts.photos === 1 ? 'photo' : 'photos'}`)
+                          if (parts.length === 0) return null
+                          return (
+                            <p
+                              className="mt-1.5 text-[11px]"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              {parts.join(' · ')} · 30d
+                            </p>
+                          )
+                        })()}
                       </div>
 
                       {/* Rating cluster — Google + Yelp stacked vertically

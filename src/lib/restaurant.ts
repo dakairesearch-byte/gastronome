@@ -25,7 +25,9 @@ const CUISINE_PHOTO_FALLBACK: Record<string, string> = {
   italian: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=800&q=80',
   mexican: 'https://images.unsplash.com/photo-1565299585323-38174c4a6b55?w=800&q=80',
   burger: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80',
-  thai: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80',
+  // Use a distinct Thai dish photo (pad thai) instead of repeating the
+  // ramen-bowl URL used for ramen/japanese. Sweep v2 food-photography QW.
+  thai: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?w=800&q=80',
   indian: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&q=80',
   brunch: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800&q=80',
   dessert: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=800&q=80',
@@ -59,6 +61,18 @@ export function getRestaurantPhotoUrl(restaurant: PhotoFields): string {
     restaurant.yelp_photo_url ||
     fallbackPhotoForCuisine(restaurant.cuisine)
   )
+}
+
+/**
+ * Whether `url` came from the cuisine-keyed Unsplash stock-photo pool
+ * rather than a real first-party photo. Components can use this to
+ * dim/badge the image so users aren't misled into thinking the photo
+ * is of the actual restaurant. Sweep v2 food-photography QW.
+ */
+export function isStockFallbackPhoto(url: string | null | undefined): boolean {
+  if (!url) return false
+  return Object.values(CUISINE_PHOTO_FALLBACK).includes(url) ||
+    url === GENERIC_PHOTO_FALLBACK
 }
 
 /**
