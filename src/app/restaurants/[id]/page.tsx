@@ -291,13 +291,19 @@ export default async function RestaurantPage({
       <div className="relative overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
         {photoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
+          // Opacity bumped from 30% → 55% so the hero photo is actually
+          // visible under the gradient — was nearly invisible (sweep v2
+          // restaurant-detail + food-photography P1). The gradient below
+          // still keeps the bottom-third dark enough for the title to
+          // read legibly. Descriptive alt for the cuisine context that
+          // accessibility specialist flagged.
           <img
             src={photoUrl}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
+            alt={`${restaurant.cuisine ?? 'Restaurant'} interior or signature dish at ${restaurant.name}`}
+            className="absolute inset-0 w-full h-full object-cover opacity-55"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
 
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
           <div className="flex items-center justify-between mb-4">
@@ -342,10 +348,14 @@ export default async function RestaurantPage({
             )}
 
             <h1
-              className="text-2xl sm:text-3xl mb-2"
+              className="text-3xl sm:text-4xl mb-2"
               style={{
                 fontFamily: 'var(--font-heading)',
-                fontWeight: 500,
+                // Bumped from 500 → 700 so the restaurant name visibly
+                // outweighs the "By the Numbers" h2 below — was the same
+                // text-2xl @ weight-500 as section headings, collapsing
+                // the hierarchy. Typography spec P1.
+                fontWeight: 700,
                 color: '#fff',
                 letterSpacing: '-0.01em',
               }}
@@ -354,24 +364,45 @@ export default async function RestaurantPage({
             </h1>
 
             <div className="flex items-center gap-2 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              <MapPin size={13} />
+              <MapPin size={13} aria-hidden="true" />
               <span style={{ fontFamily: 'var(--font-body)' }}>
                 {restaurant.neighborhood || restaurant.city}
                 {restaurant.address && ` · ${restaurant.address}`}
               </span>
             </div>
 
-            {avgRating != null && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <Star size={14} className="fill-current" style={{ color: 'var(--color-primary)' }} />
-                <span
-                  className="text-sm"
-                  style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
-                >
-                  {avgRating.toFixed(1)}
-                </span>
-              </div>
-            )}
+            {avgRating != null && (() => {
+              // Source the hero rating so users see WHICH platform's
+              // number this is (Google vs Yelp vs blended) rather than
+              // a sourceless "4.3 ★" — sweep v2 the-critic + source-
+              // attribution QW: "sourceless numbers are the cardinal
+              // sin of aggregation."
+              const heroSource = restaurant.google_rating != null ? 'Google' : 'Yelp'
+              const heroReviewCount =
+                restaurant.google_rating != null
+                  ? restaurant.google_review_count
+                  : restaurant.yelp_review_count
+              return (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <Star size={14} className="fill-current" style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
+                  <span
+                    className="text-sm"
+                    style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
+                  >
+                    {avgRating.toFixed(1)}
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)' }}
+                  >
+                    · {heroSource}
+                    {heroReviewCount && heroReviewCount > 0
+                      ? ` · ${heroReviewCount.toLocaleString()} reviews`
+                      : ''}
+                  </span>
+                </div>
+              )
+            })()}
 
             {/* Contact inline */}
             <div className="flex flex-wrap items-center gap-4 mt-3">
@@ -467,7 +498,7 @@ export default async function RestaurantPage({
                       letterSpacing: '-0.005em',
                     }}
                   >
-                    Ratings Dashboard
+                    By the Numbers
                   </h2>
                   <div
                     className="mt-3.5"
@@ -523,7 +554,7 @@ export default async function RestaurantPage({
                           letterSpacing: '-0.005em',
                         }}
                       >
-                        What Reviewers Mention
+                        Signature Dishes
                       </h2>
                     </div>
                     <span
@@ -678,35 +709,107 @@ export default async function RestaurantPage({
               </section>
             )}
 
-            {/* On Social */}
-            <section>
-              <div className="mb-3.5">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <span
-                      className="text-xs uppercase block mb-2.5"
-                      style={{
-                        color: 'var(--color-accent)',
-                        fontFamily: 'var(--font-body)',
-                        letterSpacing: '0.18em',
-                        fontWeight: 500,
-                      }}
+            {/* Graceful empty state when no dishes have been ingested yet.
+                Previously the entire section silently disappeared — for a
+                Michelin restaurant with a populated profile this read as
+                "we don't know this place." Now we show a one-liner that
+                links to the restaurant's own website / menu when known,
+                so the page never has a blank middle. Sweep v2 P0. */}
+            {dishes.length === 0 && (
+              <section>
+                <div className="mb-3.5">
+                  <span
+                    className="text-xs uppercase block mb-2.5"
+                    style={{
+                      color: 'var(--color-accent)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.18em',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Across reviews &amp; social
+                  </span>
+                  <h2
+                    className="text-2xl"
+                    style={{
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 500,
+                      color: 'var(--color-text)',
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    Signature Dishes
+                  </h2>
+                  <div
+                    className="mt-3.5"
+                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                  />
+                </div>
+                <div
+                  className="rounded-lg px-4 py-5 text-sm"
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '1px dashed var(--color-border)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  <p>
+                    Menu coming soon — our dish recommendations come from
+                    reviews and social posts, and we&rsquo;re still gathering
+                    them for {restaurant.name}.
+                  </p>
+                  {restaurant.website && (
+                    <a
+                      href={restaurant.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-3 text-xs uppercase tracking-wider font-medium"
+                      style={{ color: 'var(--color-accent)' }}
                     >
-                      TikTok &amp; Instagram
-                    </span>
-                    <h2
-                      className="text-2xl"
-                      style={{
-                        fontFamily: 'var(--font-heading)',
-                        fontWeight: 500,
-                        color: 'var(--color-text)',
-                        letterSpacing: '-0.005em',
-                      }}
-                    >
-                      On Social
-                    </h2>
-                  </div>
-                  {videoCount > 0 && (
+                      View the menu on the restaurant&rsquo;s site →
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* On Social — only renders when at least one video exists.
+                Previously the section header was always shown even when
+                VideoGallery had nothing to display, producing a "dead
+                app" feel (sweep v2 the-critic QW: "Hide the 'On Social'
+                section header until ≥1 videos load — a header over a
+                near-empty section signals a dead app"). The actual gate
+                is >0 since the gallery lazy-loads embeds; raising the
+                threshold to 3 would suppress the section for niche
+                restaurants whose sole video is genuinely a signal. */}
+            {videoCount > 0 && (
+              <section>
+                <div className="mb-3.5">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <span
+                        className="text-xs uppercase block mb-2.5"
+                        style={{
+                          color: 'var(--color-accent)',
+                          fontFamily: 'var(--font-body)',
+                          letterSpacing: '0.18em',
+                          fontWeight: 500,
+                        }}
+                      >
+                        TikTok &amp; Instagram
+                      </span>
+                      <h2
+                        className="text-2xl"
+                        style={{
+                          fontFamily: 'var(--font-heading)',
+                          fontWeight: 500,
+                          color: 'var(--color-text)',
+                          letterSpacing: '-0.005em',
+                        }}
+                      >
+                        On Social
+                      </h2>
+                    </div>
                     <span
                       className="text-[11px] uppercase pb-1"
                       style={{
@@ -717,15 +820,15 @@ export default async function RestaurantPage({
                     >
                       {videoCount} video{videoCount !== 1 ? 's' : ''}
                     </span>
-                  )}
+                  </div>
+                  <div
+                    className="mt-3.5"
+                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
+                  />
                 </div>
-                <div
-                  className="mt-3.5"
-                  style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
-                />
-              </div>
-              <VideoGallery restaurantId={restaurant.id} />
-            </section>
+                <VideoGallery restaurantId={restaurant.id} />
+              </section>
+            )}
 
             {/* The Story */}
             {restaurant.description && (
@@ -777,67 +880,145 @@ export default async function RestaurantPage({
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Map with "View on Google Maps" click-through (design v2) */}
-            {restaurant.latitude && restaurant.longitude && (
-              <div
-                className="overflow-hidden"
-                style={{
-                  borderRadius: '10px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-surface)',
-                }}
-              >
-                <div className="aspect-video bg-gray-100">
-                  {/*
-                   * Use the Google Maps Embed API (requires NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY,
-                   * or falls back to the place-search key already in env). The legacy
-                   * `?q=lat,lng&output=embed` URL has been progressively returning
-                   * "We're sorry, but this URL is no longer supported" — the Embed
-                   * API is the supported path. Prefer the place_id when we have it
-                   * (richer info card); fall back to a lat/lng view otherwise.
-                   */}
-                  {(() => {
-                    const key =
-                      process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ||
-                      process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-                    const src = restaurant.google_place_id
-                      ? `https://www.google.com/maps/embed/v1/place?key=${key}&q=place_id:${restaurant.google_place_id}`
-                      : `https://www.google.com/maps/embed/v1/view?key=${key}&center=${restaurant.latitude},${restaurant.longitude}&zoom=15`
-                    return (
+            {/* Map block.
+             *
+             * IFRAME GATING: render the Google Maps Embed iframe ONLY when
+             * a dedicated `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` env var is
+             * configured. The previous code silently fell back to the
+             * Places API key, which almost never has Maps Embed API enabled
+             * — so users on production saw a raw "Google Maps Platform
+             * rejected your request" error rendered as page content (nine
+             * sweep specialists flagged this as their most alarming
+             * finding). Without the embed key we fall back to a tasteful
+             * static tile + the existing Google Maps deep-link. The page
+             * still works; users get an obvious link out instead of an
+             * inscrutable infra error.
+             *
+             * Directions link uses Google Maps' `dir/?api=1&destination=`
+             * URL so mobile devices open the native Maps app for turn-by-
+             * turn navigation, instead of the reviews page that
+             * `google_url` points to.
+             */}
+            {restaurant.latitude && restaurant.longitude && (() => {
+              const embedKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY
+              const lat = restaurant.latitude
+              const lng = restaurant.longitude
+              const placeQuery = restaurant.google_place_id
+                ? `&query_place_id=${restaurant.google_place_id}`
+                : ''
+              const viewUrl =
+                restaurant.google_url ||
+                `https://www.google.com/maps/search/?api=1&query=${lat},${lng}${placeQuery}`
+              const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}${placeQuery}`
+
+              return (
+                <div
+                  className="overflow-hidden"
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                  }}
+                >
+                  {embedKey ? (
+                    <div className="aspect-square bg-gray-100">
                       <iframe
                         title={`Map of ${restaurant.name}`}
-                        src={src}
+                        src={
+                          restaurant.google_place_id
+                            ? `https://www.google.com/maps/embed/v1/place?key=${embedKey}&q=place_id:${restaurant.google_place_id}`
+                            : `https://www.google.com/maps/embed/v1/view?key=${embedKey}&center=${lat},${lng}&zoom=15`
+                        }
                         className="w-full h-full border-0"
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
                         allowFullScreen
                       />
-                    )
-                  })()}
-                </div>
-                {(restaurant.google_url ||
-                  (restaurant.latitude && restaurant.longitude)) && (
-                  <a
-                    href={
-                      restaurant.google_url ||
-                      `https://www.google.com/maps/search/?api=1&query=${restaurant.latitude},${restaurant.longitude}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-3 text-xs uppercase transition-colors"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.1em',
-                      fontWeight: 500,
-                      color: 'var(--color-accent)',
-                      borderTop: '1px solid var(--color-border)',
-                    }}
+                    </div>
+                  ) : (
+                    // Static fallback when no embed key configured — no
+                    // network call, no iframe, no chance of the Maps API
+                    // error leaking onto the page. The neighborhood +
+                    // pin act as a recognizable map-shaped affordance.
+                    <a
+                      href={viewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block aspect-square relative group"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, #e9eef3 0%, #d6dde6 100%)',
+                      }}
+                      aria-label={`Open ${restaurant.name} on Google Maps`}
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
+                        <span
+                          className="text-3xl"
+                          style={{ color: 'var(--color-secondary)' }}
+                          aria-hidden="true"
+                        >
+                          📍
+                        </span>
+                        {restaurant.neighborhood && (
+                          <span
+                            className="text-sm font-semibold"
+                            style={{
+                              fontFamily: 'var(--font-heading)',
+                              color: 'var(--color-secondary)',
+                            }}
+                          >
+                            {restaurant.neighborhood}
+                          </span>
+                        )}
+                        <span
+                          className="text-xs uppercase tracking-wider opacity-80 group-hover:opacity-100"
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--color-secondary)',
+                          }}
+                        >
+                          Open in Google Maps →
+                        </span>
+                      </div>
+                    </a>
+                  )}
+
+                  <div
+                    className="grid grid-cols-2 divide-x"
+                    style={{ borderTop: '1px solid var(--color-border)' }}
                   >
-                    View on Google Maps
-                  </a>
-                )}
-              </div>
-            )}
+                    <a
+                      href={directionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-3 text-xs uppercase transition-colors"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.1em',
+                        fontWeight: 500,
+                        color: 'var(--color-accent)',
+                      }}
+                    >
+                      Get Directions
+                    </a>
+                    <a
+                      href={viewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-3 text-xs uppercase transition-colors"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.1em',
+                        fontWeight: 500,
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      View on Maps
+                    </a>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Similar Restaurants */}
             {relatedRestaurants.length > 0 && (
