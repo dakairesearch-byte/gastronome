@@ -17,8 +17,28 @@
   --color-background: #FFFEFB;
   --color-surface: #FFFFFF;
   --color-text: #1C1C1C;
-  --color-text-secondary: #757575;
+  /* Bumped from #757575 → #5E5E5E so 11px/12px secondary copy meets
+   * WCAG AA 4.5:1 against the cream background. Flagged by typography
+   * and accessibility specialists in the v2 sweep. */
+  --color-text-secondary: #5E5E5E;
   --color-border: #EBEBEB;
+
+  /* Semantic accolade tokens — previously hardcoded as raw Tailwind
+   * `border-l-red-400` / `amber-400` / `pink-400` in RestaurantCard.
+   * Naming them here makes the system intentional and keeps future
+   * accolade additions consistent. */
+  --color-accolade-michelin: #f87171; /* red-400 */
+  --color-accolade-jbf: #fbbf24;      /* amber-400 */
+  --color-accolade-eater38: #f472b6;  /* pink-400 */
+
+  /* Semantic rating warmth — used by source rating chips. */
+  --color-rating-good: #16a34a;
+  --color-rating-warn: #ca8a04;
+
+  /* Shimmer skeleton stops (promoted out of inline hex strings). */
+  --color-skeleton-base: #f5f0ea;
+  --color-skeleton-highlight: #ede5d8;
+
   --font-heading: var(--font-spectral), serif;
   --font-body: var(--font-dm-sans), sans-serif;
 }
@@ -41,6 +61,51 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * Respect users' motion preferences. Gates smooth scroll, the shimmer
+ * skeleton, and any CSS transitions/animations so vestibular-sensitive
+ * users don't get triggered by hover scales, scroll snaps, and the
+ * loading shimmer wave. WCAG 2.3.3 Animation from Interactions.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-shimmer {
+    animation: none !important;
+    background: var(--color-skeleton-base) !important;
+  }
+}
+
+/*
+ * Skip-to-content link — hidden until focused, then visible at the top
+ * of the page. Keyboard users would otherwise Tab through 5+ nav items
+ * (and the mobile drawer, bottom nav) before reaching real content.
+ * WCAG 2.4.1 Bypass Blocks.
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 100;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-secondary);
+  color: white;
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 8px;
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--color-background);
@@ -54,23 +119,26 @@ h1, h2, h3 {
 
 /*
  * Focus styles — keyboard users only (via :focus-visible so we don't
- * flash an outline after every mouse click). Previous bug: the outline
- * declaration was missing `outline-style`, which defaults to `none` in
- * every major browser and silently erased the focus ring. Keyboard
- * users had no visible indicator of the focused element.
+ * flash an outline after every mouse click).
+ *
+ * Color chosen for cross-surface contrast: the previous gold ring
+ * (#D4A574) failed WCAG 3:1 on white AND was invisible on gold
+ * primary-button backgrounds (which use the same color). Slate
+ * (#2C3E50) hits ~10:1 on white AND ~4.3:1 on gold, so keyboard users
+ * see the ring everywhere — including on Sign in / Continue CTAs.
  */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-secondary);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-/* Buttons + links get a tighter ring that reads well on dark surfaces. */
+/* Buttons + links get a tighter ring + a soft halo for emphasis. */
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-secondary);
   outline-offset: 3px;
-  box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.25);
+  box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.22);
 }
 
 /* Shimmer animation for loading skeletons */
@@ -79,7 +147,12 @@ a:focus-visible {
   100% { background-position: 200% 0; }
 }
 .animate-shimmer {
-  background: linear-gradient(90deg, #f5f0ea 25%, #ede5d8 50%, #f5f0ea 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton-base) 25%,
+    var(--color-skeleton-highlight) 50%,
+    var(--color-skeleton-base) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

@@ -15,14 +15,22 @@ import SignInModalHost from '@/components/auth/SignInModalHost'
  */
 const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   variable: '--font-dm-sans',
   display: 'swap',
 })
 
+/**
+ * Spectral is used for h1/h2/h3 only — weight 400/500/700 covers every
+ * actual use (regular, medium, bold). We also include `italic` for
+ * future editorial pull-quotes; without it, any `font-italic` style
+ * triggers browser-synthesized faux italic (skewed, no true optical
+ * correction) — flagged by typography specialist in v2 sweep.
+ */
 const spectral = Spectral({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
+  style: ['normal', 'italic'],
   variable: '--font-spectral',
   display: 'swap',
 })
@@ -75,8 +83,14 @@ export default function RootLayout({
         style={{ fontFamily: 'var(--font-body)' }}
         className="min-h-screen flex flex-col"
       >
+        {/* Skip-to-content link for keyboard users — visible only on focus.
+            Without this, keyboard users Tab through the nav (5+ items) on
+            every page load. WCAG 2.4.1. */}
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <Navigation />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">{children}</main>
         <Footer />
         <BottomNav />
         <SignInModalHost />

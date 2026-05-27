@@ -12,6 +12,10 @@ import { openSignInModal } from '@/components/auth/SignInModalHost'
 const navItems = [
   { path: '/', label: 'Home' },
   { path: '/explore', label: 'Explore' },
+  // Cities was previously only reachable from the footer — surfacing it
+  // in the persistent nav since the v2 sweep flagged it as a first-class
+  // content pillar that users couldn't reach in one click.
+  { path: '/cities', label: 'Cities' },
   { path: '/community', label: 'Community' },
   { path: '/profile', label: 'Profile' },
 ]
@@ -55,27 +59,38 @@ export default function Navigation() {
         }}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-28">
-            {/* Logo */}
-            <Link href="/" className="flex items-center" aria-label="Gastronome">
+          {/* Header height was h-28 (112px) — burned ~13% of mobile
+              viewport before any content. Shrunk to h-16 on mobile, h-20
+              on desktop. Logo scales accordingly. */}
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Logo — `aria-label` names the destination ("Home") instead
+                of repeating the brand, which is already in the wordmark.
+                Image alt is empty to avoid double-announcement. */}
+            <Link href="/" className="flex items-center" aria-label="Gastronome home">
               <Image
                 src="/Logo.jpg"
-                alt="Gastronome"
+                alt=""
                 width={96}
                 height={96}
                 priority
-                className="h-24 w-24 object-contain"
+                className="h-12 w-12 md:h-16 md:w-16 object-contain"
               />
             </Link>
 
-            {/* Desktop nav — centered cluster */}
-            <nav className="hidden md:flex items-center gap-10">
+            {/* Desktop nav — centered cluster.
+                `aria-current="page"` is set on the active link so screen
+                readers announce location; tracking widened from 0.16em
+                to 0.12em so 12px text is recognisable at peripheral
+                glance distance. Active underline thickened from 1px to
+                2px for non-color signal. */}
+            <nav className="hidden md:flex items-center gap-10" aria-label="Primary">
               {navItems.map((item) => {
                 const active = isActivePath(pathname, item.path)
                 return (
                   <Link
                     key={item.path}
                     href={item.path}
+                    aria-current={active ? 'page' : undefined}
                     className="relative group py-2"
                     style={{
                       color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
@@ -85,7 +100,7 @@ export default function Navigation() {
                       className="text-xs uppercase"
                       style={{
                         fontFamily: 'var(--font-body)',
-                        letterSpacing: '0.16em',
+                        letterSpacing: '0.12em',
                         fontWeight: active ? 500 : 400,
                       }}
                     >
@@ -93,7 +108,7 @@ export default function Navigation() {
                     </span>
                     {active && (
                       <div
-                        className="absolute -bottom-1 left-0 right-0 h-px"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5"
                         style={{ backgroundColor: 'var(--color-accent)' }}
                       />
                     )}
@@ -156,16 +171,23 @@ export default function Navigation() {
         </div>
       </header>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile menu overlay — promoted to a proper dialog so screen
+          readers announce it as a modal rather than reading the page
+          behind it as inline content. `aria-modal` blocks AT navigation
+          outside the dialog; `aria-label` names the dialog explicitly. */}
       {mobileOpen && (
         <div
           className="md:hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
+          role="presentation"
         >
           <div
             className="absolute top-0 right-0 w-72 h-full shadow-2xl"
             style={{ backgroundColor: 'var(--color-surface)' }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
           >
             <div
               className="flex items-center justify-between p-5"
@@ -194,10 +216,11 @@ export default function Navigation() {
                   <Link
                     key={item.path}
                     href={item.path}
+                    aria-current={active ? 'page' : undefined}
                     className="flex items-center px-5 py-3.5 text-xs uppercase transition-colors"
                     style={{
                       fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.16em',
+                      letterSpacing: '0.12em',
                       fontWeight: active ? 500 : 400,
                       color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
                       backgroundColor: active ? 'rgba(107,149,168,0.08)' : 'transparent',
@@ -251,7 +274,7 @@ export default function Navigation() {
                       backgroundColor: 'transparent',
                     }}
                   >
-                    Log in
+                    Sign in
                   </button>
                   <button
                     type="button"

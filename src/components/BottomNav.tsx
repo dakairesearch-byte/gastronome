@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Compass, Users, User } from 'lucide-react'
+import { Home, Compass, Search, Users, User } from 'lucide-react'
 import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
 
@@ -19,9 +19,14 @@ export default function BottomNav() {
   const pathname = usePathname()
   const authed = !!useAuthUser()
 
+  // Search was previously absent from the bottom nav — the primary verb
+  // of the product on mobile had no reachable surface. Sweep v2 flagged
+  // this as a P0. Added between Explore and Community so the most-used
+  // discover-by-intent action is in thumb reach.
   const navTabs = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/explore', icon: Compass, label: 'Explore' },
+    { href: '/search', icon: Search, label: 'Search' },
     { href: '/community', icon: Users, label: 'Community' },
   ] as const
 
@@ -44,6 +49,7 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
+              aria-current={active ? 'page' : undefined}
               className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
               style={{
                 color: active ? 'var(--color-primary)' : 'var(--color-text-secondary)',
@@ -66,6 +72,7 @@ export default function BottomNav() {
         {authed ? (
           <Link
             href="/profile"
+            aria-current={profileActive ? 'page' : undefined}
             className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
             style={{
               color: profileActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',

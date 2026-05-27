@@ -51,3 +51,7 @@ next-env.d.ts
 # one-off scrape/debug scratch scripts (sandbox-only, not production)
 /scripts/debug*.ts
 /scripts/testScrapeChips.ts
+
+# working dirs from pipeline scripts (logs, watchdog shards, tmp artifacts)
+/logs/
+/tmp/
