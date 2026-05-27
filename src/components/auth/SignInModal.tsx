@@ -94,8 +94,32 @@ export default function SignInModal({
     document.body.style.overflow = 'hidden'
     const t = window.setTimeout(() => firstFieldRef.current?.focus(), 20)
 
+    // Focus trap — sweep v2 accessibility P0. Without this, Tab cycles
+    // out of the dialog into the (blurred, motionless) background page,
+    // which screen readers will then read aloud. WCAG 2.1.2.
+    function trapFocus(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const root = dialogRef.current
+      if (!root) return
+      const focusable = root.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
+      else trapFocus(e)
     }
     document.addEventListener('keydown', onKey)
     return () => {
@@ -182,7 +206,11 @@ export default function SignInModal({
             username,
             display_name: displayName,
             home_city: homeCity || null,
-            is_critic: true,
+            // Removed: `is_critic: true` was hardcoded on every signup
+            // through this modal, silently granting elevated trust to
+            // every new user. Flagged as Alarming by onboarding
+            // specialist in sweep v2. Critic status (if/when revived)
+            // belongs behind a verification flow, not a default.
           },
         },
       })
@@ -351,6 +379,7 @@ export default function SignInModal({
                     fontWeight: 500,
                     fontSize: '20px',
                   }}
+                  aria-hidden="true"
                 >
                   G
                 </div>

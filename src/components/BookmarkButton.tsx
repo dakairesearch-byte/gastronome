@@ -48,6 +48,7 @@ export default function BookmarkButton({
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [lastAction, setLastAction] = useState<'favorited' | 'unfavorited' | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const isFavorite = favorites.includes(restaurantId)
@@ -75,10 +76,14 @@ export default function BookmarkButton({
     }
   }, [])
 
-  // Auto-dismiss toast after 2s.
+  // Auto-dismiss toast after 3s (extended from 2s so the Undo button is
+  // reachable for keyboard/mobility users without rushing).
   useEffect(() => {
     if (!toast) return
-    const t = setTimeout(() => setToast(null), 2000)
+    const t = setTimeout(() => {
+      setToast(null)
+      setLastAction(null)
+    }, 3000)
     return () => clearTimeout(t)
   }, [toast])
 
@@ -107,8 +112,18 @@ export default function BookmarkButton({
       openSignInModal({ mode: 'signin' })
       return
     }
+    // Track the prior state so the toast can offer one-tap Undo
+    // (saving-lists QW: "Add an Undo action to the 2-second save toast").
+    const wasFavorite = isFavorite
     toggleFavorite(restaurantId)
-    setToast(isFavorite ? 'Removed from favorites' : 'Saved to favorites')
+    setLastAction(wasFavorite ? 'unfavorited' : 'favorited')
+    setToast(wasFavorite ? 'Removed from favorites' : 'Saved to favorites')
+  }
+
+  const handleUndoFavorite = () => {
+    toggleFavorite(restaurantId)
+    setToast(null)
+    setLastAction(null)
   }
 
   const handleOpenCollections = () => {
@@ -162,10 +177,20 @@ export default function BookmarkButton({
         type="button"
         onClick={handleToggleFavorite}
         aria-pressed={isFavorite}
-        aria-label={isFavorite ? 'Remove bookmark' : 'Bookmark'}
+        // Match aria-label to the VISIBLE text ("Save"/"Saved") rather
+        // than "Bookmark" — WCAG 2.5.3 Label in Name. Without auth, the
+        // click opens the sign-in modal; tell screen readers that too.
+        aria-label={
+          !user
+            ? 'Sign in to save'
+            : isFavorite
+              ? 'Unsave restaurant'
+              : 'Save restaurant'
+        }
+        title={!user ? 'Sign in to save' : undefined}
         className={buttonClass}
       >
-        {isFavorite ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+        {isFavorite ? <BookmarkCheck size={14} aria-hidden="true" /> : <Bookmark size={14} aria-hidden="true" />}
         {variant === 'hero' && (isFavorite ? 'Saved' : 'Save')}
       </button>
 
@@ -174,18 +199,29 @@ export default function BookmarkButton({
         onClick={handleOpenCollections}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label="Save to collection"
+        aria-label="Save to a named list"
+        title="Save to a named list"
         className={chevronClass}
       >
-        ▾
+        <span aria-hidden="true">▾</span>
       </button>
 
       {toast && (
         <div
           role="status"
-          className="absolute right-0 top-full mt-2 px-3 py-1.5 rounded-md shadow-lg bg-gray-900 text-white text-xs whitespace-nowrap z-50"
+          className="absolute right-0 top-full mt-2 flex items-center gap-3 px-3 py-1.5 rounded-md shadow-lg bg-gray-900 text-white text-xs whitespace-nowrap z-50"
         >
-          {toast}
+          <span>{toast}</span>
+          {lastAction && (
+            <button
+              type="button"
+              onClick={handleUndoFavorite}
+              className="text-emerald-300 hover:text-emerald-200 font-semibold uppercase tracking-wider underline-offset-2 hover:underline"
+              aria-label="Undo"
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
 

@@ -23,6 +23,18 @@ interface RestaurantCardProps {
   variant?: 'compact' | 'hero'
 }
 
+/**
+ * Border accent tier — color-only signal previously, now paired with
+ * a visually-hidden text label (see `accoladeTierLabel`) so accolade
+ * tier is also conveyed to screen readers and color-blind users.
+ *
+ * Border colors map to the semantic accolade tokens in globals.css so
+ * a future rebrand can change one variable and every card updates.
+ * We keep the Tailwind `border-l-<color>-400` classes here because the
+ * design system uses Tailwind utilities for layout; a tokenized
+ * inline-style version is in `borderAccentStyle` below for cases that
+ * want pure CSS-var-driven borders.
+ */
 function getBorderAccent(restaurant: Restaurant): string {
   if (restaurant.michelin_stars > 0 || restaurant.michelin_designation)
     return 'border-l-4 border-l-red-400'
@@ -30,6 +42,20 @@ function getBorderAccent(restaurant: Restaurant): string {
   if (restaurant.james_beard_winner) return 'border-l-4 border-l-amber-400'
   if (restaurant.eater_38) return 'border-l-4 border-l-pink-400'
   return ''
+}
+
+/**
+ * Plain-English label for the accolade tier reflected in the colored
+ * left border, rendered as `sr-only` text so the tier is announced to
+ * screen readers and color-blind users (who otherwise just see a
+ * red/amber/pink stripe with no semantic content).
+ */
+function accoladeTierLabel(restaurant: Restaurant): string | null {
+  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation)
+    return 'Michelin-recognized restaurant'
+  if (restaurant.james_beard_winner) return 'James Beard winner'
+  if (restaurant.eater_38) return 'Eater 38 listed'
+  return null
 }
 
 /**
@@ -88,43 +114,104 @@ export default function RestaurantCard({
     restaurant.eater_38
 
   const borderAccent = getBorderAccent(restaurant)
+  const tierLabel = accoladeTierLabel(restaurant)
 
   if (variant === 'hero') {
     return <HeroVariant restaurant={restaurant} borderAccent={borderAccent} />
   }
 
+  // Compact variant — was image-less text-only, which made city/recent
+  // feeds wall-to-wall text and impossible to scan visually (flagged by
+  // restaurant-card, food-photography, the-diner, mobile-responsive in
+  // sweep v2). Now: 80x80 thumbnail on the left + content on the right,
+  // with price chip + first-letter monogram fallback when no photo.
+  const [thumbnailFailed, setThumbnailFailed] = useState(false)
+  const thumbnail = thumbnailFailed ? null : getHeroPhoto(restaurant)
+  const priceLevel = formatPriceLevel(restaurant.price_range)
+
   return (
     <Link href={`/restaurants/${restaurant.id}`}>
       <div
-        className={`rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group ${borderAccent}`}
+        className={`relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group ${borderAccent}`}
       >
-        <div className="p-4 sm:p-5 space-y-2.5">
-          {/* Restaurant Name */}
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors">
-              {restaurant.name}
-            </h3>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
-                  {restaurant.cuisine}
+        {/* Visually-hidden text for the colored border accent — screen
+            readers and color-blind users otherwise have no signal that
+            this card is a Michelin/JBF/Eater 38 venue. */}
+        {tierLabel && <span className="sr-only">{tierLabel}.</span>}
+
+        <div className="flex gap-3 p-3 sm:p-4">
+          {/* Square 80×80 thumbnail (left-aligned image-first layout).
+              Provides visual anchor in dense list contexts and matches
+              the food-photography specialist's image-left recommendation. */}
+          <div
+            className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
+            aria-hidden="true"
+          >
+            {thumbnail ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={thumbnail}
+                alt=""
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+                onError={() => setThumbnailFailed(true)}
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{
+                  background:
+                    'linear-gradient(135deg, var(--color-skeleton-base) 0%, var(--color-skeleton-highlight) 100%)',
+                }}
+              >
+                <span
+                  className="text-2xl font-light"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {restaurant.name.charAt(0).toUpperCase()}
                 </span>
-              )}
-              <span className="flex items-center gap-1 text-sm text-gray-500">
-                <MapPin size={14} />
-                {restaurant.city}
-                {restaurant.neighborhood && (
-                  <span className="text-gray-400">&middot; {restaurant.neighborhood}</span>
-                )}
-              </span>
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Accolade badges — own row below name */}
-          {hasAccolades && <AccoladesBadges restaurant={restaurant} maxBadges={3} />}
+          <div className="flex-1 min-w-0 space-y-2">
+            <div>
+              <h3
+                className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors"
+                style={{ fontFamily: 'var(--font-heading)' }}
+              >
+                {restaurant.name}
+              </h3>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
+                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                    {restaurant.cuisine}
+                  </span>
+                )}
+                {priceLevel && (
+                  <span
+                    className="font-semibold text-gray-700 text-sm"
+                    aria-label={priceLevelAriaLabel(restaurant.price_range)}
+                  >
+                    {priceLevel}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-sm text-gray-500">
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>
+                    {restaurant.city}
+                    {restaurant.neighborhood && (
+                      <span className="text-gray-400">&middot; {restaurant.neighborhood}</span>
+                    )}
+                  </span>
+                </span>
+              </div>
+            </div>
 
-          {/* Source Ratings Bar */}
-          <SourceRatingsBar restaurant={restaurant} />
+            {hasAccolades && <AccoladesBadges restaurant={restaurant} maxBadges={3} />}
+
+            <SourceRatingsBar restaurant={restaurant} />
+          </div>
         </div>
       </div>
     </Link>
@@ -170,22 +257,35 @@ function HeroVariant({
     restaurant.james_beard_winner ||
     restaurant.eater_38
   const priceLevel = formatPriceLevel(restaurant.price_range)
+  const tierLabel = accoladeTierLabel(restaurant)
+
+  // Describe the image rather than repeating the restaurant name (which
+  // is already in the adjacent <h3>). Including cuisine context gives
+  // screen-reader users the same "what kind of place is this?" signal
+  // that sighted users get from the photo. Accessibility + food-photo
+  // specialists both flagged this in v2 sweep.
+  const photoAlt = restaurant.cuisine && restaurant.cuisine !== 'Restaurant'
+    ? `${restaurant.cuisine} food at ${restaurant.name}`
+    : `Photo of ${restaurant.name}`
 
   return (
     <Link href={`/restaurants/${restaurant.id}`} className="block h-full">
       <div
-        className={`rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group h-full flex flex-col ${borderAccent}`}
+        className={`relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group h-full flex flex-col ${borderAccent}`}
       >
+        {tierLabel && <span className="sr-only">{tierLabel}.</span>}
+
         {/* Photo or accolade-themed gradient hero */}
         <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={photo}
-              alt={restaurant.name}
+              alt={photoAlt}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
               onError={() => setPhotoFailed(true)}
+              style={{ objectPosition: 'center 30%' }}
             />
           ) : (
             <div
@@ -202,7 +302,8 @@ function HeroVariant({
             >
               <span
                 className="text-3xl font-light"
-                style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}
+                style={{ color: 'var(--color-secondary)', opacity: 0.85 }}
+                aria-hidden="true"
               >
                 {restaurant.name.charAt(0).toUpperCase()}
               </span>
@@ -273,7 +374,7 @@ function HeroVariant({
               )}
               {restaurant.neighborhood && (
                 <span className="inline-flex items-center gap-1">
-                  <MapPin size={12} />
+                  <MapPin size={12} aria-hidden="true" />
                   {restaurant.neighborhood}
                 </span>
               )}

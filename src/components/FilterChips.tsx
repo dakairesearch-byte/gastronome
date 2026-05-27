@@ -26,9 +26,21 @@ export default function FilterChips({
         setIsOpen(false)
       }
     }
+    // Escape closes the dropdown so keyboard users aren't trapped.
+    // Sweep v2 filtering QW: "Add Escape-to-close on the FilterChips
+    // dropdown (mouse-outside works, keyboard is trapped)."
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false)
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('keydown', handleKeydown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeydown)
+    }
+  }, [isOpen])
 
   return (
     <div className="flex items-center gap-2">
@@ -89,8 +101,9 @@ export default function FilterChips({
                   type="button"
                   onClick={() => onCuisineChange(cuisine)}
                   className="hover:text-emerald-900"
+                  aria-label={`Remove ${cuisine} filter`}
                 >
-                  <X size={12} />
+                  <X size={12} aria-hidden="true" />
                 </button>
               </span>
             ))}
@@ -99,7 +112,12 @@ export default function FilterChips({
             <button
               type="button"
               onClick={onClearAll}
-              className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+              // Darkened from text-gray-400 to text-gray-600 so the
+              // hit target meets WCAG AA contrast against white at
+              // 12px — flagged by filtering specialist (low-contrast
+              // "Clear" button).
+              className="text-xs text-gray-600 hover:text-gray-800 underline-offset-2 hover:underline whitespace-nowrap"
+              aria-label="Clear all cuisine filters"
             >
               Clear
             </button>

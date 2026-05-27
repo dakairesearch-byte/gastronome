@@ -37,9 +37,13 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
 
   // Michelin stars (most prominent)
   if (restaurant.michelin_stars > 0) {
+    const starsLabel = `${restaurant.michelin_stars} Michelin ${restaurant.michelin_stars === 1 ? 'Star' : 'Stars'} — Michelin Guide's highest distinction, awarded for exceptional cooking.`
     badges.push(
       <BadgeLink key="michelin-stars" href={restaurant.michelin_url}>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-sm">
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-sm"
+          title={starsLabel}
+        >
           {Array.from({ length: restaurant.michelin_stars }).map((_, i) => (
             // Stable id keyed off the restaurant so the diffing keeps
             // the same DOM nodes across re-renders that change star count.
@@ -47,6 +51,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
               key={`star-${restaurant.id}-${i}`}
               size={12}
               className="fill-white text-white"
+              aria-hidden="true"
             />
           ))}
           <span>Michelin {restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}</span>
@@ -57,10 +62,14 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
 
   // Michelin designation (Bib Gourmand, Plate, etc.) without stars
   if (restaurant.michelin_designation && restaurant.michelin_stars === 0) {
+    const designationLabel = `${getDesignationDisplay(restaurant.michelin_designation)} — recognized by the Michelin Guide.`
     badges.push(
       <BadgeLink key="michelin-designation" href={restaurant.michelin_url}>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-semibold">
-          <Star size={12} className="text-red-500" />
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-semibold"
+          title={designationLabel}
+        >
+          <Star size={12} className="text-red-500" aria-hidden="true" />
           <span>{getDesignationDisplay(restaurant.michelin_designation)}</span>
         </span>
       </BadgeLink>
@@ -72,11 +81,21 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
   // in `restaurant_jbf_history`. Only render the winner badge here â pages
   // that want richer recognition status should join that history table.
   if (restaurant.james_beard_winner) {
+    // Wrapped in BadgeLink to match the Michelin/Eater pattern even when
+    // there's no URL (it falls back to a plain span). When a `jbf_url`
+    // column lands on `restaurants`, this will become clickable for free.
+    const jbfHref =
+      (restaurant as Restaurant & { jbf_url?: string | null }).jbf_url ?? null
     badges.push(
-      <span key="james-beard" className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-semibold">
-        <Award size={12} className="text-amber-600" />
-        <span>James Beard Winner</span>
-      </span>
+      <BadgeLink key="james-beard" href={jbfHref}>
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-xs font-semibold"
+          title="Recipient of a James Beard Foundation award — the U.S. restaurant industry's most prestigious honors."
+        >
+          <Award size={12} className="text-amber-600" aria-hidden="true" />
+          <span>James Beard Winner</span>
+        </span>
+      </BadgeLink>
     )
   }
 
@@ -86,11 +105,19 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
   if (restaurant.eater_38) {
     const eaterHref =
       (restaurant as Restaurant & { eater_url?: string | null }).eater_url ?? null
+    // Append the listing year when known ("Eater 38 '25") so stale
+    // listings don't look equally authoritative as a current pick.
+    const eaterYear =
+      (restaurant as Restaurant & { eater_year?: number | null }).eater_year
+    const yearSuffix = eaterYear ? ` '${String(eaterYear).slice(-2)}` : ''
     badges.push(
       <BadgeLink key="eater-38" href={eaterHref}>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-semibold">
-          <Utensils size={12} className="text-pink-500" />
-          <span>Eater 38</span>
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-xs font-semibold"
+          title="Listed on the Eater 38 — Eater's running list of the most essential restaurants in this city."
+        >
+          <Utensils size={12} className="text-pink-500" aria-hidden="true" />
+          <span>{`Eater 38${yearSuffix}`}</span>
         </span>
       </BadgeLink>
     )
