@@ -1,23 +1,36 @@
 /**
- * Restaurant bookmarking + collections — client-side only.
+ * Restaurant bookmarking + collections.
  *
- * Two independent storage slots:
- *   1. `gastronome_favorites` — flat ordered list of ids, the quick
- *      "bookmark" toggle surfaced on the home page.
- *   2. `gastronome_collections` — named buckets so users can sort
- *      their bookmarks (Date Night, Quick Lunch, Visited, …).
+ * Storage model: localStorage is the SYNCHRONOUS source of truth for
+ * the UI (so the hooks below stay sync and consumers don't change),
+ * with a best-effort write-through to Supabase when the user is signed
+ * in. This gives cross-device persistence without rewriting every
+ * consumer to be async.
  *
- * Favorites and collection membership are independent: a restaurant
- * can be favorited without being in any collection, or in many
- * collections without being favorited. This matches how most
- * consumer bookmarking UIs work (Instagram saves, Pinterest boards).
+ *   - When signed in (see `initCollectionsSync`), we pull the user's
+ *     server-side favorites/collections into the localStorage cache. On
+ *     a first-ever sign-in where the server is empty but local has data,
+ *     we migrate the local data UP to the server instead of clobbering
+ *     it.
+ *   - Every mutation writes localStorage immediately (instant UI) and
+ *     then fires a best-effort Supabase write. If Supabase fails — table
+ *     missing (migration not yet applied), offline, RLS, signed out —
+ *     the error is swallowed and the app behaves exactly as the old
+ *     localStorage-only version did.
+ *   - On sign-out we clear the local cache so one user's saves don't
+ *     leak to the next user on a shared device.
  *
- * All mutations fan out via a custom `gastronome:collections` window
- * event so multiple mounted instances re-read from the same store
- * without a round-trip through React context.
+ * Two independent slots: a flat `favorites` bookmark list and named
+ * `collections`. A restaurant can be favorited without being in any
+ * collection, or in many collections without being favorited.
+ *
+ * All mutations fan out via custom window events so multiple mounted
+ * instances re-read from the same store without a React-context round
+ * trip.
  */
 
 import { useSyncExternalStore } from 'react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const FAVORITES_KEY = 'gastronome_favorites'
 const COLLECTIONS_KEY = 'gastronome_collections'
@@ -40,15 +53,134 @@ function now(): string {
 }
 
 /**
- * 12-char base36 id derived from `crypto.randomUUID` where available,
- * falling back to `Math.random` on older browsers. Not a security
- * primitive — it just has to be unique within a user's own list.
+ * A full UUID so client-created collection ids match the `uuid` primary
+ * key in `user_collections` server-side (we insert with an explicit id
+ * to avoid a round-trip for the id). Falls back to a uuid-shaped random
+ * string on older browsers lacking `crypto.randomUUID`.
  */
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+    return crypto.randomUUID()
   }
-  return Math.random().toString(36).slice(2, 14)
+  // RFC4122-ish fallback; uniqueness within a user's own list is enough.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+// ---------- Supabase sync layer (best-effort) ----------
+
+type AnySupabase = SupabaseClient
+let _supabase: AnySupabase | null = null
+let _userId: string | null = null
+
+/** Fire-and-forget: never let a sync failure surface to the UI. */
+function bestEffort(p: PromiseLike<unknown> | undefined) {
+  try {
+    Promise.resolve(p).catch(() => {})
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Pull server state into the local cache on sign-in. On a first-ever
+ * sign-in (server empty, local non-empty) we migrate local → server
+ * rather than wiping the user's existing local saves.
+ */
+export async function initCollectionsSync(
+  supabase: AnySupabase,
+  userId: string
+): Promise<void> {
+  _supabase = supabase
+  _userId = userId
+
+  try {
+    const [favRes, colRes, itemRes] = await Promise.all([
+      supabase
+        .from('user_favorites')
+        .select('restaurant_id, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('user_collections')
+        .select('id, name, created_at, updated_at')
+        .order('created_at', { ascending: false }),
+      supabase.from('user_collection_items').select('collection_id, restaurant_id, added_at'),
+    ])
+
+    // If any query errored (e.g. tables not yet created), abort the sync
+    // silently and stay in localStorage-only mode.
+    if (favRes.error || colRes.error || itemRes.error) return
+
+    const serverFavorites = (favRes.data ?? []).map((r) => r.restaurant_id as string)
+    const itemsByCollection = new Map<string, string[]>()
+    for (const it of itemRes.data ?? []) {
+      const arr = itemsByCollection.get(it.collection_id as string) ?? []
+      arr.push(it.restaurant_id as string)
+      itemsByCollection.set(it.collection_id as string, arr)
+    }
+    const serverCollections: Collection[] = (colRes.data ?? []).map((c) => ({
+      id: c.id as string,
+      name: c.name as string,
+      restaurantIds: itemsByCollection.get(c.id as string) ?? [],
+      createdAt: (c.created_at as string) ?? now(),
+      updatedAt: (c.updated_at as string) ?? now(),
+    }))
+
+    const localFavorites = readFavorites()
+    const localCollections = readCollections()
+
+    const serverEmpty =
+      serverFavorites.length === 0 && serverCollections.length === 0
+    const localHasData =
+      localFavorites.length > 0 || localCollections.length > 0
+
+    if (serverEmpty && localHasData) {
+      // First sign-in with pre-existing local data → migrate it up.
+      // Local stays as-is; we just push it to the server.
+      for (const rid of localFavorites) {
+        bestEffort(
+          supabase.from('user_favorites').upsert(
+            { user_id: userId, restaurant_id: rid },
+            { onConflict: 'user_id,restaurant_id', ignoreDuplicates: true }
+          )
+        )
+      }
+      for (const col of localCollections) {
+        bestEffort(
+          supabase.from('user_collections').upsert(
+            { id: col.id, user_id: userId, name: col.name },
+            { onConflict: 'id' }
+          )
+        )
+        for (const rid of col.restaurantIds) {
+          bestEffort(
+            supabase.from('user_collection_items').upsert(
+              { collection_id: col.id, restaurant_id: rid },
+              { onConflict: 'collection_id,restaurant_id', ignoreDuplicates: true }
+            )
+          )
+        }
+      }
+      return
+    }
+
+    // Otherwise the server is the source of truth — overwrite the cache.
+    writeFavorites(serverFavorites)
+    writeCollections(serverCollections)
+  } catch {
+    // Network or unexpected error — stay in localStorage-only mode.
+  }
+}
+
+/** Clear sync state + local cache on sign-out (avoid cross-user leak). */
+export function teardownCollectionsSync(): void {
+  _supabase = null
+  _userId = null
+  writeFavorites([])
+  writeCollections([])
 }
 
 // ---------- Storage read/write ----------
@@ -65,10 +197,6 @@ function readFavorites(): string[] {
 }
 
 function writeFavorites(ids: string[]) {
-  // localStorage.setItem throws in Safari private mode and when the
-  // quota is exceeded. Swallow both — the UI will re-render from the
-  // prior value via the event below, which is worse than persisting
-  // but far better than crashing the page.
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids.slice(0, 200)))
   } catch {
@@ -77,7 +205,7 @@ function writeFavorites(ids: string[]) {
   try {
     window.dispatchEvent(new Event(FAVORITES_EVENT))
   } catch {
-    // No-op; event dispatch shouldn't meaningfully fail at runtime.
+    // No-op.
   }
 }
 
@@ -131,6 +259,8 @@ export function isFavorite(restaurantId: string): boolean {
  * Toggle a restaurant in the favorites list. Newly-added favorites go
  * to the front so the home page "Your Favorites" rail shows the
  * most-recently-saved entry first. Returns the new favorited state.
+ * Writes localStorage synchronously, then mirrors to Supabase when
+ * signed in (best-effort).
  */
 export function toggleFavorite(restaurantId: string): boolean {
   const favs = readFavorites()
@@ -138,10 +268,27 @@ export function toggleFavorite(restaurantId: string): boolean {
   if (idx >= 0) {
     favs.splice(idx, 1)
     writeFavorites(favs)
+    if (_supabase && _userId) {
+      bestEffort(
+        _supabase
+          .from('user_favorites')
+          .delete()
+          .eq('user_id', _userId)
+          .eq('restaurant_id', restaurantId)
+      )
+    }
     return false
   }
   favs.unshift(restaurantId)
   writeFavorites(favs)
+  if (_supabase && _userId) {
+    bestEffort(
+      _supabase.from('user_favorites').upsert(
+        { user_id: _userId, restaurant_id: restaurantId },
+        { onConflict: 'user_id,restaurant_id', ignoreDuplicates: true }
+      )
+    )
+  }
   return true
 }
 
@@ -153,8 +300,7 @@ export function getCollections(): Collection[] {
 
 /**
  * Create a new collection with the given display name. Throws if the
- * name is empty after trimming. No uniqueness check on name — users
- * can have two collections called "Favorites" if they really want.
+ * name is empty after trimming. No uniqueness check on name.
  */
 export function createCollection(name: string): Collection {
   const trimmed = name.trim()
@@ -168,6 +314,15 @@ export function createCollection(name: string): Collection {
   }
   const next = [collection, ...readCollections()]
   writeCollections(next)
+  if (_supabase && _userId) {
+    bestEffort(
+      _supabase.from('user_collections').insert({
+        id: collection.id,
+        user_id: _userId,
+        name: collection.name,
+      })
+    )
+  }
   return collection
 }
 
@@ -179,10 +334,25 @@ export function renameCollection(id: string, name: string): void {
     c.id === id ? { ...c, name: trimmed.slice(0, 80), updatedAt: now() } : c
   )
   writeCollections(next)
+  if (_supabase && _userId) {
+    bestEffort(
+      _supabase
+        .from('user_collections')
+        .update({ name: trimmed.slice(0, 80), updated_at: now() })
+        .eq('id', id)
+        .eq('user_id', _userId)
+    )
+  }
 }
 
 export function deleteCollection(id: string): void {
   writeCollections(readCollections().filter((c) => c.id !== id))
+  if (_supabase && _userId) {
+    // ON DELETE CASCADE removes the membership rows server-side.
+    bestEffort(
+      _supabase.from('user_collections').delete().eq('id', id).eq('user_id', _userId)
+    )
+  }
 }
 
 export function addToCollection(collectionId: string, restaurantId: string): void {
@@ -192,13 +362,19 @@ export function addToCollection(collectionId: string, restaurantId: string): voi
     if (c.restaurantIds.includes(restaurantId)) return c
     return {
       ...c,
-      // Newest-first so the collection page can render "recently added"
-      // naturally without a separate timestamp per membership.
       restaurantIds: [restaurantId, ...c.restaurantIds],
       updatedAt: now(),
     }
   })
   writeCollections(next)
+  if (_supabase && _userId) {
+    bestEffort(
+      _supabase.from('user_collection_items').upsert(
+        { collection_id: collectionId, restaurant_id: restaurantId },
+        { onConflict: 'collection_id,restaurant_id', ignoreDuplicates: true }
+      )
+    )
+  }
 }
 
 export function removeFromCollection(collectionId: string, restaurantId: string): void {
@@ -213,6 +389,15 @@ export function removeFromCollection(collectionId: string, restaurantId: string)
         }
   )
   writeCollections(next)
+  if (_supabase && _userId) {
+    bestEffort(
+      _supabase
+        .from('user_collection_items')
+        .delete()
+        .eq('collection_id', collectionId)
+        .eq('restaurant_id', restaurantId)
+    )
+  }
 }
 
 /**
@@ -235,10 +420,6 @@ export function getCollectionsForRestaurant(restaurantId: string): Collection[] 
 }
 
 // ---------- React hooks (useSyncExternalStore) ----------
-//
-// We cache the parsed value keyed by the raw JSON string so repeated
-// calls to `getSnapshot` return a stable reference until the underlying
-// storage actually changes — useSyncExternalStore throws otherwise.
 
 function subscribe(event: string) {
   return (listener: () => void): (() => void) => {
@@ -254,10 +435,6 @@ function subscribe(event: string) {
 let cachedFavRaw: string | null = null
 let cachedFavValue: string[] = []
 function getFavSnapshot(): string[] {
-  // localStorage.getItem throws in Safari private mode when the origin
-  // has disabled storage. Treat it as an empty favorites list rather
-  // than letting the exception bubble up through useSyncExternalStore
-  // and crash the subtree.
   let raw: string
   try {
     raw = localStorage.getItem(FAVORITES_KEY) ?? '[]'

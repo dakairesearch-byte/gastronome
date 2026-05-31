@@ -35,6 +35,12 @@ function BadgeLink({ href, children }: { href?: string | null; children: React.R
 export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadgesProps) {
   const badges: React.ReactNode[] = []
 
+  // Append the recognition year when known so a stale accolade doesn't read
+  // as equally current as a fresh one.
+  const yearSuffix = (year: number | null | undefined) =>
+    year ? ` '${String(year).slice(-2)}` : ''
+  const michelinYear = (restaurant as Restaurant & { michelin_year?: number | null }).michelin_year
+
   // Michelin stars (most prominent)
   if (restaurant.michelin_stars > 0) {
     const starsLabel = `${restaurant.michelin_stars} Michelin ${restaurant.michelin_stars === 1 ? 'Star' : 'Stars'} — Michelin Guide's highest distinction, awarded for exceptional cooking.`
@@ -54,7 +60,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
               aria-hidden="true"
             />
           ))}
-          <span>Michelin {restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}</span>
+          <span>{`Michelin ${restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}${yearSuffix(michelinYear)}`}</span>
         </span>
       </BadgeLink>
     )
