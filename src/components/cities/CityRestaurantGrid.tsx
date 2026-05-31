@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import AccoladesBadges from '@/components/AccoladesBadges'
 import type { Restaurant } from '@/types/database'
@@ -15,12 +15,13 @@ export type CityGridRestaurant = Restaurant & { trendingRank?: number | null }
 const PAGE_SIZE = 24
 
 /**
- * Paginated city restaurant grid. The city page previously rendered all
- * (up to 500) restaurants at once — on mobile that produced a
- * ~126,000px-tall page that was a performance and UX crisis (sweep v2
- * P0 #18). We now render PAGE_SIZE at a time and reveal more on demand,
- * which keeps the DOM small without needing a round-trip (the rows are
- * already fetched server-side).
+ * City restaurant grid with scroll-triggered infinite loading. The page
+ * previously rendered all (up to 500) restaurants at once — on mobile a
+ * ~126,000px-tall page (sweep v2 P0 #18). We render PAGE_SIZE rows and
+ * reveal the next page automatically as a sentinel scrolls into view
+ * (IntersectionObserver), so it loads in smoothly with no "Load more"
+ * button. Rows are already fetched server-side, so growing the window
+ * is instant — no round-trip.
  */
 export default function CityRestaurantGrid({
   restaurants,
@@ -30,8 +31,28 @@ export default function CityRestaurantGrid({
   cityName: string
 }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
   const shown = restaurants.slice(0, visible)
-  const remaining = restaurants.length - visible
+  const hasMore = visible < restaurants.length
+
+  useEffect(() => {
+    if (!hasMore) return
+    const node = sentinelRef.current
+    if (!node) return
+    // rootMargin pre-loads the next page ~600px before the sentinel is
+    // actually on screen, so rows are already there by the time the
+    // user reaches them — no visible "pop".
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisible((v) => Math.min(v + PAGE_SIZE, restaurants.length))
+        }
+      },
+      { rootMargin: '600px 0px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasMore, restaurants.length])
 
   return (
     <>
@@ -61,19 +82,23 @@ export default function CityRestaurantGrid({
         ))}
       </div>
 
-      {remaining > 0 && (
-        <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setVisible((v) => v + PAGE_SIZE)}
-            className="px-6 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
-          >
-            Show {Math.min(PAGE_SIZE, remaining)} more
-            <span className="text-gray-400 font-normal">
-              {' '}
-              ({remaining.toLocaleString()} left)
-            </span>
-          </button>
+      {/* Screen-reader progress + auto-load sentinel. The sentinel is
+          what the IntersectionObserver watches; the aria-live text keeps
+          non-visual users informed since there's no button to announce. */}
+      <p className="sr-only" aria-live="polite">
+        Showing {shown.length} of {restaurants.length} restaurants.
+      </p>
+      {hasMore && (
+        <div
+          ref={sentinelRef}
+          aria-hidden="true"
+          className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {/* Skeleton placeholders hint that more is loading as the user
+              approaches the end. */}
+          {Array.from({ length: Math.min(3, restaurants.length - visible) }).map((_, i) => (
+            <div key={i} className="animate-shimmer h-28 rounded-xl" />
+          ))}
         </div>
       )}
     </>

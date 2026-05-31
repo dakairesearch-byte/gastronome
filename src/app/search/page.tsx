@@ -163,54 +163,39 @@ function SearchContent() {
             }
           )
         })
-        const results = await Promise.all(
-          predictions
-            .filter((p) => {
-              const types = p.types || []
-              return (
-                types.includes('restaurant') ||
-                types.includes('food') ||
-                types.includes('cafe') ||
-                types.includes('bakery') ||
-                types.includes('bar') ||
-                types.includes('meal_delivery') ||
-                types.includes('meal_takeaway')
-              )
-            })
-            .slice(0, 8)
-            .map(
-              (prediction) =>
-                new Promise<GooglePlaceResult | null>((resolve) => {
-                  const map = document.createElement('div')
-                  const placesService = new window.google!.maps!.places!.PlacesService(map)
-                  placesService.getDetails(
-                    {
-                      placeId: prediction.place_id,
-                      fields: ['name', 'formatted_address', 'geometry', 'rating', 'place_id'],
-                    },
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (place: any, status: string) => {
-                      if (status === 'OK' && place) {
-                        const address = place.formatted_address || ''
-                        const parts = address.split(',')
-                        const city =
-                          parts.length > 1 ? parts[parts.length - 2].trim() : ''
-                        resolve({
-                          placeId: prediction.place_id,
-                          name: place.name,
-                          address,
-                          city,
-                          rating: place.rating,
-                        })
-                      } else {
-                        resolve(null)
-                      }
-                    }
-                  )
-                })
+        // Build the typeahead straight from the (cheap) Autocomplete
+        // predictions. Calling Place Details (getDetails) per prediction on
+        // every keystroke fired up to 8 billed requests per character — orders
+        // of magnitude more expensive. Details (geometry/rating) can be fetched
+        // lazily on selection if a consumer ever needs them.
+        const results: GooglePlaceResult[] = predictions
+          .filter((p) => {
+            const types = p.types || []
+            return (
+              types.includes('restaurant') ||
+              types.includes('food') ||
+              types.includes('cafe') ||
+              types.includes('bakery') ||
+              types.includes('bar') ||
+              types.includes('meal_delivery') ||
+              types.includes('meal_takeaway')
             )
-        )
-        return results.filter((r): r is GooglePlaceResult => r !== null)
+          })
+          .slice(0, 8)
+          .map((prediction) => {
+            const main = prediction.structured_formatting?.main_text ?? prediction.description ?? ''
+            const secondary = prediction.structured_formatting?.secondary_text ?? ''
+            const parts = secondary.split(',')
+            const city = parts.length > 1 ? parts[parts.length - 2].trim() : parts[0]?.trim() ?? ''
+            return {
+              placeId: prediction.place_id,
+              name: main,
+              address: secondary,
+              city,
+              rating: undefined,
+            } as GooglePlaceResult
+          })
+        return results
       } catch {
         return []
       }
@@ -233,7 +218,13 @@ function SearchContent() {
           .select('name, is_active')
           .eq('is_active', true)
           .order('name', { ascending: true }),
-        supabase.from('restaurants').select('cuisine'),
+        // Distinct cuisines for the filter facet. Bound the scan and skip
+        // nulls rather than pulling every restaurant row's cuisine.
+        supabase
+          .from('restaurants')
+          .select('cuisine')
+          .not('cuisine', 'is', null)
+          .limit(1000),
       ])
       if (cancelled) return
       const cityNames = (citiesRes.data ?? [])
@@ -497,7 +488,27 @@ function SearchContent() {
     setVisibleResults(RESULTS_PAGE)
   }
   const shownRestaurants = restaurants.slice(0, visibleResults)
-  const remainingResults = restaurants.length - visibleResults
+  const hasMoreResults = visibleResults < restaurants.length
+
+  // Auto-load the next page of results as the sentinel scrolls into
+  // view (smooth infinite scroll, no "Load more" button). Pre-loads
+  // ~600px early so rows are present before the user reaches them.
+  const resultsSentinelRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!hasMoreResults) return
+    const node = resultsSentinelRef.current
+    if (!node) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleResults((v) => Math.min(v + RESULTS_PAGE, restaurants.length))
+        }
+      },
+      { rootMargin: '600px 0px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasMoreResults, restaurants.length])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -685,15 +696,12 @@ function SearchContent() {
                   <RestaurantCard key={r.id} restaurant={r} />
                 ))}
 
-                {remainingResults > 0 && (
-                  <div className="flex justify-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setVisibleResults((v) => v + RESULTS_PAGE)}
-                      className="px-6 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
-                    >
-                      Show {Math.min(RESULTS_PAGE, remainingResults)} more
-                    </button>
+                {/* Auto-load sentinel + skeletons (no Load-more button). */}
+                {hasMoreResults && (
+                  <div ref={resultsSentinelRef} aria-hidden="true" className="space-y-4 pt-2">
+                    {[0, 1].map((i) => (
+                      <RestaurantCardSkeleton key={i} />
+                    ))}
                   </div>
                 )}
 
