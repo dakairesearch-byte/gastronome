@@ -9,7 +9,9 @@ import BookmarkButton from '@/components/BookmarkButton'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
+import GastronomeScoreBadge from '@/components/GastronomeScoreBadge'
 import { citySlug } from '@/lib/restaurant'
+import { gastronomeScore } from '@/lib/score'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
 import type { Metadata } from 'next'
 
@@ -284,7 +286,6 @@ export default async function RestaurantPage({
     restaurant.james_beard_winner ||
     restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
-  const avgRating = restaurant.google_rating ?? restaurant.yelp_rating ?? null
 
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
@@ -378,38 +379,16 @@ export default async function RestaurantPage({
               </span>
             </div>
 
-            {avgRating != null && (() => {
-              // Source the hero rating so users see WHICH platform's
-              // number this is (Google vs Yelp vs blended) rather than
-              // a sourceless "4.3 ★" — sweep v2 the-critic + source-
-              // attribution QW: "sourceless numbers are the cardinal
-              // sin of aggregation."
-              const heroSource = restaurant.google_rating != null ? 'Google' : 'Yelp'
-              const heroReviewCount =
-                restaurant.google_rating != null
-                  ? restaurant.google_review_count
-                  : restaurant.yelp_review_count
-              return (
-                <div className="flex items-center gap-1.5 mt-2">
-                  <Star size={14} className="fill-current" style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
-                  <span
-                    className="text-sm"
-                    style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
-                  >
-                    {avgRating.toFixed(1)}
-                  </span>
-                  <span
-                    className="text-xs"
-                    style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-body)' }}
-                  >
-                    · {heroSource}
-                    {heroReviewCount && heroReviewCount > 0
-                      ? ` · ${heroReviewCount.toLocaleString()} reviews`
-                      : ''}
-                  </span>
-                </div>
-              )
-            })()}
+            {/* Gastronome Score — the unified number the product is
+                named for. Replaces the old sourceless "4.3 ★" hero
+                rating; the per-source breakdown still lives in the
+                "By the Numbers" dashboard below as receipts. Falls back
+                to nothing when no rating source exists. Sweep v2 P0 #2. */}
+            {gastronomeScore(restaurant) && (
+              <div className="mt-3">
+                <GastronomeScoreBadge score={gastronomeScore(restaurant)!} />
+              </div>
+            )}
 
             {/* Contact inline */}
             <div className="flex flex-wrap items-center gap-4 mt-3">
