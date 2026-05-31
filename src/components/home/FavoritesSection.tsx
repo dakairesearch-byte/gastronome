@@ -8,6 +8,9 @@ import { useFavorites } from '@/lib/collections'
 import { displayCuisine, getRestaurantPhotoUrl } from '@/lib/restaurant'
 import { formatRating } from '@/lib/format'
 import type { Restaurant } from '@/types/database'
+// [sweep-2026-05-26-v3 R2] SectionHeader moved inside component so the
+// heading only renders when there are actual favorites (empty/loading = no header).
+import SectionHeader from '@/components/SectionHeader'
 
 /**
  * "Your Favorites" section — client component.
@@ -73,49 +76,22 @@ export default function FavoritesSection() {
     }
   }, [key, ids])
 
+  // [sweep-2026-05-26-v3 R2] Loading and empty states return null — heading
+  // is included only with real content so no orphan header floats above
+  // blank space. Loading skeleton is transient; empty state was already
+  // surfaced by the page comment, so null is cleaner.
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-shimmer h-16 rounded-sm" />
-        ))}
-      </div>
-    )
+    return null
   }
 
   if (restaurants.length === 0) {
-    return (
-      <div
-        className="rounded-sm p-6 text-center"
-        style={{ backgroundColor: 'var(--color-surface)' }}
-      >
-        <p
-          className="text-sm mb-3"
-          style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-        >
-          {/* Copy fix: previous version said "tap the heart" but the
-              actual save control is a bookmark icon. Reframed as an
-              invitation rather than a flagged absence. */}
-          Saved restaurants land here. Tap the bookmark on any card to
-          start your list.
-        </p>
-        <Link
-          href="/explore"
-          className="inline-block px-6 py-2.5 text-xs uppercase tracking-wider font-medium rounded-sm text-white transition-all hover:opacity-90"
-          style={{
-            fontFamily: 'var(--font-body)',
-            letterSpacing: '0.1em',
-            backgroundColor: 'var(--color-primary)',
-          }}
-        >
-          Find restaurants to save
-        </Link>
-      </div>
-    )
+    return null
   }
 
   return (
-    <div className="space-y-3">
+    <>
+      <SectionHeader title="Your favorites" />
+      <div className="space-y-3">
       {restaurants.map((r) => {
         const photo = getRestaurantPhotoUrl(r)
         const rating = formatRating(r.google_rating ?? r.yelp_rating)
@@ -166,5 +142,6 @@ export default function FavoritesSection() {
         )
       })}
     </div>
+    </>
   )
 }

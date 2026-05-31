@@ -14,6 +14,7 @@ import {
   Pencil,
   Star,
   Trash2,
+  UserCircle,
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -31,6 +32,9 @@ import {
   clearRecentSearches,
   getRecentSearchesCount,
 } from '@/components/home/RecentSearches'
+// [sweep-2026-05-26-v3 P0-1] EmptyState + sign-in modal for unauthenticated view.
+import EmptyState from '@/components/EmptyState'
+import { openSignInModal } from '@/components/auth/SignInModalHost'
 
 /**
  * `/profile` — the user's personal home.
@@ -99,18 +103,24 @@ export default function ProfilePage() {
 
   // Middleware should prevent this from being reachable, but render a
   // graceful fallback anyway in case a user hits the page mid-logout.
+  // [sweep-2026-05-26-v3 P0-1] Replaced bare sentence with EmptyState so
+  // the page is never a dead end — primary CTA opens sign-in modal,
+  // secondary CTA links to sign-up flow.
   if (!user) {
     return (
       <div
         className="flex items-center justify-center min-h-[70vh] px-6"
         style={{ backgroundColor: 'var(--color-background)' }}
       >
-        <p
-          className="text-sm"
-          style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-        >
-          You need to be signed in to see your profile.
-        </p>
+        <EmptyState
+          icon={UserCircle}
+          title="Sign in to see your profile"
+          description="Save restaurants, create collections, and set your home city so your homepage shows the right spots."
+          ctaText="Sign in"
+          onCtaClick={() => openSignInModal({ mode: 'signin', redirectTo: '/profile' })}
+          secondaryCtaText="Create an account"
+          onSecondaryCtaClick={() => openSignInModal({ mode: 'signup', redirectTo: '/profile' })}
+        />
       </div>
     )
   }

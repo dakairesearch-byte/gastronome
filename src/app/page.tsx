@@ -98,8 +98,12 @@ export default async function HomePage() {
   })
 
   // Fallback: if trending has no results, show top-rated in the same city.
+  // [sweep-2026-05-26-v3 microcopy QW] Track whether we fell back so the
+  // section eyebrow can be honest ("Top-rated in X" vs "Trending this week").
   let suggestions: Restaurant[] = trendingRestaurants
+  let usedTrendingFallback = false
   if (suggestions.length === 0) {
+    usedTrendingFallback = true
     const { data } = await supabase
       .from('restaurants')
       .select('*')
@@ -169,10 +173,13 @@ export default async function HomePage() {
         {/* Suggestions section — header names the city so users never
             have to wonder. Eyebrow label changed from "Curated Selection"
             (which overpromised editorial taste on what is actually a
-            7-day trending algorithm) to "Trending this week". */}
+            7-day trending algorithm) to "Trending this week".
+            [sweep-2026-05-26-v3 microcopy QW] When trending was empty and
+            we fell back to top-rated, use "Top-rated in {city}" so the
+            label is honest about what the user is actually seeing. */}
         <section className="mb-16">
           <SectionHeader
-            label="Trending this week"
+            label={usedTrendingFallback ? `Top-rated in ${city}` : 'Trending this week'}
             title={`Suggestions in ${city}`}
           />
           {citySource === 'fallback' && (
@@ -201,31 +208,29 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Personal rails — RecentSearches and FavoritesSection already
-            know how to handle empty state internally (each component
-            returns null when there's nothing to show), so we just let
-            them self-suppress rather than rendering empty headers above
-            empty sections. Sweep v2 P0: previously rendered "Your
-            Favorites" + "Recent Searches" with empty cells, making the
-            page look abandoned. */}
+        {/* Personal rails — RecentSearches and FavoritesSection each own
+            their <SectionHeader> now (sweep-2026-05-26-v3 R2). Both
+            components return null when empty, so no orphan heading floats
+            over blank space. The <section> wrappers are kept for layout
+            but hold no heading of their own. */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           <section>
-            <SectionHeader title="Recent searches" />
             <RecentSearches />
           </section>
 
           <section>
-            <SectionHeader title="Your favorites" />
             <FavoritesSection />
           </section>
         </div>
 
         {/* Editorial picks — was "Saved Collections" which implied user
             data. Renamed to make the curated-entry intent explicit. The
-            bookmark hover icon was removed (these aren't user saves). */}
+            bookmark hover icon was removed (these aren't user saves).
+            Eyebrow updated from internal "Editor's gateways" to user-facing
+            "Curated for you" (sweep-2026-05-26-v3 microcopy QW). */}
         <section>
           <SectionHeader
-            label="Editor's gateways"
+            label="Curated for you"
             title="Editorial Picks"
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">

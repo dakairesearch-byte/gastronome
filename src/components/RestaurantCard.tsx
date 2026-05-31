@@ -8,6 +8,9 @@ import BookmarkButton from './BookmarkButton'
 import { Restaurant } from '@/types/database'
 import { MapPin } from 'lucide-react'
 import { GoogleGIcon, YelpIcon } from '@/components/brands/BrandIcons'
+// Sweep 2026-05-26-v3 P0-2: import stock-fallback detector so we can badge
+// cuisine-keyed Unsplash photos that aren't real restaurant photos.
+import { isStockFallbackPhoto } from '@/lib/restaurant'
 
 interface RestaurantCardProps {
   restaurant: Restaurant
@@ -117,6 +120,10 @@ export default function RestaurantCard({
   const borderAccent = getBorderAccent(restaurant)
   const tierLabel = accoladeTierLabel(restaurant)
 
+  // Declared before the early return so the hook runs unconditionally
+  // (Rules of Hooks). Only the compact variant below reads it.
+  const [thumbnailFailed, setThumbnailFailed] = useState(false)
+
   if (variant === 'hero') {
     return <HeroVariant restaurant={restaurant} borderAccent={borderAccent} />
   }
@@ -126,8 +133,10 @@ export default function RestaurantCard({
   // restaurant-card, food-photography, the-diner, mobile-responsive in
   // sweep v2). Now: 80x80 thumbnail on the left + content on the right,
   // with price chip + first-letter monogram fallback when no photo.
-  const [thumbnailFailed, setThumbnailFailed] = useState(false)
   const thumbnail = thumbnailFailed ? null : getHeroPhoto(restaurant)
+  // Sweep 2026-05-26-v3 P0-2: detect whether the resolved thumbnail is a
+  // cuisine-keyed Unsplash stock photo (not a real restaurant photo).
+  const thumbnailIsStock = isStockFallbackPhoto(thumbnail)
   const priceLevel = formatPriceLevel(restaurant.price_range)
 
   // Stretched-link pattern: the card root is a plain <div>, the whole
@@ -156,14 +165,34 @@ export default function RestaurantCard({
           aria-hidden="true"
         >
           {thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbnail}
-              alt=""
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-              onError={() => setThumbnailFailed(true)}
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnail}
+                alt=""
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+                onError={() => setThumbnailFailed(true)}
+              />
+              {/* Sweep 2026-05-26-v3 P0-2: unobtrusive pill so users aren't
+                  misled into thinking Unsplash stock photos are real photos
+                  of the restaurant. */}
+              {thumbnailIsStock && (
+                <span
+                  className="absolute bottom-0.5 left-0.5 text-[9px] leading-none px-1 py-0.5 rounded"
+                  style={{
+                    backgroundColor: 'rgba(0,0,0,0.45)',
+                    color: 'rgba(255,255,255,0.85)',
+                    fontFamily: 'var(--font-body)',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  aria-label="Stock photo — not a photo of this restaurant"
+                >
+                  Stock photo
+                </span>
+              )}
+            </>
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
@@ -184,9 +213,12 @@ export default function RestaurantCard({
 
         <div className="flex-1 min-w-0 space-y-2">
           <div>
+            {/* Sweep 2026-05-26-v3 QW: title attr exposes full name when
+                line-clamp-1 truncates it — hero variant already had this. */}
             <h3
               className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors pr-9"
               style={{ fontFamily: 'var(--font-heading)' }}
+              title={restaurant.name}
             >
               {restaurant.name}
             </h3>
@@ -264,6 +296,9 @@ function HeroVariant({
   // the gradient so the card has visual presence.
   const [photoFailed, setPhotoFailed] = useState(false)
   const photo = photoFailed ? null : initialPhoto
+  // Sweep 2026-05-26-v3 P0-2: detect stock fallback before photoFailed
+  // override so the pill only shows when the stock URL is actually used.
+  const photoIsStock = !photoFailed && isStockFallbackPhoto(initialPhoto)
   const showCuisine =
     restaurant.cuisine &&
     restaurant.cuisine !== 'Restaurant' &&
@@ -311,15 +346,35 @@ function HeroVariant({
         {/* Photo or accolade-themed gradient hero */}
         <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
           {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photo}
-              alt={photoAlt}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-              onError={() => setPhotoFailed(true)}
-              style={{ objectPosition: 'center 30%' }}
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo}
+                alt={photoAlt}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+                onError={() => setPhotoFailed(true)}
+                style={{ objectPosition: 'center 30%' }}
+              />
+              {/* Sweep 2026-05-26-v3 P0-2: pill over hero photo — mirrors
+                  compact variant treatment but slightly larger for readability
+                  at the 16:10 aspect ratio. */}
+              {photoIsStock && (
+                <span
+                  className="absolute bottom-1.5 right-1.5 text-[10px] leading-none px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: 'rgba(0,0,0,0.50)',
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-body)',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  aria-label="Stock photo — not a photo of this restaurant"
+                >
+                  Stock photo
+                </span>
+              )}
+            </>
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
@@ -357,24 +412,32 @@ function HeroVariant({
             {/* Brand-mark rating cluster — Google G + Yelp burst inline.
                 Tighter than SourceRatingsBar (which stacks Google, Yelp,
                 Infatuation, Beli vertically). The hero card needs the
-                rating to read as a single glance, not a bar of badges. */}
+                rating to read as a single glance, not a bar of badges.
+                Sweep 2026-05-26-v3 QW: append "/5" so bare numerals aren't
+                sourceless — e.g. "4.3" becomes "4.3/5". */}
             <div className="flex-shrink-0 flex items-center gap-2 text-sm font-medium text-gray-700">
               {googleRating != null && (
                 <span
                   className="inline-flex items-center gap-1"
-                  aria-label={`Google rating ${googleRating.toFixed(1)}`}
+                  aria-label={`Google rating ${googleRating.toFixed(1)} out of 5`}
                 >
                   <GoogleGIcon size={14} title="Google" />
-                  <span>{googleRating.toFixed(1)}</span>
+                  <span>
+                    {googleRating.toFixed(1)}
+                    <span className="text-[11px] font-normal text-gray-400">/5</span>
+                  </span>
                 </span>
               )}
               {yelpRating != null && (
                 <span
                   className="inline-flex items-center gap-1"
-                  aria-label={`Yelp rating ${yelpRating.toFixed(1)}`}
+                  aria-label={`Yelp rating ${yelpRating.toFixed(1)} out of 5`}
                 >
                   <YelpIcon size={14} title="Yelp" />
-                  <span>{yelpRating.toFixed(1)}</span>
+                  <span>
+                    {yelpRating.toFixed(1)}
+                    <span className="text-[11px] font-normal text-gray-400">/5</span>
+                  </span>
                 </span>
               )}
             </div>

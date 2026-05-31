@@ -537,9 +537,13 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
               : span > 0.05
               ? 13
               : 14
-          const mapsKey =
-            process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY ||
-            process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+          // [sweep-2026-05-26-v3 R1] Use ONLY the dedicated Maps Embed key.
+          // The Places key (NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) does NOT have
+          // the Maps Embed API enabled, so the iframe renders a raw Google
+          // rejection error. Removing the || fallback means `mapsKey` is
+          // falsy when no Embed key is configured, which makes `embedSrc`
+          // null and lets the SVG-grid fallback render instead of the error.
+          const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY
           const embedSrc = center && mapsKey
             ? `https://www.google.com/maps/embed/v1/view?key=${mapsKey}&center=${center.lat},${center.lng}&zoom=${zoom}&maptype=roadmap`
             : null

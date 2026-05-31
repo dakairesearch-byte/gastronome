@@ -644,13 +644,15 @@ export default async function RestaurantPage({
                               />
                             )}
                             {dish.tiktok > 0 && (
+                              // Sweep 2026-05-26-v3 QW: raised from text-[9px]
+                              // to text-[11px] (legibility floor).
                               <span
-                                className="inline-flex items-center justify-center text-[9px]"
+                                className="inline-flex items-center justify-center text-[11px]"
                                 style={{
                                   backgroundColor: '#000',
                                   color: '#fff',
-                                  width: 14,
-                                  height: 14,
+                                  width: 16,
+                                  height: 16,
                                   borderRadius: '3px',
                                   fontWeight: 700,
                                   letterSpacing: '-0.03em',
@@ -661,14 +663,16 @@ export default async function RestaurantPage({
                               </span>
                             )}
                             {dish.instagram > 0 && (
+                              // Sweep 2026-05-26-v3 QW: raised from text-[9px]
+                              // to text-[11px] (legibility floor).
                               <span
-                                className="inline-flex items-center justify-center text-[9px]"
+                                className="inline-flex items-center justify-center text-[11px]"
                                 style={{
                                   background:
                                     'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',
                                   color: '#fff',
-                                  width: 14,
-                                  height: 14,
+                                  width: 16,
+                                  height: 16,
                                   borderRadius: '3px',
                                   fontWeight: 700,
                                   letterSpacing: '-0.03em',
@@ -847,12 +851,15 @@ export default async function RestaurantPage({
                     style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
                   />
                 </div>
+                {/* Sweep 2026-05-26-v3 QW: fontWeight 300 → 400. weight-300
+                    is not loaded, so browser fakes a thin weight that renders
+                    blurry on low-DPI screens. */}
                 <p
                   className="italic"
                   style={{
                     color: 'var(--color-text)',
                     fontFamily: 'var(--font-heading)',
-                    fontWeight: 300,
+                    fontWeight: 400,
                     fontSize: '18px',
                     lineHeight: 1.65,
                     maxWidth: '44rem',

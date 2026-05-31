@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import AccoladesBadges from '@/components/AccoladesBadges'
+// Sweep 2026-05-26-v3 R3: import BookmarkButton so city-grid rows get a
+// save affordance (previously missing; only RestaurantCard had it).
+import BookmarkButton from '@/components/BookmarkButton'
 import type { Restaurant } from '@/types/database'
 
 /**
@@ -58,27 +61,43 @@ export default function CityRestaurantGrid({
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {shown.map((r) => (
-          <Link
-            key={r.id}
-            href={`/restaurants/${r.id}`}
-            className="group block rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-300 hover:shadow-sm transition-all"
-          >
-            <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-              {r.name}
-            </h3>
-            <p className="mt-1 text-xs text-gray-500 truncate">
-              {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
-              {r.neighborhood ? ` • ${r.neighborhood}` : ''}
-            </p>
-            {r.trendingRank ? (
-              <p className="mt-2 text-[11px] font-semibold text-orange-600">
-                🔥 #{r.trendingRank} trending in {cityName}
+          // Sweep 2026-05-26-v3 R3: wrap row in a relative container so we
+          // can layer the BookmarkButton above the Link without nesting
+          // interactive elements (which would be invalid HTML / a11y issue).
+          <div key={r.id} className="relative">
+            <Link
+              href={`/restaurants/${r.id}`}
+              className="group block rounded-xl border border-gray-100 bg-white p-4 pr-10 hover:border-emerald-300 hover:shadow-sm transition-all"
+            >
+              <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                {r.name}
+              </h3>
+              <p className="mt-1 text-xs text-gray-500 truncate">
+                {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
+                {r.neighborhood ? ` • ${r.neighborhood}` : ''}
               </p>
-            ) : null}
-            <div className="mt-2">
-              <AccoladesBadges restaurant={r} maxBadges={3} />
+              {r.trendingRank ? (
+                <p className="mt-2 text-[11px] font-semibold text-orange-600">
+                  🔥 #{r.trendingRank} trending in {cityName}
+                </p>
+              ) : null}
+              <div className="mt-2">
+                <AccoladesBadges restaurant={r} maxBadges={3} />
+              </div>
+            </Link>
+            {/* BookmarkButton sits above the Link (z-[1]) with stopPropagation
+                so tapping the bookmark doesn't also navigate to the detail page.
+                Sweep 2026-05-26-v3 R3. */}
+            <div
+              className="absolute top-2 right-2 z-[1]"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              <BookmarkButton restaurantId={r.id} variant="card" />
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 

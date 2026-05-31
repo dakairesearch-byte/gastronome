@@ -3,6 +3,9 @@
 import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
+// [sweep-2026-05-26-v3 R2] SectionHeader moved inside component so the
+// heading only renders when there is content (empty state = no header).
+import SectionHeader from '@/components/SectionHeader'
 
 interface RecentSearch {
   query: string
@@ -87,24 +90,16 @@ export default function RecentSearches() {
     saveSearches(next)
   }
 
+  // [sweep-2026-05-26-v3 R2] Return null when empty — the heading lives
+  // here now, so the whole section (header + body) disappears together.
   if (searches.length === 0) {
-    return (
-      <div>
-        <p
-          className="text-sm py-4"
-          style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-        >
-          {/* Reframed from passive system-speak ("will appear here") to
-              an active suggestion. Sweep v2 microcopy QW. */}
-          Try a cuisine, neighborhood, or dish in the search bar above —
-          we&rsquo;ll keep your recent searches handy here.
-        </p>
-      </div>
-    )
+    return null
   }
 
   return (
-    <div className="space-y-3">
+    <>
+      <SectionHeader title="Recent searches" />
+      <div className="space-y-3">
       {searches.slice(0, 3).map((s, i) => (
         <div
           key={`${s.query}-${i}`}
@@ -151,6 +146,7 @@ export default function RecentSearches() {
         </div>
       ))}
     </div>
+    </>
   )
 }
 
