@@ -87,6 +87,23 @@ export function displayCuisine(cuisine: string | null | undefined): string {
 }
 
 /**
+ * Slugify a city name to match the convention used in the `cities`
+ * table (lowercase, spaces/punctuation → hyphens): "New York" →
+ * "new-york", "Los Angeles" → "los-angeles". Used for breadcrumb
+ * links from the restaurant detail page to the city page without an
+ * extra DB round-trip. If a stored slug ever deviates, the city page's
+ * own `notFound()` handles it gracefully.
+ */
+export function citySlug(cityName: string | null | undefined): string {
+  if (!cityName) return ''
+  return cityName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
  * Whether the restaurant has a meaningful cuisine label (i.e. not the
  * "Restaurant" sentinel and not null/empty). Use this to decide whether
  * to render a cuisine pill at all.

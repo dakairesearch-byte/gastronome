@@ -1,10 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Award, MapPin, Star } from 'lucide-react'
+import { Award, MapPin, Star } from 'lucide-react'
+import Breadcrumb from '@/components/Breadcrumb'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
-import AccoladesBadges from '@/components/AccoladesBadges'
 import EmptyState from '@/components/EmptyState'
+import CityRestaurantGrid, {
+  type CityGridRestaurant,
+} from '@/components/cities/CityRestaurantGrid'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
@@ -168,13 +171,15 @@ export default async function CityPage({
           />
         )}
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
-          <Link
-            href="/cities"
-            className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white font-medium mb-4 transition-colors"
-          >
-            <ArrowLeft size={14} />
-            All cities
-          </Link>
+          <div className="mb-4">
+            <Breadcrumb
+              light
+              crumbs={[
+                { label: 'Cities', href: '/cities' },
+                { label: city.name },
+              ]}
+            />
+          </div>
           <div className="flex items-end gap-3">
             <MapPin size={28} className="text-white/70 mb-1" />
             <div>
@@ -311,35 +316,16 @@ export default async function CityPage({
             description="Clear a filter to see all restaurants in this city."
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((r) => {
-              const trendingRank =
-                trending.length > 0 && trendingById.get(r.id)?.trending_rank
-              return (
-                <Link
-                  key={r.id}
-                  href={`/restaurants/${r.id}`}
-                  className="group block rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-300 hover:shadow-sm transition-all"
-                >
-                  <h3 className="font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                    {r.name}
-                  </h3>
-                  <p className="mt-1 text-xs text-gray-500 truncate">
-                    {r.cuisine && r.cuisine !== 'Restaurant' ? r.cuisine : 'Restaurant'}
-                    {r.neighborhood ? ` • ${r.neighborhood}` : ''}
-                  </p>
-                  {trendingRank ? (
-                    <p className="mt-2 text-[11px] font-semibold text-orange-600">
-                      🔥 #{trendingRank} trending in {city.name}
-                    </p>
-                  ) : null}
-                  <div className="mt-2">
-                    <AccoladesBadges restaurant={r} maxBadges={3} />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+          <CityRestaurantGrid
+            cityName={city.name}
+            restaurants={filtered.map((r): CityGridRestaurant => ({
+              ...r,
+              trendingRank:
+                trending.length > 0
+                  ? trendingById.get(r.id)?.trending_rank ?? null
+                  : null,
+            }))}
+          />
         )}
       </div>
     </div>

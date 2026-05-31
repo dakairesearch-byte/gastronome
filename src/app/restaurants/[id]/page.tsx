@@ -8,7 +8,8 @@ import ShareButton from '@/components/ShareButton'
 import BookmarkButton from '@/components/BookmarkButton'
 import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
-import BackButton from '@/components/BackButton'
+import Breadcrumb from '@/components/Breadcrumb'
+import { citySlug } from '@/lib/restaurant'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
 import type { Metadata } from 'next'
 
@@ -306,16 +307,22 @@ export default async function RestaurantPage({
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
 
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
-          <div className="flex items-center justify-between mb-4">
-            <BackButton
-              fallbackHref="/explore"
-              ariaLabel="Back"
-              className="inline-flex items-center gap-1.5 text-sm transition-colors"
-              style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-body)' }}
-            >
-              Back
-            </BackButton>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            {/* Breadcrumb replaces the bare "Back" label so deep-linked
+                users see where they are (Cities › City › Restaurant)
+                and can jump up a level. */}
+            <Breadcrumb
+              light
+              crumbs={[
+                { label: 'Cities', href: '/cities' },
+                {
+                  label: restaurant.city,
+                  href: `/cities/${citySlug(restaurant.city)}`,
+                },
+                { label: restaurant.name },
+              ]}
+            />
+            <div className="flex items-center gap-2 flex-shrink-0">
               <BookmarkButton restaurantId={restaurant.id} />
               <ShareButton
                 title={restaurant.name}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
+import BookmarkButton from './BookmarkButton'
 import { Restaurant } from '@/types/database'
 import { MapPin } from 'lucide-react'
 import { GoogleGIcon, YelpIcon } from '@/components/brands/BrandIcons'
@@ -129,92 +130,112 @@ export default function RestaurantCard({
   const thumbnail = thumbnailFailed ? null : getHeroPhoto(restaurant)
   const priceLevel = formatPriceLevel(restaurant.price_range)
 
+  // Stretched-link pattern: the card root is a plain <div>, the whole
+  // surface is made clickable by an absolutely-positioned overlay <Link>,
+  // and the visual content sits above it with pointer-events-none so dead
+  // areas fall through to the overlay. Interactive children (source
+  // links, accolade links, the Save button) re-enable pointer events and
+  // sit above the overlay. This adds the Save action AND fixes the
+  // pre-existing nested-anchor violation (SourceRatingsBar/AccoladesBadges
+  // anchors were previously nested inside the card-wide <Link>). WCAG 4.1.2.
   return (
-    <Link href={`/restaurants/${restaurant.id}`}>
-      <div
-        className={`relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group ${borderAccent}`}
-      >
-        {/* Visually-hidden text for the colored border accent — screen
-            readers and color-blind users otherwise have no signal that
-            this card is a Michelin/JBF/Eater 38 venue. */}
-        {tierLabel && <span className="sr-only">{tierLabel}.</span>}
+    <div
+      className={`relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group ${borderAccent}`}
+    >
+      {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
-        <div className="flex gap-3 p-3 sm:p-4">
-          {/* Square 80×80 thumbnail (left-aligned image-first layout).
-              Provides visual anchor in dense list contexts and matches
-              the food-photography specialist's image-left recommendation. */}
-          <div
-            className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
-            aria-hidden="true"
-          >
-            {thumbnail ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={thumbnail}
-                alt=""
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-                onError={() => setThumbnailFailed(true)}
-              />
-            ) : (
-              <div
-                className="w-full h-full flex items-center justify-center"
-                style={{
-                  background:
-                    'linear-gradient(135deg, var(--color-skeleton-base) 0%, var(--color-skeleton-highlight) 100%)',
-                }}
+      <Link
+        href={`/restaurants/${restaurant.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={restaurant.name}
+      />
+
+      <div className="relative z-[1] flex gap-3 p-3 sm:p-4 pointer-events-none">
+        <div
+          className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
+          aria-hidden="true"
+        >
+          {thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={thumbnail}
+              alt=""
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+              onError={() => setThumbnailFailed(true)}
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{
+                background:
+                  'linear-gradient(135deg, var(--color-skeleton-base) 0%, var(--color-skeleton-highlight) 100%)',
+              }}
+            >
+              <span
+                className="text-2xl font-light"
+                style={{ color: 'var(--color-text-secondary)' }}
               >
-                <span
-                  className="text-2xl font-light"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {restaurant.name.charAt(0).toUpperCase()}
+                {restaurant.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-2">
+          <div>
+            <h3
+              className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors pr-9"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              {restaurant.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                  {restaurant.cuisine}
                 </span>
-              </div>
-            )}
+              )}
+              {priceLevel && (
+                <span
+                  className="font-semibold text-gray-700 text-sm"
+                  aria-label={priceLevelAriaLabel(restaurant.price_range)}
+                >
+                  {priceLevel}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-sm text-gray-500">
+                <MapPin size={14} aria-hidden="true" />
+                <span>
+                  {restaurant.city}
+                  {restaurant.neighborhood && (
+                    <span className="text-gray-400">&middot; {restaurant.neighborhood}</span>
+                  )}
+                </span>
+              </span>
+            </div>
           </div>
 
-          <div className="flex-1 min-w-0 space-y-2">
-            <div>
-              <h3
-                className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                {restaurant.name}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
-                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
-                    {restaurant.cuisine}
-                  </span>
-                )}
-                {priceLevel && (
-                  <span
-                    className="font-semibold text-gray-700 text-sm"
-                    aria-label={priceLevelAriaLabel(restaurant.price_range)}
-                  >
-                    {priceLevel}
-                  </span>
-                )}
-                <span className="flex items-center gap-1 text-sm text-gray-500">
-                  <MapPin size={14} aria-hidden="true" />
-                  <span>
-                    {restaurant.city}
-                    {restaurant.neighborhood && (
-                      <span className="text-gray-400">&middot; {restaurant.neighborhood}</span>
-                    )}
-                  </span>
-                </span>
-              </div>
+          {/* Interactive children re-enable pointer events so their own
+              links work and their clicks don't fall through to the
+              overlay. */}
+          {hasAccolades && (
+            <div className="pointer-events-auto w-fit">
+              <AccoladesBadges restaurant={restaurant} maxBadges={3} />
             </div>
+          )}
 
-            {hasAccolades && <AccoladesBadges restaurant={restaurant} maxBadges={3} />}
-
+          <div className="pointer-events-auto w-fit">
             <SourceRatingsBar restaurant={restaurant} />
           </div>
         </div>
       </div>
-    </Link>
+
+      {/* Save button — above the overlay link, pointer-events restored. */}
+      <div className="absolute top-2 right-2 z-[2] pointer-events-auto">
+        <BookmarkButton restaurantId={restaurant.id} variant="card" />
+      </div>
+    </div>
   )
 }
 
@@ -269,12 +290,24 @@ function HeroVariant({
     : `Photo of ${restaurant.name}`
 
   return (
-    <Link href={`/restaurants/${restaurant.id}`} className="block h-full">
-      <div
-        className={`relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white cursor-pointer group h-full flex flex-col ${borderAccent}`}
-      >
-        {tierLabel && <span className="sr-only">{tierLabel}.</span>}
+    <div
+      className={`relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group h-full flex flex-col ${borderAccent}`}
+    >
+      {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
+      {/* Stretched overlay link — see compact-variant comment. */}
+      <Link
+        href={`/restaurants/${restaurant.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={restaurant.name}
+      />
+
+      {/* Save button — above the photo + overlay link. */}
+      <div className="absolute top-2 right-2 z-[2] pointer-events-auto">
+        <BookmarkButton restaurantId={restaurant.id} variant="card" />
+      </div>
+
+      <div className="relative z-[1] flex flex-col h-full pointer-events-none">
         {/* Photo or accolade-themed gradient hero */}
         <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
           {photo ? (
@@ -382,12 +415,12 @@ function HeroVariant({
           )}
 
           {hasAccolades && (
-            <div className="mt-auto pt-1">
+            <div className="mt-auto pt-1 pointer-events-auto w-fit">
               <AccoladesBadges restaurant={restaurant} maxBadges={3} />
             </div>
           )}
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
