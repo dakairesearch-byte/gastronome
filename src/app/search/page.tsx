@@ -465,6 +465,40 @@ function SearchContent() {
   const hasAnyResults = totalRestaurants > 0 || dishes.length > 0
   const activeFilterCount = useMemo(() => countActive(filters), [filters])
 
+  // Identify the most restrictive active filter to name in the zero-
+  // result empty state ("the Google ≥4.1 filter is the most
+  // restrictive"). Heuristic: rating/review thresholds and single-
+  // select accolades tend to cut hardest, so we surface those first.
+  const mostRestrictiveFilterLabel = useMemo(() => {
+    if (filters.googleMinReviews > 0) return `Google ≥${filters.googleMinReviews} reviews`
+    if (filters.yelpMinReviews > 0) return `Yelp ≥${filters.yelpMinReviews} reviews`
+    if (filters.googleMinRating > 0) return `Google ≥${filters.googleMinRating}★`
+    if (filters.yelpMinRating > 0) return `Yelp ≥${filters.yelpMinRating}★`
+    if (filters.michelinStars.length) return 'Michelin stars'
+    if (filters.jamesBeard !== 'any') return 'James Beard'
+    if (filters.eater38) return 'Eater 38'
+    if (filters.bibGourmand) return 'Bib Gourmand'
+    if (filters.cuisines.length) return `cuisine (${filters.cuisines[0]})`
+    if (filters.cities.length) return `city (${filters.cities[0]})`
+    return null
+  }, [filters])
+
+  // Client-side incremental rendering of the restaurant results so the
+  // DOM stays small on broad queries. The server still caps the query;
+  // this just controls how many of the fetched rows render at once and
+  // surfaces an honest "showing N of M" count. Sweep v2 search P1.
+  const RESULTS_PAGE = 12
+  const [visibleResults, setVisibleResults] = useState(RESULTS_PAGE)
+  // Reset the visible window whenever the result set changes.
+  const resultsKey = `${restaurants.length}:${searchQuery}:${activeFilterCount}`
+  const [trackedResultsKey, setTrackedResultsKey] = useState(resultsKey)
+  if (trackedResultsKey !== resultsKey) {
+    setTrackedResultsKey(resultsKey)
+    setVisibleResults(RESULTS_PAGE)
+  }
+  const shownRestaurants = restaurants.slice(0, visibleResults)
+  const remainingResults = restaurants.length - visibleResults
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -549,10 +583,15 @@ function SearchContent() {
               </div>
             )}
 
-            {/* No Results */}
+            {/* No Results — when filters are active, name the most
+                restrictive one so the user knows what to loosen, and
+                always offer a "Browse all" escape alongside "Reset
+                filters" so the state is never a dead end. Sweep v2
+                empty-states P1 + QW. */}
             {!loading && !hasAnyResults && (
               <EmptyState
                 icon={Search}
+                tone={searchQuery || activeFilterCount > 0 ? 'attention' : 'neutral'}
                 title={
                   searchQuery || activeFilterCount > 0
                     ? 'No results found'
@@ -561,17 +600,19 @@ function SearchContent() {
                     : 'Start searching'
                 }
                 description={
-                  searchQuery || activeFilterCount > 0
-                    ? 'Try relaxing a filter or adjusting your search terms.'
+                  activeFilterCount > 0
+                    ? `Nothing matches all ${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}${mostRestrictiveFilterLabel ? ` — the ${mostRestrictiveFilterLabel} filter is the most restrictive.` : '.'} Try removing one.`
+                    : searchQuery
+                    ? `No matches for “${searchQuery}”. Check the spelling or try a broader term.`
                     : filters.mode === 'dishes'
                     ? 'Try "ramen", "pizza", or "cacio e pepe" to find which spots do it best.'
                     : 'Enter a restaurant, cuisine, city, or dish to get started.'
                 }
-                ctaText={activeFilterCount > 0 ? 'Reset filters' : 'Discover'}
+                ctaText={activeFilterCount > 0 ? 'Reset filters' : 'Browse restaurants'}
                 ctaHref={activeFilterCount > 0 ? undefined : '/explore'}
-                onCtaClick={
-                  activeFilterCount > 0 ? handleResetAll : undefined
-                }
+                onCtaClick={activeFilterCount > 0 ? handleResetAll : undefined}
+                secondaryCtaText={activeFilterCount > 0 ? 'Browse all restaurants' : undefined}
+                secondaryCtaHref={activeFilterCount > 0 ? '/explore' : undefined}
               />
             )}
 
@@ -628,19 +669,51 @@ function SearchContent() {
                   </>
                 )}
 
-                {restaurants.map((r) => (
+                {restaurants.length > 0 && (
+                  <p className="text-xs text-gray-500 pt-1">
+                    Showing{' '}
+                    <span className="font-semibold text-gray-700">
+                      {Math.min(visibleResults, restaurants.length)}
+                    </span>{' '}
+                    of {restaurants.length}
+                    {restaurants.length >= 40 ? '+' : ''}{' '}
+                    {restaurants.length === 1 ? 'restaurant' : 'restaurants'}
+                  </p>
+                )}
+
+                {shownRestaurants.map((r) => (
                   <RestaurantCard key={r.id} restaurant={r} />
                 ))}
+
+                {remainingResults > 0 && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleResults((v) => v + RESULTS_PAGE)}
+                      className="px-6 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-emerald-300 hover:text-emerald-700 transition-colors"
+                    >
+                      Show {Math.min(RESULTS_PAGE, remainingResults)} more
+                    </button>
+                  </div>
+                )}
 
                 {googlePlaces.length > 0 && (
                   <>
                     {restaurants.length > 0 && (
-                      <div className="flex items-center gap-2 pt-2">
-                        <div className="h-px bg-gray-200 flex-1" />
-                        <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                          <MapPin size={12} /> From Google
-                        </span>
-                        <div className="h-px bg-gray-200 flex-1" />
+                      <div className="pt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-px bg-gray-200 flex-1" />
+                          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                            <MapPin size={12} aria-hidden="true" /> From Google
+                          </span>
+                          <div className="h-px bg-gray-200 flex-1" />
+                        </div>
+                        {/* Explain what these rows are — they aren't in
+                            Gastronome yet; tapping adds them. Sweep v2
+                            search QW. */}
+                        <p className="text-[11px] text-gray-400 text-center mt-1.5">
+                          Not in Gastronome yet — tap to add a review and put it on the map.
+                        </p>
                       </div>
                     )}
                     {googlePlaces.map((place) => (
