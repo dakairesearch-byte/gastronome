@@ -115,7 +115,6 @@ async function seed() {
         michelin_stars,
         michelin_designation,
         james_beard_winner,
-        james_beard_nominated: james_beard_winner,
         eater_38: (r.lists || []).some((l: string) => l.includes('Essential 38')),
         accolades: accoladesJson,
         description: null,
@@ -123,16 +122,29 @@ async function seed() {
       };
     });
 
+    // Idempotency: skip rows that already exist for this city. The fixture has
+    // no google_place_id at seed time (enrichment fills it later), so (name,
+    // city) is the only dedupe key available here. Without this, re-running the
+    // seeder inserts duplicate restaurants.
+    const { data: existingRows } = await supabase
+      .from('restaurants')
+      .select('name')
+      .eq('city', cityInfo.city);
+    const existingNames = new Set((existingRows ?? []).map((row) => row.name));
+    const newRows = batch.filter((row) => !existingNames.has(row.name));
+    const skipped = batch.length - newRows.length;
+    if (skipped > 0) console.log(`Skipping ${skipped} existing ${key} restaurants`);
+
     // Insert in chunks of 50 to avoid payload limits
-    for (let i = 0; i < batch.length; i += 50) {
-      const chunk = batch.slice(i, i + 50);
+    for (let i = 0; i < newRows.length; i += 50) {
+      const chunk = newRows.slice(i, i + 50);
       const { error } = await supabase.from('restaurants').insert(chunk);
       if (error) {
         console.error(`Error inserting chunk for ${key} (${i}-${i + chunk.length}):`, error.message);
         errors += chunk.length;
       } else {
         total += chunk.length;
-        console.log(`Inserted ${key}: ${Math.min(i + 50, batch.length)}/${batch.length}`);
+        console.log(`Inserted ${key}: ${Math.min(i + 50, newRows.length)}/${newRows.length}`);
       }
     }
   }

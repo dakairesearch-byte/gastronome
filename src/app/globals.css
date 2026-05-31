@@ -62,6 +62,31 @@ html {
 }
 
 /*
+ * Standalone (Add to Home Screen) hardening for iOS:
+ *  - Disable vertical overscroll so the rubber-band bounce doesn't
+ *    reveal the page background behind the standalone web app.
+ *  - Neutralize the default grey tap-highlight flash. Visible :active /
+ *    :focus-visible affordances below preserve interaction feedback so
+ *    we don't lose perceivable state (the focus ring rules further down
+ *    are intentionally left untouched).
+ */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Restore a perceptible press state for touch (tap-highlight removed). */
+a:active,
+button:active,
+[role='button']:active {
+  opacity: 0.6;
+}
+
+/*
  * Respect users' motion preferences. Gates smooth scroll, the shimmer
  * skeleton, and any CSS transitions/animations so vestibular-sensitive
  * users don't get triggered by hover scales, scroll snaps, and the
@@ -164,4 +189,7 @@ a:focus-visible {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  /* Momentum scrolling for the horizontal rails / overflow containers
+   * that hide their scrollbars (city grids, trending rows, etc.). */
+  -webkit-overflow-scrolling: touch;
 }

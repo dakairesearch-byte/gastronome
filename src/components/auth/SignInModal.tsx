@@ -12,6 +12,8 @@ interface SignInModalProps {
   onClose: () => void
   initialMode?: 'signin' | 'signup'
   redirectTo?: string
+  /** Pre-seed an error banner (e.g. from a /auth/callback ?error= redirect). */
+  initialError?: string
 }
 
 type ViewMode = 'signin' | 'signup' | 'forgot'
@@ -41,6 +43,7 @@ export default function SignInModal({
   onClose,
   initialMode = 'signin',
   redirectTo = '/',
+  initialError = '',
 }: SignInModalProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -65,12 +68,12 @@ export default function SignInModal({
     if (!open) return
     setPhase('auth')
     setMode(initialMode)
-    setError('')
+    setError(initialError)
     setAwaitingConfirmation(false)
     setResetSent(false)
     setLoading(false)
     setOauthLoading(false)
-  }, [open, initialMode])
+  }, [open, initialMode, initialError])
 
   useEffect(() => {
     if (!open || mode !== 'signup' || cities.length > 0) return
@@ -811,7 +814,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '2px',
   color: 'var(--color-text)',
   fontFamily: 'var(--font-body)',
-  fontSize: '14px',
+  fontSize: '16px',
 }
 
 function Field({

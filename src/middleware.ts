@@ -13,7 +13,11 @@ export const config = {
      * - _next/image   (image optimization endpoint)
      * - favicon.ico   (favicon file)
      * - any path ending in a static asset extension
-     *   (svg/png/jpg/jpeg/gif/webp/avif/ico)
+     *   (svg/png/jpg/jpeg/gif/webp/avif/ico/webmanifest)
+     *   — `webmanifest` is required so the PWA manifest at
+     *   /manifest.webmanifest is publicly fetchable (iOS/Android read it
+     *   for "Add to Home Screen"); without it the manifest 307s to
+     *   /onboarding for anonymous users and install breaks.
      *
      * The trailing extension exclusion is the fix for a real bug: the
      * previous matcher caught `/Logo.jpg` and every other file in
@@ -24,6 +28,6 @@ export const config = {
      * Excluding asset extensions lets /public files serve directly and
      * skips the per-asset Supabase client instantiation entirely.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|webmanifest)$).*)',
   ],
 }

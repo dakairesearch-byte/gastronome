@@ -483,7 +483,7 @@ export default async function ExplorePage({
       <Suspense
         fallback={
           <div
-            className="sticky top-0 z-30 border-b backdrop-blur-md"
+            className="sticky top-16 md:top-20 z-30 border-b backdrop-blur-md"
             style={{
               backgroundColor: 'rgba(255,255,255,0.92)',
               borderColor: 'var(--color-border)',

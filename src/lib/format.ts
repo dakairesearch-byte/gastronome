@@ -20,8 +20,11 @@ export function formatRating(rating: number | null | undefined): string | null {
  *   12_345 → "12.3K"
  *   999 → "999"
  */
-export function formatCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
+export function formatCount(count: number | null | undefined): string {
+  if (count == null || Number.isNaN(count)) return '0'
+  // 999_950+ rounds to 1.0M at one-decimal precision — promote it so we never
+  // print "1000.0K" for values like 999_999.
+  if (count >= 999_950) return `${(count / 1_000_000).toFixed(1)}M`
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`
   return count.toLocaleString()
 }

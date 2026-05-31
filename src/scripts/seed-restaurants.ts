@@ -75,40 +75,35 @@ async function seed() {
   console.log(`Seeding ${SEED_RESTAURANTS.length} restaurants...`)
 
   for (const restaurant of SEED_RESTAURANTS) {
-    const { error } = await supabase
+    // Idempotency: these fixtures have no google_place_id, so dedupe on
+    // (name, city). There is no unique constraint on name, so an upsert on
+    // 'name' silently fails into a plain insert and creates duplicates on
+    // re-run — check existence first instead.
+    const { data: existing } = await supabase
       .from('restaurants')
-      .upsert(
-        {
-          name: restaurant.name,
-          city: restaurant.city,
-          cuisine: restaurant.cuisine,
-          price_range: restaurant.price_range,
-          neighborhood: restaurant.neighborhood,
-          is_featured: true,
-        },
-        { onConflict: 'name' }
-      )
-      .select()
-      .single()
+      .select('id')
+      .eq('name', restaurant.name)
+      .eq('city', restaurant.city)
+      .maybeSingle()
 
-    if (error) {
-      // Try insert without upsert if no unique constraint on name
-      const { error: insertError } = await supabase
-        .from('restaurants')
-        .insert({
-          name: restaurant.name,
-          city: restaurant.city,
-          cuisine: restaurant.cuisine,
-          price_range: restaurant.price_range,
-          neighborhood: restaurant.neighborhood,
-          is_featured: true,
-        })
+    if (existing) {
+      console.log(`  = ${restaurant.name} (${restaurant.city}) already seeded`)
+      continue
+    }
 
-      if (insertError) {
-        console.error(`  Error seeding ${restaurant.name}:`, insertError.message)
-      } else {
-        console.log(`  + ${restaurant.name} (${restaurant.city})`)
-      }
+    const { error: insertError } = await supabase
+      .from('restaurants')
+      .insert({
+        name: restaurant.name,
+        city: restaurant.city,
+        cuisine: restaurant.cuisine,
+        price_range: restaurant.price_range,
+        neighborhood: restaurant.neighborhood,
+        is_featured: true,
+      })
+
+    if (insertError) {
+      console.error(`  Error seeding ${restaurant.name}:`, insertError.message)
     } else {
       console.log(`  + ${restaurant.name} (${restaurant.city})`)
     }

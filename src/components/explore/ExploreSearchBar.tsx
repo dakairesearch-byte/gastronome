@@ -218,6 +218,7 @@ export default function ExploreSearchBar({
                         color: 'var(--color-text)',
                         borderColor: 'var(--color-border)',
                         borderRadius: '6px',
+                        fontSize: '16px',
                       }}
                     />
                     <p

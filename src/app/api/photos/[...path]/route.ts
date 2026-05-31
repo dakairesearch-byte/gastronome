@@ -63,13 +63,36 @@ export async function GET(
     return new NextResponse('GOOGLE_PLACES_API_KEY not set', { status: 500 })
   }
 
+  // Pass the API key as a header (never in the URL) and handle redirects
+  // manually. Google's photo-media endpoint 302s to a signed CDN URL that
+  // needs no key — following automatically would forward the key header to
+  // the redirect target. We follow it ourselves, without the key, only to a
+  // known Google host.
   const upstream =
     `https://places.googleapis.com/v1/${photoName}/media` +
-    `?maxWidthPx=${maxWidthPx}&key=${key}`
+    `?maxWidthPx=${maxWidthPx}`
+
+  const ALLOWED_REDIRECT_HOSTS = /(^|\.)(googleusercontent\.com|ggpht\.com|googleapis\.com|gstatic\.com)$/
 
   let res: Response
   try {
-    res = await fetch(upstream, { redirect: 'follow' })
+    res = await fetch(upstream, {
+      redirect: 'manual',
+      headers: { 'X-Goog-Api-Key': key },
+    })
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location')
+      if (!location) {
+        return new NextResponse('Upstream redirect without location', { status: 502 })
+      }
+      const redirectUrl = new URL(location)
+      if (redirectUrl.protocol !== 'https:' || !ALLOWED_REDIRECT_HOSTS.test(redirectUrl.hostname)) {
+        return new NextResponse('Upstream redirect to disallowed host', { status: 502 })
+      }
+      // Second hop carries no key — the signed CDN URL is self-authorizing.
+      res = await fetch(redirectUrl, { redirect: 'manual' })
+    }
   } catch (err) {
     return new NextResponse(
       `Upstream fetch failed: ${(err as Error).message}`,

@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SUPABASE_URL="https://trwdqzsfgeydafojajbh.supabase.co"
-SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyd2RxenNmZ2V5ZGFmb2phamJoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1NTU4NiwiZXhwIjoyMDkwODMxNTg2fQ.BsT8WxBigJfhlr4IXiN2VcG7iP8lcIqk5DEiQixllwU"
-GOOGLE_API_KEY="AIzaSyDTubcLiMJpNHVmZKJDxTzyQFtpq5NZHb4"
+# Load secrets from .env.local (never hardcode credentials in source).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env.local"
+if [ -f "$ENV_FILE" ]; then
+  set -a; source "$ENV_FILE"; set +a
+fi
+
+SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:?Set NEXT_PUBLIC_SUPABASE_URL in .env.local}"
+SK="${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY in .env.local}"
+GOOGLE_API_KEY="${GOOGLE_PLACES_API_KEY:?Set GOOGLE_PLACES_API_KEY in .env.local}"
 
 # City -> state mapping
 declare -A STATE_MAP

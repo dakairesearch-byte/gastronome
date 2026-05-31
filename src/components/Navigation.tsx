@@ -56,9 +56,21 @@ export default function Navigation() {
         style={{
           backgroundColor: 'rgba(255,255,255,0.97)',
           borderBottom: '1px solid var(--color-border)',
+          // Keep the header clear of the notch / Dynamic Island in iOS
+          // standalone mode (viewport-fit: cover is set on layout). This
+          // sits on top of the inner row's existing h-16/h-20 height.
+          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div
+          className="max-w-7xl mx-auto px-6 lg:px-8"
+          style={{
+            // Honor the side insets in landscape standalone so the logo
+            // and hamburger aren't tucked under the rounded corners.
+            paddingLeft: 'max(1.5rem, env(safe-area-inset-left, 0px))',
+            paddingRight: 'max(1.5rem, env(safe-area-inset-right, 0px))',
+          }}
+        >
           {/* Header height was h-28 (112px) — burned ~13% of mobile
               viewport before any content. Shrunk to h-16 on mobile, h-20
               on desktop. Logo scales accordingly. */}

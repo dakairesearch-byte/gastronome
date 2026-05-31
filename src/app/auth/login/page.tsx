@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import SignInModal from '@/components/auth/SignInModal'
 
@@ -16,24 +16,24 @@ function LoginContent() {
     router.push('/')
   }
 
-  // Any `?error=...` query param (e.g. the /auth/callback failure
-  // redirect) surfaces as a one-time notification in the dialog. The
-  // state lives inside the dialog, so the outer page just needs to
-  // mount it with the right mode.
-  useEffect(() => {
-    if (searchParams.get('error')) {
-      // No dedicated prop for ad-hoc errors; the dialog surfaces
-      // auth errors as they occur from Supabase, which is the common
-      // case. Keeping this stub for future expansion.
-    }
-  }, [searchParams])
+  // Surface any `?error=...` (e.g. from the /auth/callback failure redirect)
+  // as a banner inside the dialog.
+  const errorParam = searchParams.get('error')
+  const initialError = errorParam
+    ? 'Sign-in failed. Please try again or use a different method.'
+    : ''
 
   return (
     <div
       className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: 'var(--color-background)' }}
     >
-      <SignInModal open={open} onClose={handleClose} initialMode="signin" />
+      <SignInModal
+        open={open}
+        onClose={handleClose}
+        initialMode="signin"
+        initialError={initialError}
+      />
     </div>
   )
 }

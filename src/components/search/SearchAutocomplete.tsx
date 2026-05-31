@@ -182,7 +182,7 @@ export default function SearchAutocomplete({
       style={{
         color: 'var(--color-text)',
         fontFamily: 'var(--font-body)',
-        fontSize: '15px',
+        fontSize: '16px',
       }}
     />
   )

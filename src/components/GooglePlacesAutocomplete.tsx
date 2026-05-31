@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Google Maps JS API has no bundled types; install @types/google.maps to remove these */
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Search, ExternalLink, Loader2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Restaurant } from '@/types/database'
@@ -64,35 +64,58 @@ export default function GooglePlacesAutocomplete({
   const supabase = createClient()
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
 
-  // Load Google Places API
+  // Load Google Places API as a singleton. Injecting a fresh <script> on every
+  // mount (and removing it on unmount) means a duplicate same-src tag never
+  // re-fires `onload`, so the service refs silently stay unset on remount.
+  // Instead: reuse the already-loaded SDK, attach to an in-flight script, or
+  // inject one shared tag that is never removed.
   useEffect(() => {
     if (!apiKey) {
       console.warn('Google Places API key not configured')
       return
     }
 
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-
-    script.onload = () => {
-      if (window.google?.maps?.places) {
+    let cancelled = false
+    const init = () => {
+      if (!cancelled && window.google?.maps?.places) {
         autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
         setGoogleApiAvailable(true)
       }
     }
 
+    // Already available — initialise immediately.
+    if (window.google?.maps?.places) {
+      init()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    // A previous mount already started loading the SDK — wait for it.
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-places]')
+    if (existing) {
+      existing.addEventListener('load', init)
+      return () => {
+        cancelled = true
+        existing.removeEventListener('load', init)
+      }
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.dataset.googlePlaces = 'true'
+    script.addEventListener('load', init)
     script.onerror = () => {
       console.error('Failed to load Google Places API')
     }
-
     document.head.appendChild(script)
 
+    // Intentionally do NOT remove the shared script on unmount.
     return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
-      }
+      cancelled = true
+      script.removeEventListener('load', init)
     }
   }, [apiKey])
 
@@ -335,6 +358,12 @@ export default function GooglePlacesAutocomplete({
     inputRef.current?.focus()
   }
 
+  // Precompute result → position so the dropdown doesn't do O(n²) indexOf scans.
+  const indexByResult = useMemo(
+    () => new Map(results.map((r, i) => [r, i] as const)),
+    [results]
+  )
+
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
       <div className="relative">
@@ -385,7 +414,7 @@ export default function GooglePlacesAutocomplete({
                 .filter((r) => !r.isFromGoogle)
                 .map((result) => {
                   const restaurant = result as LocalRestaurantResult
-                  const resultIndex = results.indexOf(result)
+                  const resultIndex = indexByResult.get(result) ?? -1
                   return (
                     <button
                       key={`local-${restaurant.id}`}
@@ -434,7 +463,7 @@ export default function GooglePlacesAutocomplete({
                 .filter((r) => r.isFromGoogle)
                 .map((result) => {
                   const place = result as GooglePlacesResult
-                  const resultIndex = results.indexOf(result)
+                  const resultIndex = indexByResult.get(result) ?? -1
                   return (
                     <button
                       key={`google-${place.placeId}`}

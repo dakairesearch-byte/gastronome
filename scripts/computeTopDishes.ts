@@ -1185,10 +1185,17 @@ async function main() {
     return
   }
 
-  // Truncate + bulk insert
-  console.log('[topDishes] truncating restaurant_top_dishes...')
-  const { error: delErr } = await sb.from('restaurant_top_dishes').delete().neq('restaurant_id', '00000000-0000-0000-0000-000000000000')
-  if (delErr) { console.error('truncate err', delErr.message); process.exit(1) }
+  // Scoped delete + bulk insert. Never TRUNCATE the whole table: chip-only
+  // restaurants that aren't part of this run have no other mention source and
+  // would be permanently dropped. Only clear the restaurants we recomputed.
+  const touchedIds = [...new Set(allRows.map((r) => r.restaurant_id))]
+  console.log(`[topDishes] clearing ${touchedIds.length} recomputed restaurants...`)
+  const DEL_BATCH = 200
+  for (let i = 0; i < touchedIds.length; i += DEL_BATCH) {
+    const idChunk = touchedIds.slice(i, i + DEL_BATCH)
+    const { error: delErr } = await sb.from('restaurant_top_dishes').delete().in('restaurant_id', idChunk)
+    if (delErr) { console.error('delete err', delErr.message); process.exit(1) }
+  }
 
   const nowIso = new Date().toISOString()
   const insertRows = allRows.map((r) => ({

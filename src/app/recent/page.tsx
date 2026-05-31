@@ -88,7 +88,7 @@ export default async function RecentPage({
       </section>
 
       {/* Sticky filter chips */}
-      <div className="sticky top-14 z-20 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100">
+      <div className="sticky top-16 md:top-20 z-20 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3">
           <FeedFilterChips active={filter} />
         </div>

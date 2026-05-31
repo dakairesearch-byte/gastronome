@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SUPABASE_URL="https://trwdqzsfgeydafojajbh.supabase.co"
-SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyd2RxenNmZ2V5ZGFmb2phamJoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI1NTU4NiwiZXhwIjoyMDkwODMxNTg2fQ.BsT8WxBigJfhlr4IXiN2VcG7iP8lcIqk5DEiQixllwU"
+# Load secrets from .env.local (never hardcode credentials in source).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env.local"
+if [ -f "$ENV_FILE" ]; then
+  set -a; source "$ENV_FILE"; set +a
+fi
+
+SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:?Set NEXT_PUBLIC_SUPABASE_URL in .env.local}"
+SK="${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY in .env.local}"
 SEED_FILE="./gastronome-seed-data-with-accolades.json"
 
 if [ ! -f "$SEED_FILE" ]; then
@@ -52,7 +59,6 @@ for city_key in Miami NYC LA Chicago SF; do
         else null end
       ),
       james_beard_winner: ((.accolades // []) | map(select(startswith(\"James Beard\"))) | length > 0),
-      james_beard_nominated: ((.accolades // []) | map(select(startswith(\"James Beard\"))) | length > 0),
       eater_38: ((.lists // []) | map(select(contains(\"Essential 38\"))) | length > 0),
       is_featured: (
         (.accolades // [] | map(select(contains(\"Michelin 2 Star\") or contains(\"Michelin 3 Star\"))) | length > 0) or

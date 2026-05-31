@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Quarantined one-off / superseded pipeline scripts — not shippable app code.
+    "scripts/archived/**",
   ]),
 ]);
 

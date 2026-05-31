@@ -1,0 +1,8 @@
+# Pre-commit hooks. Install once with: pipx install pre-commit && pre-commit install
+# Primary purpose: block secrets (service-role keys, API keys) from being
+# committed again — see scripts/*.sh history for why this exists.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks

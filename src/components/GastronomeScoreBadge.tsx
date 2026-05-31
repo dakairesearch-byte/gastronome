@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 import type { GastronomeScore } from '@/lib/score'
 
@@ -16,6 +16,13 @@ export default function GastronomeScoreBadge({
   score: GastronomeScore
 }) {
   const [open, setOpen] = useState(false)
+  // Touch fires a synthetic mouseenter immediately before the click. Without
+  // this guard, hover-open would set open=true, then the click toggle would
+  // flip it straight back to false — leaving touch users unable to open the
+  // popover. We suppress hover-open for a short window after a touch start so
+  // the click handler is the sole authority on touch devices, while pointer
+  // (mouse) hover continues to open/close on desktop.
+  const touchedRef = useRef(false)
 
   return (
     <div className="relative inline-flex flex-col gap-0.5">
@@ -39,14 +46,26 @@ export default function GastronomeScoreBadge({
         </span>
         <button
           type="button"
+          onTouchStart={() => {
+            touchedRef.current = true
+          }}
           onClick={() => setOpen((v) => !v)}
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
+          onMouseEnter={() => {
+            if (touchedRef.current) return
+            setOpen(true)
+          }}
+          onMouseLeave={() => {
+            if (touchedRef.current) {
+              touchedRef.current = false
+              return
+            }
+            setOpen(false)
+          }}
           onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           aria-label="How the Gastronome Score is calculated"
           aria-expanded={open}
-          className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-colors"
+          className="inline-flex items-center justify-center -m-3 p-3 min-w-[44px] min-h-[44px] rounded-full transition-colors"
           style={{ color: 'rgba(255,255,255,0.6)' }}
         >
           <Info size={15} aria-hidden="true" />

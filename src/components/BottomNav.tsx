@@ -41,7 +41,12 @@ export default function BottomNav() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex items-center justify-around h-16 px-2">
+      {/* min-height (not a fixed h-16) so the icon + 10px label always
+          have vertical room — the "Home" label was clipping when the
+          flex row was locked to 64px. The home-indicator inset is added
+          by the outer <nav>'s paddingBottom, so it stacks on top of this
+          rather than eating into the label space. */}
+      <div className="flex items-center justify-around min-h-16 px-2">
         {navTabs.map((tab) => {
           const active = isActivePath(pathname, tab.href)
           const Icon = tab.icon

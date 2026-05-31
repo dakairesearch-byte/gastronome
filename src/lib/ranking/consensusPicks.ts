@@ -130,20 +130,27 @@ export async function topConsensusPicks(
   // secondary filter rather than the other way round, because cities have
   // hundreds of qualifying restaurants but tens of thousands of videos
   // globally — narrowing first by city + rating is the cheaper join.
-  const { data: candidates, error: candidatesErr } = await supabase
-    .from('restaurants')
-    .select('*')
-    .ilike('city', city)
-    .gte('google_rating', 4.2)
-    .gte('yelp_rating', 4.0)
-    // Pull a generous slice — Supabase caps each query at 1000, and
-    // realistic cities have well under 500 restaurants meeting the
-    // rating floor. If a city ever exceeds the cap, paginate here.
-    .limit(1000)
-  if (candidatesErr) {
-    throw new Error(`consensus candidates: ${candidatesErr.message}`)
+  // Supabase caps each .select() at 1000 rows; paginate so a city that grows
+  // past the cap isn't silently truncated (matches the video-aggregate loop).
+  const candidateRows: Restaurant[] = []
+  const candPageSize = 1000
+  let candFrom = 0
+  for (;;) {
+    const { data, error: candidatesErr } = await supabase
+      .from('restaurants')
+      .select('*')
+      .ilike('city', city)
+      .gte('google_rating', 4.2)
+      .gte('yelp_rating', 4.0)
+      .range(candFrom, candFrom + candPageSize - 1)
+    if (candidatesErr) {
+      throw new Error(`consensus candidates: ${candidatesErr.message}`)
+    }
+    if (!data || data.length === 0) break
+    candidateRows.push(...(data as Restaurant[]))
+    if (data.length < candPageSize) break
+    candFrom += candPageSize
   }
-  const candidateRows = (candidates ?? []) as Restaurant[]
   if (candidateRows.length === 0) return []
 
   // Step 2 — aggregate TikTok + Instagram engagement for the candidate set.

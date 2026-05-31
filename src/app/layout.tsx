@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Spectral } from 'next/font/google'
 import './globals.css'
 import Navigation from '@/components/Navigation'
@@ -43,10 +43,10 @@ export const metadata: Metadata = {
   keywords:
     'restaurant ratings, restaurant reviews, Google rating, Yelp rating, Michelin stars, Infatuation, dining, food',
   authors: [{ name: 'Gastronome' }],
-  icons: {
-    icon: '/Logo.jpg',
-    shortcut: '/Logo.jpg',
-    apple: '/Logo.jpg',
+  appleWebApp: {
+    capable: true,
+    title: 'Gastronome',
+    statusBarStyle: 'default',
   },
   openGraph: {
     title: 'Gastronome — Every Restaurant Rating in One Place',
@@ -68,6 +68,13 @@ export const metadata: Metadata = {
       'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
     images: ['/Logo.jpg'],
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#FFFEFB',
 }
 
 export default function RootLayout({

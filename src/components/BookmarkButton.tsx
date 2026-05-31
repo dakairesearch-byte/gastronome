@@ -162,14 +162,14 @@ export default function BookmarkButton({
       ? `inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-xs font-medium text-gray-200 border border-white/10 transition-colors ${
           isFavorite ? 'bg-white/20 text-white' : ''
         }`
-      : `inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md text-gray-700 transition-colors ${
+      : `inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/90 hover:bg-white shadow-md text-gray-700 transition-colors ${
           isFavorite ? 'text-emerald-600' : ''
         }`
 
   const chevronClass =
     variant === 'hero'
       ? 'inline-flex items-center justify-center w-7 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-xs text-gray-200 border border-white/10 transition-colors'
-      : 'inline-flex items-center justify-center w-7 h-8 rounded-full bg-white/90 hover:bg-white shadow-md text-gray-700 text-xs transition-colors'
+      : 'inline-flex items-center justify-center w-9 h-11 rounded-full bg-white/90 hover:bg-white shadow-md text-gray-700 text-xs transition-colors'
 
   return (
     <div ref={rootRef} className={`relative inline-flex items-stretch gap-1 ${className}`}>
@@ -238,7 +238,7 @@ export default function BookmarkButton({
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="p-1 -mr-1 rounded-sm text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              className="-m-2.5 p-2.5 inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-sm text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             >
               ×
             </button>

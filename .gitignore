@@ -55,3 +55,7 @@ next-env.d.ts
 # working dirs from pipeline scripts (logs, watchdog shards, tmp artifacts)
 /logs/
 /tmp/
+
+# generated run reports and stray logs (keep out of version control)
+*-report-*.json
+*.log

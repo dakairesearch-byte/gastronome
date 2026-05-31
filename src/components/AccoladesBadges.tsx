@@ -92,6 +92,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     // column lands on `restaurants`, this will become clickable for free.
     const jbfHref =
       (restaurant as Restaurant & { jbf_url?: string | null }).jbf_url ?? null
+    const jbfYear = (restaurant as Restaurant & { jbf_year?: number | null }).jbf_year
     badges.push(
       <BadgeLink key="james-beard" href={jbfHref}>
         <span
@@ -99,7 +100,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
           title="Recipient of a James Beard Foundation award — the U.S. restaurant industry's most prestigious honors."
         >
           <Award size={12} className="text-amber-600" aria-hidden="true" />
-          <span>James Beard Winner</span>
+          <span>{`James Beard Winner${yearSuffix(jbfYear)}`}</span>
         </span>
       </BadgeLink>
     )
@@ -115,7 +116,6 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     // listings don't look equally authoritative as a current pick.
     const eaterYear =
       (restaurant as Restaurant & { eater_year?: number | null }).eater_year
-    const yearSuffix = eaterYear ? ` '${String(eaterYear).slice(-2)}` : ''
     badges.push(
       <BadgeLink key="eater-38" href={eaterHref}>
         <span
@@ -123,7 +123,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
           title="Listed on the Eater 38 — Eater's running list of the most essential restaurants in this city."
         >
           <Utensils size={12} className="text-pink-500" aria-hidden="true" />
-          <span>{`Eater 38${yearSuffix}`}</span>
+          <span>{`Eater 38${yearSuffix(eaterYear)}`}</span>
         </span>
       </BadgeLink>
     )

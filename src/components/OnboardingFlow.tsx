@@ -112,10 +112,8 @@ export default function OnboardingFlow() {
   // wanted to look first) were stuck. Now `canProceed` is always true
   // on the city step; an unselected city just defers home-city setup.
   // Sweep v2 onboarding P0.
-  const canProceed = (() => {
-    if (step === 'problem' || step === 'solution' || step === 'city') return true
-    return true
-  })()
+  // Every step is now advanceable (the city step no longer hard-blocks).
+  const canProceed = true
 
   const goNext = () => {
     if (!canProceed) return

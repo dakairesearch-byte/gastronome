@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Heart, Eye, Play, SlidersHorizontal, Music2, Camera } from 'lucide-react'
 import type { RestaurantVideo } from '@/types/database'
 import VideoEmbed from './VideoEmbed'
+import { formatCount } from '@/lib/format'
 
 /**
  * Derives a public preview image URL for a video when our cached
@@ -98,12 +99,6 @@ interface VideoGalleryProps {
   restaurantId: string
 }
 
-function formatCount(count: number): string {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`
-  return count.toLocaleString()
-}
-
 export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
   const [videos, setVideos] = useState<RestaurantVideo[]>([])
   const [loading, setLoading] = useState(true)
@@ -126,7 +121,9 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
         if (!res.ok) throw new Error('Failed to fetch videos')
         const data = await res.json()
         if (!alive) return
-        setVideos(data)
+        // The endpoint may return an error object instead of an array; guard
+        // so the later .filter/.sort can't throw on a non-array payload.
+        setVideos(Array.isArray(data) ? data : [])
       } catch (err) {
         if (!alive) return
         if ((err as Error)?.name === 'AbortError') return

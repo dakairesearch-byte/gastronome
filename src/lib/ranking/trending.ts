@@ -338,25 +338,29 @@ export async function topTrending(
  */
 export async function topTrendingRestaurants(
   supabase: Supabase,
-  options: TrendingOptions & { limit?: number } = {}
+  options: TrendingOptions & { limit?: number; allowZeroScores?: boolean } = {}
 ): Promise<TrendingRestaurant[]> {
   const ranked = await topTrending(supabase, options)
-  const nonZero = ranked.filter((r) => r.score > 0)
-  if (nonZero.length === 0) return []
+  // By default we drop score-0 entries. But on a quiet window (e.g. 24h with no
+  // engagement) every score can be 0, which would blank the trending rail.
+  // Callers that render a fixed-size rail can pass `allowZeroScores` to keep
+  // the ranked order (tie-broken by raw_score then id) instead of an empty list.
+  const selected = options.allowZeroScores ? ranked : ranked.filter((r) => r.score > 0)
+  if (selected.length === 0) return []
 
   const { data: rows } = await supabase
     .from('restaurants')
     .select('*')
     .in(
       'id',
-      nonZero.map((r) => r.restaurant_id)
+      selected.map((r) => r.restaurant_id)
     )
 
   const byId = new Map<string, Restaurant>()
   for (const row of rows ?? []) byId.set(row.id, row as Restaurant)
 
   const out: TrendingRestaurant[] = []
-  for (const entry of nonZero) {
+  for (const entry of selected) {
     const row = byId.get(entry.restaurant_id)
     if (!row) continue
     out.push({
