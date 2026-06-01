@@ -5,6 +5,58 @@ import { Info } from 'lucide-react'
 import type { GastronomeScore } from '@/lib/score'
 
 /**
+ * ScorePill — the reusable, compact Gastronome Score badge that appears
+ * on cards across the app (the namesake number finally rendered where
+ * users browse, not just on the detail hero). SHARED CONTRACT: imported
+ * by the card components.
+ *
+ *  - `score`: the 0–10 number, or null. Returns null when null — a
+ *    restaurant with no rating source shows nothing rather than a
+ *    fabricated "0".
+ *  - `size`: "sm" (default) is the corner/inline card pill; "md" is a
+ *    slightly larger variant for denser hero rows.
+ *
+ * Design tokens only (var(--color-*)) so a rebrand flows through. No
+ * tooltip here — the methodology popover lives on the detail hero badge
+ * (GastronomeScoreBadge) to keep cards lightweight.
+ */
+export function ScorePill({
+  score,
+  size = 'sm',
+}: {
+  score: number | null
+  size?: 'sm' | 'md'
+}) {
+  if (score == null) return null
+
+  const isMd = size === 'md'
+
+  return (
+    <span
+      className={`inline-flex items-baseline gap-0.5 rounded-full font-bold leading-none shadow-sm ${
+        isMd ? 'px-2.5 py-1 text-sm' : 'px-2 py-0.5 text-xs'
+      }`}
+      style={{
+        backgroundColor: 'var(--color-secondary)',
+        color: 'var(--color-surface)',
+        fontFamily: 'var(--font-heading)',
+      }}
+      aria-label={`Gastronome Score ${score.toFixed(1)} out of 10`}
+      title={`Gastronome Score ${score.toFixed(1)} / 10`}
+    >
+      {score.toFixed(1)}
+      <span
+        className={isMd ? 'text-[10px]' : 'text-[9px]'}
+        style={{ color: 'var(--color-surface)', opacity: 0.6, fontWeight: 400 }}
+        aria-hidden="true"
+      >
+        /10
+      </span>
+    </span>
+  )
+}
+
+/**
  * Hero display for the Gastronome Score: a bold number out of 10 plus a
  * source count, with a methodology popover so the score is transparent
  * ("why is it 8.4?"). Renders on the restaurant detail hero over the
@@ -75,8 +127,10 @@ export default function GastronomeScoreBadge({
         className="text-[11px] uppercase tracking-wider"
         style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-body)' }}
       >
-        Gastronome Score · {score.sourceCount}{' '}
-        {score.sourceCount === 1 ? 'source' : 'sources'}
+        Gastronome Score · {score.sourceCount} of {score.maxSources} sources
+        {score.reviewCount != null && score.reviewCount > 0 && (
+          <> · {score.reviewCount.toLocaleString()} reviews</>
+        )}
       </span>
 
       {open && (
@@ -86,13 +140,25 @@ export default function GastronomeScoreBadge({
           style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
         >
           <p
-            className="text-xs mb-3"
+            className="text-xs mb-2"
             style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
           >
-            A credibility-weighted blend of every rating source we have,
-            each put on the same 0–10 scale. Awards (Michelin, James
-            Beard, Eater) are shown separately and don&rsquo;t affect this
-            number.
+            A credibility-weighted blend of the rating sources we have for
+            this place, each put on the same 0–10 scale. We weight by
+            source, then renormalize over only the sources present — a
+            missing source neither helps nor hurts. Awards (Michelin,
+            James Beard, Eater) are shown separately and don&rsquo;t
+            affect this number.
+          </p>
+          <p
+            className="text-[11px] mb-3"
+            style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+          >
+            Based on {score.sourceCount} of {score.maxSources} sources
+            {score.reviewCount != null && score.reviewCount > 0 && (
+              <> across {score.reviewCount.toLocaleString()} reviews</>
+            )}
+            . Fewer sources means a thinner read — treat it accordingly.
           </p>
           <ul className="space-y-1.5">
             {score.breakdown.map((c) => (
@@ -101,7 +167,13 @@ export default function GastronomeScoreBadge({
                 className="flex items-center justify-between text-xs"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                <span style={{ color: 'var(--color-text)' }}>{c.source}</span>
+                <span style={{ color: 'var(--color-text)' }}>
+                  {c.source}
+                  <span className="opacity-50">
+                    {' '}
+                    · {Math.round(c.weight * 100)}%
+                  </span>
+                </span>
                 <span style={{ color: 'var(--color-text-secondary)' }}>
                   {c.native.toFixed(1)} / {c.nativeMax}
                   <span className="opacity-60">

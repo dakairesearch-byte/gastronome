@@ -26,6 +26,15 @@ export const GASTRONOME_SCORE_WEIGHTS = {
   beli: 0.2, // curated social
 } as const
 
+/**
+ * The full universe of rating sources the score *can* draw on. Used by
+ * the trust reframe ("N of 4 sources") so coverage is communicated
+ * honestly — a restaurant scored from one source shouldn't read as
+ * authoritative as one corroborated by all four.
+ */
+export const GASTRONOME_SCORE_MAX_SOURCES =
+  Object.keys(GASTRONOME_SCORE_WEIGHTS).length
+
 export interface ScoreContribution {
   /** Display label, e.g. "Google". */
   source: string
@@ -44,6 +53,21 @@ export interface GastronomeScore {
   score: number
   /** How many sources fed the score. */
   sourceCount: number
+  /**
+   * The full universe of sources the score can draw on, so the UI can
+   * honestly say "N of {maxSources} sources" rather than implying the
+   * number is corroborated by more sources than it actually is.
+   */
+  maxSources: number
+  /**
+   * Total underlying review volume (Google + Yelp counts) backing the
+   * score, when available. A review-count anchor keeps an 8.5 from one
+   * 12-review source from reading the same as one from 4,000 reviews.
+   * Null when no source reports a count.
+   */
+  reviewCount: number | null
+  /** Display labels of the sources that actually contributed. */
+  contributingSources: string[]
   /** Per-source contributions, for the methodology tooltip. */
   breakdown: ScoreContribution[]
 }
@@ -53,6 +77,9 @@ interface ScoreInput {
   yelp_rating?: number | null
   infatuation_rating?: number | null
   beli_score?: number | null
+  /** Optional review-volume anchors (additive; not required by callers). */
+  google_review_count?: number | null
+  yelp_review_count?: number | null
 }
 
 const clamp10 = (n: number) => Math.max(0, Math.min(10, n))
@@ -108,9 +135,22 @@ export function gastronomeScore(r: ScoreInput): GastronomeScore | null {
   const weighted =
     contributions.reduce((s, c) => s + c.normalized * c.weight, 0) / totalWeight
 
+  // Sum the review-volume anchors that are actually present. Kept null
+  // (not 0) when neither source reports a count, so the UI can hide the
+  // anchor rather than claim "0 reviews".
+  const counts = [r.google_review_count, r.yelp_review_count].filter(
+    (n): n is number => Number.isFinite(n) && (n as number) >= 0,
+  )
+  const reviewCount = counts.length
+    ? counts.reduce((s, n) => s + n, 0)
+    : null
+
   return {
     score: Math.round(clamp10(weighted) * 10) / 10,
     sourceCount: contributions.length,
+    maxSources: GASTRONOME_SCORE_MAX_SOURCES,
+    reviewCount,
+    contributingSources: contributions.map((c) => c.source),
     breakdown: contributions,
   }
 }

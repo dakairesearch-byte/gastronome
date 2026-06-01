@@ -956,9 +956,11 @@ function SearchContent() {
                   </p>
                 )}
 
-                {restaurants.map((r) => (
-                  <RestaurantCard key={r.id} restaurant={r} />
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {restaurants.map((r) => (
+                    <RestaurantCard key={r.id} restaurant={r} variant="compact" />
+                  ))}
+                </div>
               </div>
             )}
           </div>

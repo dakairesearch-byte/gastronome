@@ -5,9 +5,10 @@ import Link from 'next/link'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
 import BookmarkButton from './BookmarkButton'
+import { ScorePill } from '@/components/GastronomeScoreBadge'
+import { gastronomeScore } from '@/lib/score'
 import { Restaurant } from '@/types/database'
 import { MapPin } from 'lucide-react'
-import { GoogleGIcon, YelpIcon } from '@/components/brands/BrandIcons'
 // Sweep 2026-05-26-v3 P0-2: import stock-fallback detector so we can badge
 // cuisine-keyed Unsplash photos that aren't real restaurant photos.
 import { isStockFallbackPhoto } from '@/lib/restaurant'
@@ -28,24 +29,23 @@ interface RestaurantCardProps {
 }
 
 /**
- * Border accent tier — color-only signal previously, now paired with
- * a visually-hidden text label (see `accoladeTierLabel`) so accolade
- * tier is also conveyed to screen readers and color-blind users.
- *
- * Border colors map to the semantic accolade tokens in globals.css so
- * a future rebrand can change one variable and every card updates.
- * We keep the Tailwind `border-l-<color>-400` classes here because the
- * design system uses Tailwind utilities for layout; a tokenized
- * inline-style version is in `borderAccentStyle` below for cases that
- * want pure CSS-var-driven borders.
+ * Accolade tier key — a semantic, color-free signal of which top
+ * accolade a restaurant holds. Previously this drove a colored left
+ * border stripe on the card (CD8); that stripe was redundant with the
+ * accolade PILLS (which already convey tier and carry sr-only labels),
+ * so it has been dropped. The tier key is still used internally to tint
+ * the hero-photo gradient fallback, and the human-readable equivalent is
+ * `accoladeTierLabel` (rendered sr-only for screen readers).
  */
-function getBorderAccent(restaurant: Restaurant): string {
+type AccoladeTier = 'michelin' | 'jbf' | 'eater' | null
+
+function getAccoladeTier(restaurant: Restaurant): AccoladeTier {
   if (restaurant.michelin_stars > 0 || restaurant.michelin_designation)
-    return 'border-l-4 border-l-red-400'
+    return 'michelin'
   // `james_beard_nominated` was dropped — only winners get the accent now.
-  if (restaurant.james_beard_winner) return 'border-l-4 border-l-amber-400'
-  if (restaurant.eater_38) return 'border-l-4 border-l-pink-400'
-  return ''
+  if (restaurant.james_beard_winner) return 'jbf'
+  if (restaurant.eater_38) return 'eater'
+  return null
 }
 
 /**
@@ -117,15 +117,19 @@ export default function RestaurantCard({
     restaurant.james_beard_winner ||
     restaurant.eater_38
 
-  const borderAccent = getBorderAccent(restaurant)
+  const accoladeTier = getAccoladeTier(restaurant)
   const tierLabel = accoladeTierLabel(restaurant)
+
+  // Gastronome Score — the product's namesake unified rating. Lead with
+  // this; raw source ratings (Google/Yelp/…) are demoted to secondary.
+  const score = gastronomeScore(restaurant)?.score ?? null
 
   // Declared before the early return so the hook runs unconditionally
   // (Rules of Hooks). Only the compact variant below reads it.
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
 
   if (variant === 'hero') {
-    return <HeroVariant restaurant={restaurant} borderAccent={borderAccent} />
+    return <HeroVariant restaurant={restaurant} accoladeTier={accoladeTier} />
   }
 
   // Compact variant — was image-less text-only, which made city/recent
@@ -149,7 +153,7 @@ export default function RestaurantCard({
   // anchors were previously nested inside the card-wide <Link>). WCAG 4.1.2.
   return (
     <div
-      className={`relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group ${borderAccent}`}
+      className="relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group"
     >
       {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
@@ -223,6 +227,8 @@ export default function RestaurantCard({
               {restaurant.name}
             </h3>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {/* Gastronome Score leads the meta row as the primary metric. */}
+              <ScorePill score={score} size="sm" />
               {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
                   {restaurant.cuisine}
@@ -281,10 +287,10 @@ export default function RestaurantCard({
  */
 function HeroVariant({
   restaurant,
-  borderAccent,
+  accoladeTier,
 }: {
   restaurant: Restaurant
-  borderAccent: string
+  accoladeTier: AccoladeTier
 }) {
   const initialPhoto = getHeroPhoto(restaurant)
   // Track image-load state so we can swap to the accolade-tinted
@@ -303,10 +309,10 @@ function HeroVariant({
     restaurant.cuisine &&
     restaurant.cuisine !== 'Restaurant' &&
     restaurant.cuisine !== 'Fine Dining'
-  const googleRating =
-    typeof restaurant.google_rating === 'number' ? restaurant.google_rating : null
-  const yelpRating =
-    typeof restaurant.yelp_rating === 'number' ? restaurant.yelp_rating : null
+  // Gastronome Score — the product's namesake unified rating, rendered as
+  // the primary metric (overlay on the photo). Raw source ratings are
+  // demoted to the secondary SourceRatingsBar in the body below.
+  const score = gastronomeScore(restaurant)?.score ?? null
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
     restaurant.michelin_designation ||
@@ -326,7 +332,7 @@ function HeroVariant({
 
   return (
     <div
-      className={`relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group h-full flex flex-col ${borderAccent}`}
+      className="relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group h-full flex flex-col"
     >
       {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
@@ -336,6 +342,15 @@ function HeroVariant({
         className="absolute inset-0 z-0"
         aria-label={restaurant.name}
       />
+
+      {/* Gastronome Score — primary metric, overlaid top-left of the
+          photo. Top-right is reserved for the Save button and bottom-right
+          for the stock-photo pill, so the corners never collide. */}
+      {score != null && (
+        <div className="absolute top-2 left-2 z-[2] pointer-events-none">
+          <ScorePill score={score} size="md" />
+        </div>
+      )}
 
       {/* Save button — above the photo + overlay link. */}
       <div className="absolute top-2 right-2 z-[2] pointer-events-auto">
@@ -379,13 +394,14 @@ function HeroVariant({
             <div
               className="w-full h-full flex items-center justify-center"
               style={{
-                background: borderAccent.includes('red')
-                  ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'
-                  : borderAccent.includes('amber')
-                  ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
-                  : borderAccent.includes('pink')
-                  ? 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)'
-                  : 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+                background:
+                  accoladeTier === 'michelin'
+                    ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'
+                    : accoladeTier === 'jbf'
+                    ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+                    : accoladeTier === 'eater'
+                    ? 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)'
+                    : 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
               }}
             >
               <span
@@ -401,47 +417,22 @@ function HeroVariant({
 
         {/* Body */}
         <div className="p-4 flex-1 flex flex-col gap-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3
-              className="font-bold text-gray-900 text-base leading-snug line-clamp-2 min-w-0 flex-1 group-hover:text-emerald-600 transition-colors"
-              title={restaurant.name}
-            >
-              {restaurant.name}
-            </h3>
+          <h3
+            className="font-bold text-gray-900 text-base leading-snug line-clamp-2 min-w-0 group-hover:text-emerald-600 transition-colors"
+            title={restaurant.name}
+          >
+            {restaurant.name}
+          </h3>
 
-            {/* Brand-mark rating cluster — Google G + Yelp burst inline.
-                Tighter than SourceRatingsBar (which stacks Google, Yelp,
-                Infatuation, Beli vertically). The hero card needs the
-                rating to read as a single glance, not a bar of badges.
-                Sweep 2026-05-26-v3 QW: append "/5" so bare numerals aren't
-                sourceless — e.g. "4.3" becomes "4.3/5". */}
-            <div className="flex-shrink-0 flex items-center gap-2 text-sm font-medium text-gray-700">
-              {googleRating != null && (
-                <span
-                  className="inline-flex items-center gap-1"
-                  aria-label={`Google rating ${googleRating.toFixed(1)} out of 5`}
-                >
-                  <GoogleGIcon size={14} title="Google" />
-                  <span>
-                    {googleRating.toFixed(1)}
-                    <span className="text-[11px] font-normal text-gray-400">/5</span>
-                  </span>
-                </span>
-              )}
-              {yelpRating != null && (
-                <span
-                  className="inline-flex items-center gap-1"
-                  aria-label={`Yelp rating ${yelpRating.toFixed(1)} out of 5`}
-                >
-                  <YelpIcon size={14} title="Yelp" />
-                  <span>
-                    {yelpRating.toFixed(1)}
-                    <span className="text-[11px] font-normal text-gray-400">/5</span>
-                  </span>
-                </span>
-              )}
+          {/* Accolade pills — follow the name in the fixed info hierarchy
+              (name → accolades → meta → score + sources). The redundant
+              colored left-border stripe was dropped (CD8); these pills
+              already convey tier and carry sr-only labels. */}
+          {hasAccolades && (
+            <div className="pointer-events-auto w-fit">
+              <AccoladesBadges restaurant={restaurant} maxBadges={3} />
             </div>
-          </div>
+          )}
 
           {/* Subtitle: cuisine pill (when meaningful) + price level +
               neighborhood. Dropping the city — the user is already
@@ -477,11 +468,13 @@ function HeroVariant({
             </div>
           )}
 
-          {hasAccolades && (
-            <div className="mt-auto pt-1 pointer-events-auto w-fit">
-              <AccoladesBadges restaurant={restaurant} maxBadges={3} />
-            </div>
-          )}
+          {/* Secondary: the same full source set as the compact variant
+              (Google, Yelp, Infatuation, Beli) — CD5. The Gastronome Score
+              is the primary metric (photo overlay); these raw source
+              ratings are demoted to the card footer for context. */}
+          <div className="mt-auto pt-1 pointer-events-auto w-fit">
+            <SourceRatingsBar restaurant={restaurant} />
+          </div>
         </div>
       </div>
     </div>
