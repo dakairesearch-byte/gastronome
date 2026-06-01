@@ -18,7 +18,8 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react'
-import type { City } from '@/types/database'
+import OnboardingRestaurantPreview from './OnboardingRestaurantPreview'
+import type { City, Restaurant } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
 
 /**
@@ -61,6 +62,13 @@ export default function OnboardingFlow() {
 
   const [cities, setCities] = useState<City[]>([])
   const [selectedCity, setSelectedCity] = useState<string>('')
+
+  // Live proof-of-value: a couple of real, top-rated restaurants (with
+  // the Gastronome Score) shown on the Solution pane BEFORE the sign-up
+  // wall. Keyed by the city we fetched for so we don't refetch on every
+  // render or step change.
+  const [previews, setPreviews] = useState<Restaurant[]>([])
+  const [previewCity, setPreviewCity] = useState<string>('')
 
   // Sign-up form state (pane 4, anon users)
   const [email, setEmail] = useState('')
@@ -153,6 +161,42 @@ export default function OnboardingFlow() {
       active = false
     }
   }, [supabase])
+
+  // Fetch a couple of real top restaurants to preview on the Solution
+  // pane. Targets the user's selected city; otherwise falls back to the
+  // most-populated active city (cities are loaded rating-desc-ordered),
+  // and finally to whatever's top-rated globally. We only refetch when
+  // the target city actually changes — `previewCity` guards re-runs.
+  useEffect(() => {
+    const targetCity = selectedCity || cities[0]?.name || ''
+    if (targetCity === previewCity) return
+
+    let active = true
+    ;(async () => {
+      // Pull every field SourceRatingsBar / AccoladesBadges / the
+      // Gastronome Score reader need, gated to rows with a usable photo
+      // so the preview never renders an empty image frame. Apply the
+      // city filter inline (a `.eq` on '' is a no-op) so we never
+      // reassign the builder — reassignment widens its inferred type and
+      // breaks the row typing.
+      const { data } = await supabase
+        .from('restaurants')
+        .select(
+          'id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls, google_rating, google_review_count, google_url, yelp_rating, yelp_review_count, yelp_url, infatuation_rating, infatuation_url, beli_score, beli_url, michelin_stars, michelin_designation, michelin_url, james_beard_winner, eater_38'
+        )
+        .eq('city', targetCity || '')
+        .or('photo_url.not.is.null,google_photo_url.not.is.null')
+        .not('google_rating', 'is', null)
+        .order('google_rating', { ascending: false, nullsFirst: false })
+        .limit(2)
+      if (!active) return
+      setPreviews((data ?? []) as Restaurant[])
+      setPreviewCity(targetCity)
+    })()
+    return () => {
+      active = false
+    }
+  }, [supabase, selectedCity, cities, previewCity])
 
   // City step used to be a hard block — Continue stayed disabled until
   // a city was selected, so users in unsupported cities (or who just
@@ -383,7 +427,9 @@ export default function OnboardingFlow() {
       >
         <div key={step} className="p-6 sm:p-10 transition-opacity duration-300">
           {step === 'problem' && <ProblemStep />}
-          {step === 'solution' && <SolutionStep />}
+          {step === 'solution' && (
+            <SolutionStep previews={previews} previewCity={previewCity} />
+          )}
           {step === 'city' && (
             <CityStep
               cities={cities}
@@ -626,7 +672,13 @@ function ProblemStep() {
   )
 }
 
-function SolutionStep() {
+function SolutionStep({
+  previews,
+  previewCity,
+}: {
+  previews: Restaurant[]
+  previewCity: string
+}) {
   const features = [
     {
       icon: Layers,
@@ -730,6 +782,31 @@ function SolutionStep() {
           </div>
         ))}
       </div>
+
+      {/* Live proof: real aggregated cards — Gastronome Score and all —
+          rendered BEFORE the sign-up wall so a prospective user sees the
+          payoff, not just a pitch. Display-only (no links out of
+          onboarding). Hidden until at least one card is ready. */}
+      {previews.length > 0 && (
+        <div className="mt-8">
+          <p
+            className="text-[10px] uppercase mb-3 text-center"
+            style={{
+              color: 'var(--color-accent)',
+              fontFamily: 'var(--font-body)',
+              letterSpacing: '0.16em',
+              fontWeight: 600,
+            }}
+          >
+            {previewCity ? `A live taste of ${previewCity}` : 'See it live'}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {previews.map((r) => (
+              <OnboardingRestaurantPreview key={r.id} restaurant={r} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -919,6 +996,35 @@ function SignUpStep({
           {selectedCity
             ? `Save your ${selectedCity} picks, keep collections, and unlock the full experience.`
             : 'Save restaurants, build collections, and unlock the full experience.'}
+        </p>
+      </div>
+
+      {/* "Why we ask" trust framing — sits right above the form so the
+          ask for an email is qualified before the user types it. Keeps
+          the gate honest about scope: lists + home city only, no spam. */}
+      <div
+        className="mb-5 flex items-start gap-2.5 p-3 rounded-sm"
+        style={{
+          backgroundColor: 'var(--color-background)',
+          border: '1px solid var(--color-border)',
+        }}
+      >
+        <Check
+          size={14}
+          className="flex-shrink-0 mt-0.5"
+          style={{ color: 'var(--color-accent)' }}
+          aria-hidden="true"
+        />
+        <p
+          className="text-xs"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+            lineHeight: 1.5,
+          }}
+        >
+          We use your email only to save your lists and home city — no spam,
+          no selling your data. That&rsquo;s the whole reason for an account.
         </p>
       </div>
 

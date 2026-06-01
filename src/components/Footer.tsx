@@ -35,7 +35,7 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Explore */}
+          {/* Discover */}
           <div>
             <h3
               className="text-xs uppercase tracking-wider mb-3"
@@ -46,7 +46,7 @@ export default function Footer() {
                 fontWeight: 500,
               }}
             >
-              Explore
+              Discover
             </h3>
             <ul className="space-y-2">
               <li>
@@ -69,17 +69,26 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/community"
+                  href="/saved"
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
-                  Community
+                  Saved
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/recent"
+                  className="text-sm hover:text-white transition-colors"
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  What&apos;s new
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* More */}
+          {/* Community */}
           <div>
             <h3
               className="text-xs uppercase tracking-wider mb-3"
@@ -90,16 +99,16 @@ export default function Footer() {
                 fontWeight: 500,
               }}
             >
-              More
+              Community
             </h3>
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/recent"
-                  className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
+                  href="/community"
+                  className="text-sm transition-colors hover:opacity-80"
+                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-accent)' }}
                 >
-                  Recent
+                  Join the waitlist
                 </Link>
               </li>
             </ul>

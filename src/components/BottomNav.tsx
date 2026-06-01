@@ -2,9 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User } from 'lucide-react'
-import { useAuthUser } from '@/lib/hooks/useAuthUser'
-import { openSignInModal } from '@/components/auth/SignInModalHost'
 import { NAV_ITEMS } from '@/components/navItems'
 
 /**
@@ -18,12 +15,12 @@ function isActivePath(pathname: string, path: string): boolean {
 
 export default function BottomNav() {
   const pathname = usePathname()
-  const authed = !!useAuthUser()
 
   // Tabs come from the shared NAV_ITEMS spine (Home, Explore, Search,
-  // Community) so the bottom bar never drifts from the desktop header.
-  // Profile is appended separately below because it is auth-gated.
-  const profileActive = isActivePath(pathname, '/profile')
+  // Saved, Community) so the bottom bar never drifts from the desktop
+  // header. That fills the 5-tab budget exactly. Account/Profile is NOT
+  // a bottom tab — it lives in the header drawer (mobile) and the
+  // top-right account control (desktop), keeping the bar uncrowded.
 
   return (
     <nav
@@ -66,44 +63,6 @@ export default function BottomNav() {
             </Link>
           )
         })}
-
-        {authed ? (
-          <Link
-            href="/profile"
-            aria-current={profileActive ? 'page' : undefined}
-            className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
-            style={{
-              color: profileActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            }}
-          >
-            <User size={22} strokeWidth={profileActive ? 2.5 : 1.5} />
-            <span
-              className="text-[10px]"
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontWeight: profileActive ? 500 : 400,
-              }}
-            >
-              Profile
-            </span>
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => openSignInModal()}
-            className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
-            style={{ color: 'var(--color-text-secondary)' }}
-            aria-label="Sign in"
-          >
-            <User size={22} strokeWidth={1.5} />
-            <span
-              className="text-[10px]"
-              style={{ fontFamily: 'var(--font-body)', fontWeight: 400 }}
-            >
-              Sign in
-            </span>
-          </button>
-        )}
       </div>
     </nav>
   )

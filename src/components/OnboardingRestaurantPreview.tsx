@@ -3,6 +3,8 @@
 import { MapPin } from 'lucide-react'
 import SourceRatingsBar from './SourceRatingsBar'
 import AccoladesBadges from './AccoladesBadges'
+import { ScorePill } from './GastronomeScoreBadge'
+import { gastronomeScore } from '@/lib/score'
 import type { Restaurant } from '@/types/database'
 
 interface OnboardingRestaurantPreviewProps {
@@ -24,6 +26,11 @@ export default function OnboardingRestaurantPreview({
     restaurant.photo_url ||
     (restaurant.photo_urls && restaurant.photo_urls[0]) ||
     restaurant.google_photo_url
+  // The Gastronome Score is the namesake unified metric — the whole
+  // point of the preview is to show a prospective user that we collapse
+  // every source into one honest number. Returns null when no rating
+  // source exists, in which case ScorePill renders nothing.
+  const score = gastronomeScore(restaurant)
   // `james_beard_nominated` was dropped — check the winner flag only.
   // Nominee/finalist signals now live in `restaurant_jbf_history`.
   const hasAccolades =
@@ -58,15 +65,30 @@ export default function OnboardingRestaurantPreview({
           >
             Preview
           </span>
+          {score && (
+            <span className="absolute top-2 right-2">
+              <ScorePill score={score.score} size="sm" />
+            </span>
+          )}
         </div>
       )}
       <div className="p-4 space-y-2">
-        <h4
-          className="text-sm line-clamp-1"
-          style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
-        >
-          {restaurant.name}
-        </h4>
+        <div className="flex items-start justify-between gap-2">
+          <h4
+            className="text-sm line-clamp-1"
+            style={{ color: 'var(--color-text)', fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            {restaurant.name}
+          </h4>
+          {/* When there's no photo to overlay onto, anchor the score
+              inline next to the name so the namesake metric is always
+              visible. */}
+          {!photoUrl && score && (
+            <span className="flex-shrink-0">
+              <ScorePill score={score.score} size="sm" />
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
           {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (

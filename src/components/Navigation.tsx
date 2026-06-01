@@ -26,6 +26,19 @@ export default function Navigation() {
   const user = useAuthUser()
   const drawerRef = useRef<HTMLDivElement | null>(null)
 
+  // NV7 account control: derive a display avatar / initial from the
+  // Supabase user. Falls back to the first email character, then a
+  // neutral bullet so the circle never renders empty.
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>
+  const avatarUrl =
+    typeof metadata.avatar_url === 'string' ? metadata.avatar_url : undefined
+  const displayName =
+    (typeof metadata.full_name === 'string' && metadata.full_name) ||
+    (typeof metadata.name === 'string' && metadata.name) ||
+    user?.email ||
+    ''
+  const accountInitial = displayName.trim().charAt(0).toUpperCase() || '•'
+
   // Close mobile menu on route change (React-safe derived-state pattern)
   const [tracked, setTracked] = useState(pathname)
   if (tracked !== pathname) {
@@ -152,59 +165,43 @@ export default function Navigation() {
                   </Link>
                 )
               })}
-              {/* Profile is auth-gated: only signed-in users see it in the
-                  primary cluster, mirroring the mobile BottomNav. Anonymous
-                  users use the Sign in affordance on the right instead. */}
-              {user && (() => {
-                const active = isActivePath(pathname, '/profile')
-                return (
-                  <Link
-                    href="/profile"
-                    aria-current={active ? 'page' : undefined}
-                    className="relative group py-2"
-                    style={{
-                      color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                    }}
-                  >
-                    <span
-                      className="text-xs uppercase"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        letterSpacing: '0.12em',
-                        fontWeight: active ? 500 : 400,
-                      }}
-                    >
-                      Profile
-                    </span>
-                    {active && (
-                      <div
-                        className="absolute -bottom-1 left-0 right-0 h-0.5"
-                        style={{ backgroundColor: 'var(--color-accent)' }}
-                      />
-                    )}
-                  </Link>
-                )
-              })()}
+              {/* NV7: Profile is no longer a primary-cluster link. With
+                  Saved now in NAV_ITEMS the centered row is full, so the
+                  account entry point lives in the top-right control below
+                  (auth-gated avatar / Sign in). */}
             </nav>
 
-            {/* Minimal profile/sign-in affordance — the Figma design
-                doesn't show an avatar cluster, but users still need a
-                reachable entry point for auth. */}
+            {/* NV7 — top-right account control. Signed-in users get a
+                compact avatar/initial that links to /profile (the account
+                destination, moved out of the primary row); anonymous users
+                get a Sign in affordance. `aria-current` marks the avatar
+                when on a /profile route so the active location still reads
+                to AT even though Profile left the primary cluster. */}
             <div className="hidden md:flex items-center gap-2">
               {user ? (
                 <Link
                   href="/profile"
-                  aria-label="Profile"
-                  className="flex items-center gap-2 px-3 py-2 rounded-sm transition-colors hover:bg-gray-100"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  aria-label="Account"
+                  aria-current={isActivePath(pathname, '/profile') ? 'page' : undefined}
+                  className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden transition-colors hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{
+                    backgroundColor: 'var(--color-accent)',
+                    border: isActivePath(pathname, '/profile')
+                      ? '2px solid var(--color-text)'
+                      : '2px solid transparent',
+                  }}
                 >
-                  <User size={18} strokeWidth={1.5} />
-                  <span
-                    className="text-xs uppercase"
-                    style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}
-                  >
-                    Profile
-                  </span>
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span
+                      className="text-xs font-medium text-white uppercase"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    >
+                      {accountInitial}
+                    </span>
+                  )}
                 </Link>
               ) : (
                 <button

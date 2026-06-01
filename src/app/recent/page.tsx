@@ -72,17 +72,23 @@ export default async function RecentPage({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-950 text-white">
+      <section
+        className="text-white"
+        style={{
+          background:
+            'linear-gradient(to bottom right, var(--color-secondary), var(--color-secondary) 60%, var(--color-accent))',
+        }}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
           <div className="flex items-center gap-2 mb-2">
-            <Clock size={22} className="text-emerald-400" />
+            <Clock size={22} style={{ color: 'var(--color-accent)' }} />
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               What&apos;s new
             </h1>
           </div>
           <p className="text-gray-400 text-sm">
-            Reverse-chronological activity across Gastronome. New
-            restaurants, new videos, new reviews — grouped by day.
+            The latest activity across Gastronome — new restaurants, videos,
+            reviews, and photos, grouped by day.
           </p>
         </div>
       </section>
