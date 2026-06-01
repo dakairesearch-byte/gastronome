@@ -245,8 +245,8 @@ export default async function HomePage() {
               className="inline-flex items-center text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
               style={{
                 fontFamily: 'var(--font-body)',
-                color: 'var(--color-surface)',
-                backgroundColor: 'var(--color-secondary)',
+                color: 'var(--color-on-action)',
+                backgroundColor: 'var(--color-action)',
               }}
             >
               Search by dish
@@ -296,7 +296,7 @@ export default async function HomePage() {
               Showing {city} by default —{' '}
               <Link
                 href="/profile"
-                style={{ color: 'var(--color-accent)' }}
+                style={{ color: 'var(--color-action)' }}
                 className="underline-offset-2 hover:underline"
               >
                 set your home city
@@ -346,8 +346,12 @@ export default async function HomePage() {
               <Link
                 key={c.id}
                 href={c.href}
-                className="overflow-hidden cursor-pointer transition-all hover:shadow-2xl group rounded-sm block"
-                style={{ backgroundColor: 'var(--color-surface)' }}
+                className="overflow-hidden cursor-pointer transition-shadow group block"
+                style={{
+                  backgroundColor: 'var(--color-surface)',
+                  borderRadius: 'var(--r-card)',
+                  boxShadow: 'var(--shadow-1)',
+                }}
                 aria-label={`${c.name} — ${c.tagline} (${c.count} in ${city})`}
               >
                 <div className="overflow-hidden relative rounded-sm aspect-square">
@@ -355,11 +359,11 @@ export default async function HomePage() {
                 </div>
                 <div className="p-4">
                   <h3
-                    className="text-base mb-1"
+                    className="text-lg mb-1"
                     style={{
                       color: 'var(--color-text)',
                       fontFamily: 'var(--font-heading)',
-                      fontWeight: 500,
+                      fontWeight: 600,
                     }}
                   >
                     {c.name}
@@ -374,11 +378,10 @@ export default async function HomePage() {
                     {c.tagline}
                   </p>
                   <p
-                    className="text-xs uppercase"
+                    className="text-xs uppercase tracking-wide"
                     style={{
-                      color: 'var(--color-accent)',
+                      color: 'var(--color-action)',
                       fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.1em',
                       fontWeight: 600,
                     }}
                   >
@@ -395,7 +398,7 @@ export default async function HomePage() {
               href="/explore"
               className="inline-flex items-center gap-1 text-sm hover:underline underline-offset-2"
               style={{
-                color: 'var(--color-accent)',
+                color: 'var(--color-action)',
                 fontFamily: 'var(--font-body)',
                 fontWeight: 500,
               }}

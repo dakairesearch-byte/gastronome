@@ -153,7 +153,8 @@ export default function RestaurantCard({
   // anchors were previously nested inside the card-wide <Link>). WCAG 4.1.2.
   return (
     <div
-      className="relative rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group"
+      className="relative shadow-sm hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden bg-white group"
+      style={{ borderRadius: 'var(--r-card)' }}
     >
       {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
@@ -220,7 +221,7 @@ export default function RestaurantCard({
             {/* Sweep 2026-05-26-v3 QW: title attr exposes full name when
                 line-clamp-1 truncates it — hero variant already had this. */}
             <h3
-              className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 group-hover:text-emerald-600 transition-colors pr-9"
+              className="font-bold text-gray-900 text-lg line-clamp-1 min-w-0 transition-colors pr-9 group-hover:text-[var(--color-action)]"
               style={{ fontFamily: 'var(--font-heading)' }}
               title={restaurant.name}
             >
@@ -230,7 +231,7 @@ export default function RestaurantCard({
               {/* Gastronome Score leads the meta row as the primary metric. */}
               <ScorePill score={score} size="sm" />
               {restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && (
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
                   {restaurant.cuisine}
                 </span>
               )}
@@ -332,7 +333,8 @@ function HeroVariant({
 
   return (
     <div
-      className="relative rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 overflow-hidden bg-white group h-full flex flex-col"
+      className="relative shadow-sm hover:shadow-xl transition-shadow duration-200 border border-gray-100 overflow-hidden bg-white group h-full flex flex-col"
+      style={{ borderRadius: 'var(--r-card)' }}
     >
       {tierLabel && <span className="sr-only">{tierLabel}.</span>}
 
@@ -418,7 +420,7 @@ function HeroVariant({
         {/* Body */}
         <div className="p-4 flex-1 flex flex-col gap-2">
           <h3
-            className="font-bold text-gray-900 text-base leading-snug line-clamp-2 min-w-0 group-hover:text-emerald-600 transition-colors"
+            className="font-bold text-gray-900 text-base leading-snug line-clamp-2 min-w-0 transition-colors group-hover:text-[var(--color-action)]"
             title={restaurant.name}
           >
             {restaurant.name}
@@ -446,7 +448,7 @@ function HeroVariant({
           {(showCuisine || restaurant.neighborhood || priceLevel) && (
             <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
               {showCuisine && (
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-medium">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full font-medium">
                   {restaurant.cuisine}
                 </span>
               )}

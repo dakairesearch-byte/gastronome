@@ -42,22 +42,19 @@ export default function EmptyState({
   onSecondaryCtaClick,
   tone = 'neutral',
 }: EmptyStateProps) {
-  // Token-bound colors live in inline `style` (Tailwind v4 can't hover-swap
-  // a CSS-var background cleanly); layout/spacing stay in className.
+  // Primary CTA uses THE single action color (garnet) via the shared
+  // `action-cta` helper (bg + on-action text + hover live in globals.css,
+  // since Tailwind v4 can't hover-swap a CSS-var background cleanly).
   const ctaClass =
-    'px-5 py-2 rounded-lg transition-colors text-sm font-medium gastro-accent-cta'
-  const ctaStyle = {
-    backgroundColor: 'var(--color-accent)',
-    color: 'var(--color-on-accent)',
-  }
+    'px-5 py-2 rounded-lg transition-colors text-sm font-medium action-cta'
   const secondaryClass =
     'px-5 py-2 text-sm font-medium underline-offset-4 hover:underline transition-colors'
   // `attention` halo keeps amber (failure semantics, not an accent); the
-  // neutral halo now derives from the brand accent instead of emerald.
+  // neutral halo now derives from the action token.
   const haloStyle =
     tone === 'attention'
       ? { backgroundColor: 'color-mix(in srgb, var(--color-accolade-jbf) 18%, transparent)', color: 'var(--color-accolade-jbf)' }
-      : { backgroundColor: 'color-mix(in srgb, var(--color-accent) 16%, transparent)', color: 'var(--color-accent)' }
+      : { backgroundColor: 'color-mix(in srgb, var(--color-action) 16%, transparent)', color: 'var(--color-action)' }
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4">
@@ -75,12 +72,12 @@ export default function EmptyState({
       </p>
       <div className="flex flex-col sm:flex-row items-center gap-2">
         {ctaText && ctaHref && (
-          <Link href={ctaHref} className={ctaClass} style={ctaStyle}>
+          <Link href={ctaHref} className={ctaClass}>
             {ctaText}
           </Link>
         )}
         {ctaText && !ctaHref && onCtaClick && (
-          <button type="button" onClick={onCtaClick} className={ctaClass} style={ctaStyle}>
+          <button type="button" onClick={onCtaClick} className={ctaClass}>
             {ctaText}
           </button>
         )}

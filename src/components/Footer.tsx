@@ -106,7 +106,7 @@ export default function Footer() {
                 <Link
                   href="/community"
                   className="text-sm transition-colors hover:opacity-80"
-                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-accent)' }}
+                  style={{ fontFamily: 'var(--font-body)', color: 'var(--color-action)' }}
                 >
                   Join the waitlist
                 </Link>

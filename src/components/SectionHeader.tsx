@@ -23,15 +23,14 @@ export default function SectionHeader({
 }: SectionHeaderProps) {
   const isCenter = align === 'center'
   return (
-    <div className={`mb-8 ${isCenter ? 'text-center' : ''} ${className}`}>
+    <div className={`mb-6 ${isCenter ? 'text-center' : ''} ${className}`}>
       {label && (
-        <div className="mb-3">
+        <div className="mb-2">
           <span
-            className="text-xs uppercase"
+            className="text-xs uppercase tracking-wide"
             style={{
-              color: 'var(--color-accent)',
+              color: 'var(--color-action)',
               fontFamily: 'var(--font-body)',
-              letterSpacing: '0.18em',
               fontWeight: 500,
             }}
           >
@@ -40,21 +39,17 @@ export default function SectionHeader({
         </div>
       )}
       <h2
-        className="text-3xl sm:text-4xl lg:text-5xl"
+        className="text-2xl"
         style={{
           color: 'var(--color-text)',
           fontFamily: 'var(--font-heading)',
-          fontWeight: 400,
+          fontWeight: 600,
           letterSpacing: '-0.01em',
-          lineHeight: 1.15,
+          lineHeight: 1.2,
         }}
       >
         {title}
       </h2>
-      <div
-        className={`mt-4 w-12 h-px ${isCenter ? 'mx-auto' : ''}`}
-        style={{ backgroundColor: 'var(--color-accent)' }}
-      />
     </div>
   )
 }

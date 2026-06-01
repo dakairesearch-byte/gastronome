@@ -594,9 +594,9 @@ export default async function RestaurantPage({
                       fontFamily: 'var(--font-body)',
                       letterSpacing: '0.08em',
                       fontWeight: 600,
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-primary)',
-                      color: '#fff',
+                      borderRadius: 'var(--r-input)',
+                      backgroundColor: 'var(--color-action)',
+                      color: 'var(--color-on-action)',
                     }}
                   >
                     <Globe size={13} aria-hidden="true" />
@@ -616,9 +616,9 @@ export default async function RestaurantPage({
                       fontFamily: 'var(--font-body)',
                       letterSpacing: '0.08em',
                       fontWeight: 600,
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-accent)',
-                      color: 'var(--color-accent)',
+                      borderRadius: 'var(--r-input)',
+                      border: '1px solid var(--color-action)',
+                      color: 'var(--color-action)',
                     }}
                   >
                     <MapPin size={13} aria-hidden="true" />
@@ -719,7 +719,7 @@ export default async function RestaurantPage({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 mt-2.5 text-xs uppercase tracking-wider font-medium"
-                      style={{ color: 'var(--color-accent)' }}
+                      style={{ color: 'var(--color-action)' }}
                     >
                       Read the full review &rarr;
                     </a>
@@ -1128,7 +1128,7 @@ export default async function RestaurantPage({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 mt-3 text-xs uppercase tracking-wider font-medium"
-                      style={{ color: 'var(--color-accent)' }}
+                      style={{ color: 'var(--color-action)' }}
                     >
                       {isTastingFormat
                         ? 'See the menu & reserve →'
@@ -1453,7 +1453,7 @@ export default async function RestaurantPage({
                         fontFamily: 'var(--font-body)',
                         letterSpacing: '0.1em',
                         fontWeight: 500,
-                        color: 'var(--color-accent)',
+                        color: 'var(--color-action)',
                       }}
                     >
                       Get Directions

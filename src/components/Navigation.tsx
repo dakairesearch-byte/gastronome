@@ -196,7 +196,7 @@ export default function Navigation() {
                     {active && (
                       <div
                         className="absolute -bottom-1 left-0 right-0 h-0.5"
-                        style={{ backgroundColor: 'var(--color-accent)' }}
+                        style={{ backgroundColor: 'var(--color-action)' }}
                       />
                     )}
                   </Link>
@@ -273,7 +273,9 @@ export default function Navigation() {
                             letterSpacing: '0.1em',
                             fontWeight: selected ? 500 : 400,
                             color: selected ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                            backgroundColor: selected ? 'rgba(107,149,168,0.08)' : 'transparent',
+                            backgroundColor: selected
+                              ? 'color-mix(in srgb, var(--color-action) 8%, transparent)'
+                              : 'transparent',
                           }}
                         >
                           {name}
@@ -291,7 +293,7 @@ export default function Navigation() {
                   aria-current={isActivePath(pathname, '/profile') ? 'page' : undefined}
                   className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden transition-colors hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{
-                    backgroundColor: 'var(--color-accent)',
+                    backgroundColor: 'var(--color-action)',
                     border: isActivePath(pathname, '/profile')
                       ? '2px solid var(--color-text)'
                       : '2px solid transparent',
@@ -302,8 +304,8 @@ export default function Navigation() {
                     <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span
-                      className="text-xs font-medium text-white uppercase"
-                      style={{ fontFamily: 'var(--font-body)' }}
+                      className="text-xs font-medium uppercase"
+                      style={{ fontFamily: 'var(--font-body)', color: 'var(--color-on-action)' }}
                     >
                       {accountInitial}
                     </span>
@@ -422,9 +424,11 @@ export default function Navigation() {
                         letterSpacing: '0.08em',
                         fontWeight: selected ? 500 : 400,
                         color: selected ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                        backgroundColor: selected ? 'rgba(107,149,168,0.12)' : 'transparent',
+                        backgroundColor: selected
+                          ? 'color-mix(in srgb, var(--color-action) 12%, transparent)'
+                          : 'transparent',
                         border: selected
-                          ? '1px solid var(--color-accent)'
+                          ? '1px solid var(--color-action)'
                           : '1px solid var(--color-border)',
                       }}
                     >
@@ -449,8 +453,10 @@ export default function Navigation() {
                       letterSpacing: '0.12em',
                       fontWeight: active ? 500 : 400,
                       color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                      backgroundColor: active ? 'rgba(107,149,168,0.08)' : 'transparent',
-                      borderLeft: active ? '2px solid var(--color-accent)' : '2px solid transparent',
+                      backgroundColor: active
+                        ? 'color-mix(in srgb, var(--color-action) 8%, transparent)'
+                        : 'transparent',
+                      borderLeft: active ? '2px solid var(--color-action)' : '2px solid transparent',
                     }}
                   >
                     {item.label}
@@ -508,11 +514,12 @@ export default function Navigation() {
                       setMobileOpen(false)
                       openSignInModal({ mode: 'signup' })
                     }}
-                    className="block w-full text-center py-2.5 rounded-sm text-xs uppercase tracking-wider font-medium text-white transition-all hover:opacity-90"
+                    className="block w-full text-center py-2.5 rounded-sm text-xs uppercase tracking-wider font-medium transition-all hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-body)',
                       letterSpacing: '0.1em',
-                      backgroundColor: 'var(--color-primary)',
+                      color: 'var(--color-on-action)',
+                      backgroundColor: 'var(--color-action)',
                     }}
                   >
                     Sign up

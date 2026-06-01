@@ -385,7 +385,7 @@ export default async function ExplorePage({
               removed, so Explore leads with an H1 naming the active city and
               a count subline. The city picker in the search bar above doubles
               as the inline "change city" control, so there's no separate
-              control rendered here. Brand slate tokens only — no emerald hero. */}
+              control rendered here. Neutral tokens only — no colored hero. */}
           <header className="mb-10">
             <h1
               className="text-3xl sm:text-4xl"

@@ -660,10 +660,11 @@ function SearchContent() {
         {/* Header */}
         <div className="mb-6">
           <h1
-            className="text-2xl"
+            className="text-3xl sm:text-4xl"
             style={{
               fontFamily: 'var(--font-heading)',
-              fontWeight: 700,
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
               color: 'var(--color-text)',
             }}
           >
@@ -719,8 +720,8 @@ function SearchContent() {
                   <span
                     className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
                     style={{
-                      backgroundColor: 'var(--color-accent)',
-                      color: 'var(--color-surface)',
+                      backgroundColor: 'var(--color-action)',
+                      color: 'var(--color-on-action)',
                     }}
                   >
                     {activeFilterCount}
@@ -752,9 +753,9 @@ function SearchContent() {
                     style={
                       active
                         ? {
-                            backgroundColor: 'var(--color-primary)',
+                            backgroundColor: 'var(--color-action)',
                             borderColor: 'transparent',
-                            color: 'var(--color-surface)',
+                            color: 'var(--color-on-action)',
                           }
                         : {
                             backgroundColor: 'var(--color-surface)',
@@ -835,7 +836,7 @@ function SearchContent() {
                   type="button"
                   onClick={handleResetAll}
                   className="font-semibold transition-opacity hover:opacity-80"
-                  style={{ color: 'var(--color-accent)' }}
+                  style={{ color: 'var(--color-action)' }}
                 >
                   Reset all
                 </button>
@@ -865,7 +866,7 @@ function SearchContent() {
                       borderColor: 'var(--color-border)',
                     }}
                     onFocus={(e) =>
-                      (e.currentTarget.style.borderColor = 'var(--color-accent)')
+                      (e.currentTarget.style.borderColor = 'var(--color-action)')
                     }
                     onBlur={(e) =>
                       (e.currentTarget.style.borderColor = 'var(--color-border)')
@@ -1085,8 +1086,8 @@ function SearchContent() {
                 onClick={() => setMobileFiltersOpen(false)}
                 className="w-full py-2 text-sm font-semibold rounded-lg transition-opacity hover:opacity-90"
                 style={{
-                  backgroundColor: 'var(--color-accent)',
-                  color: 'var(--color-surface)',
+                  backgroundColor: 'var(--color-action)',
+                  color: 'var(--color-on-action)',
                 }}
               >
                 {/* Show the live result count so users don't close the
@@ -1154,10 +1155,11 @@ function SearchShell() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <h1
-          className="text-3xl mb-2"
+          className="text-3xl sm:text-4xl mb-2"
           style={{
             fontFamily: 'var(--font-heading)',
-            fontWeight: 700,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
             color: 'var(--color-text)',
           }}
         >

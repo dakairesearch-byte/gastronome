@@ -163,7 +163,7 @@ export default function BookmarkButton({
           isFavorite ? 'bg-white/20 text-white' : ''
         }`
       : `inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/90 hover:bg-white shadow-md text-gray-700 transition-colors ${
-          isFavorite ? 'text-emerald-600' : ''
+          isFavorite ? 'text-[var(--color-action)]' : ''
         }`
 
   const chevronClass =
@@ -216,7 +216,7 @@ export default function BookmarkButton({
             <button
               type="button"
               onClick={handleUndoFavorite}
-              className="text-emerald-300 hover:text-emerald-200 font-semibold uppercase tracking-wider underline-offset-2 hover:underline"
+              className="text-white/90 hover:text-white font-semibold uppercase tracking-wider underline-offset-2 underline"
               aria-label="Undo"
             >
               Undo
@@ -263,7 +263,7 @@ export default function BookmarkButton({
                   >
                     <span className="truncate text-gray-800">{c.name}</span>
                     {included ? (
-                      <Check size={16} className="text-emerald-600 flex-shrink-0 ml-3" />
+                      <Check size={16} className="text-[var(--color-action)] flex-shrink-0 ml-3" />
                     ) : (
                       <span className="w-4 h-4 rounded border border-gray-300 flex-shrink-0 ml-3" />
                     )}
@@ -290,14 +290,15 @@ export default function BookmarkButton({
                 }}
                 maxLength={80}
                 placeholder="New collection…"
-                className="flex-1 px-3 py-2 rounded-md border border-gray-200 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="flex-1 px-3 py-2 border border-gray-200 text-sm outline-none focus:border-[var(--color-action)] focus:ring-1 focus:ring-[var(--color-action)]"
+                style={{ borderRadius: 'var(--r-input)' }}
               />
               <button
                 type="button"
                 onClick={handleCreateCollection}
                 disabled={!newName.trim()}
                 aria-label="Create collection"
-                className="inline-flex items-center justify-center w-9 h-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="action-cta inline-flex items-center justify-center w-9 h-9 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus size={16} />
               </button>

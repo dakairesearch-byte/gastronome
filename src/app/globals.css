@@ -10,8 +10,21 @@
  * don't need per-site updates.
  */
 :root {
+  /* GOLD is now BRAND-ONLY (Wave 1, color discipline): use --color-primary
+   * solely for the Gastronome Score seal/pill, the wordmark, and editorial
+   * hairline rules. It is NO LONGER an interactive/CTA color — use
+   * --color-action for buttons, active chips, selected states, and key links.
+   * Kept defined because other code still references it this wave. */
   --color-primary: #D4A574;
   --color-primary-hover: #C4955F;
+
+  /* THE single app-wide action color (garnet) — interactive/CTA/active.
+   * Replaces emerald-*, gold, and slate-blue accent on all interactive
+   * surfaces. --color-on-action is the readable foreground (white). */
+  --color-action: #8E3B46;
+  --color-action-hover: #762F39;
+  --color-on-action: #FFFFFF;
+
   --color-secondary: #2C3E50;
   /* Brand accent — a muted slate-blue that replaces the de-facto emerald
    * that had leaked across CTAs/empty-states/badges. `*-hover` is a
@@ -47,11 +60,24 @@
 
   --font-heading: var(--font-spectral), serif;
   --font-body: var(--font-dm-sans), sans-serif;
+
+  /* Radius scale (Wave 1) — calmer, consistent corners. */
+  --r-card: 14px;
+  --r-input: 10px;
+  --r-tag: 9999px;
+
+  /* Warm shadow levels (Wave 1) — two steps, tinted warm rather than
+   * neutral grey so cards sit on the cream background gently. */
+  --shadow-1: 0 1px 2px rgba(60, 40, 30, 0.06), 0 1px 3px rgba(60, 40, 30, 0.08);
+  --shadow-2: 0 4px 12px rgba(60, 40, 30, 0.08), 0 2px 6px rgba(60, 40, 30, 0.06);
 }
 
 @theme inline {
   --color-gastro-primary: var(--color-primary);
   --color-gastro-primary-hover: var(--color-primary-hover);
+  --color-gastro-action: var(--color-action);
+  --color-gastro-action-hover: var(--color-action-hover);
+  --color-gastro-on-action: var(--color-on-action);
   --color-gastro-secondary: var(--color-secondary);
   --color-gastro-accent: var(--color-accent);
   --color-gastro-accent-hover: var(--color-accent-hover);
@@ -181,6 +207,20 @@ a:focus-visible {
  */
 .gastro-accent-cta:hover {
   background-color: var(--color-accent-hover) !important;
+}
+
+/*
+ * Action CTA helper (Wave 1) — THE single interactive color. Use on
+ * primary buttons / active chips / selected states whose background is
+ * the garnet action token. Tailwind can't express a CSS-var hover swap,
+ * so the hover step lives here. Pair with the `action-cta` class.
+ */
+.action-cta {
+  background-color: var(--color-action);
+  color: var(--color-on-action);
+}
+.action-cta:hover {
+  background-color: var(--color-action-hover);
 }
 
 /* Shimmer animation for loading skeletons */
