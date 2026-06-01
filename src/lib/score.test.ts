@@ -83,11 +83,27 @@ describe('gastronomeScore (calibrated absolute)', () => {
 
   // ---- Rarity: a 10 is near-unattainable; the top is earned ----
 
-  it('caps a single uncorroborated source below the elite band (never 10)', () => {
-    // Even a perfect 5.0 with huge volume, from ONE source, tops out at ~9.0.
+  it('caps a single uncorroborated source out of the elite band', () => {
+    // Even a perfect 5.0 with huge volume, from ONE source, tops out at ~8.5 —
+    // the top tier is reserved for restaurants multiple crowds corroborate.
     const r = gastronomeScore({ google_rating: 5.0, google_review_count: 25000 })!
-    expect(r.score).toBeLessThanOrEqual(9.0)
-    expect(r.score).toBeGreaterThan(8.5)
+    expect(r.score).toBeLessThanOrEqual(8.5)
+    expect(r.score).toBeGreaterThanOrEqual(8.0)
+  })
+
+  it('penalizes cross-source disagreement — consensus beats a populist split', () => {
+    // A populist split (Google 4.9, Yelp 4.4) must score BELOW a place both
+    // crowds agree on (Google 4.7, Yelp 4.7), even though the split has the
+    // higher raw Google rating. This is the Cvi.che 105 case.
+    const split = gastronomeScore({
+      google_rating: 4.9, google_review_count: 30000,
+      yelp_rating: 4.4, yelp_review_count: 6000,
+    })!
+    const agree = gastronomeScore({
+      google_rating: 4.7, google_review_count: 30000,
+      yelp_rating: 4.7, yelp_review_count: 6000,
+    })!
+    expect(agree.score).toBeGreaterThan(split.score)
   })
 
   it('lets a strongly corroborated destination reach the low 9s — not 10', () => {

@@ -76,9 +76,20 @@ const YELP_ANCHORS: [number, number][] = [
 ]
 
 // Evidence gates.
-const SINGLE_SOURCE_CAP = { base: 8.5, span: 0.5, ref: 15000, ceiling: 9.0 }
+// Single-source (uncorroborated) places top out in the low-8s — the elite
+// band is reserved for restaurants MULTIPLE independent crowds agree on. The
+// cap rises slightly with volume so a huge-volume lone source isn't crushed,
+// but it can never reach the corroborated tier.
+const SINGLE_SOURCE_CAP = { base: 8.0, span: 0.5, ref: 15000, ceiling: 8.5 }
 const TOPBAND = { knee: 9.2, floorConf: 0.55, spanConf: 0.45, volMin: 100, volFull: 12000 }
 const DUAL_SOURCE_CEILING = 9.95 // corroborated places top out just under 10
+// Cross-source AGREEMENT (consensus) penalty. Gastronome is a consensus
+// product: a restaurant every crowd agrees on is a surer bet than one Google
+// loves and Yelp is lukewarm on. When present sources DISAGREE by more than a
+// tolerance, the score is pulled down toward the more skeptical source,
+// proportional to the gap (a populist 4.9-Google / 4.4-Yelp split is penalized;
+// a unanimous 4.8 / 4.7 is not). Never pulled below the skeptical source.
+const AGREEMENT = { tolerance: 0.3, k: 0.8 }
 
 export interface ScoreContribution {
   /** Display label, e.g. "Google". */
@@ -208,6 +219,19 @@ export function gastronomeScore(r: ScoreInput): GastronomeScore | null {
   // Credibility-weighted average over only the sources present.
   const totalWeight = contributions.reduce((s, c) => s + c.weight, 0)
   let q = contributions.reduce((s, c) => s + c.normalized * c.weight, 0) / totalWeight
+
+  // CONSENSUS / AGREEMENT penalty. With ≥2 sources, measure how far they
+  // diverge (max−min of the per-source qualities). Beyond a small tolerance,
+  // pull the score down toward the more skeptical source proportional to the
+  // gap — but never below it. A unanimous 4.8/4.7 keeps its average; a
+  // populist 4.9-Google / 4.4-Yelp split is dragged toward the cooler verdict.
+  if (contributions.length >= 2) {
+    const qualities = contributions.map((c) => c.normalized)
+    const qMin = Math.min(...qualities)
+    const gap = Math.max(...qualities) - qMin
+    const penalty = AGREEMENT.k * Math.max(0, gap - AGREEMENT.tolerance)
+    q = Math.max(qMin, q - penalty)
+  }
 
   // Review-volume anchors actually present (Google + Yelp). Null when none.
   const counts = [r.google_review_count, r.yelp_review_count].filter(
