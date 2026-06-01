@@ -95,15 +95,6 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/cities"
-                  className="text-sm hover:text-white transition-colors"
-                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
-                >
-                  Cities
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/recent"
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}

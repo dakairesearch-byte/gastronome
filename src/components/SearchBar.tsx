@@ -59,7 +59,7 @@ export default function SearchBar({
           }}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="w-full pl-10 pr-20 py-3 text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+          className="w-full pl-10 pr-20 py-3 text-gray-900 border border-gray-300 rounded-xl transition"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {query && (

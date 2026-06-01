@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -8,19 +8,7 @@ import { Menu, User, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
-
-// `/profile` is intentionally NOT in this shared list: it requires auth
-// and bounces anonymous users to /onboarding. It's appended below only
-// when a user is signed in, mirroring the mobile BottomNav gating.
-const navItems = [
-  { path: '/', label: 'Home' },
-  { path: '/explore', label: 'Explore' },
-  // Cities was previously only reachable from the footer — surfacing it
-  // in the persistent nav since the v2 sweep flagged it as a first-class
-  // content pillar that users couldn't reach in one click.
-  { path: '/cities', label: 'Cities' },
-  { path: '/community', label: 'Community' },
-]
+import { NAV_ITEMS } from '@/components/navItems'
 
 /**
  * Exact-prefix match: `/exploreXYZ` must NOT activate `/explore`. We
@@ -36,6 +24,7 @@ export default function Navigation() {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const user = useAuthUser()
+  const drawerRef = useRef<HTMLDivElement | null>(null)
 
   // Close mobile menu on route change (React-safe derived-state pattern)
   const [tracked, setTracked] = useState(pathname)
@@ -43,6 +32,40 @@ export default function Navigation() {
     setTracked(pathname)
     if (mobileOpen) setMobileOpen(false)
   }
+
+  // Drawer a11y (TA3): Escape to close + a focus trap so Tab can't escape
+  // into the blurred background page (WCAG 2.1.2). Mirrors the trapFocus
+  // pattern used in SignInModal.tsx.
+  useEffect(() => {
+    if (!mobileOpen) return
+
+    function trapFocus(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const root = drawerRef.current
+      if (!root) return
+      const focusable = root.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileOpen(false)
+      else trapFocus(e)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mobileOpen])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -98,7 +121,7 @@ export default function Navigation() {
                 glance distance. Active underline thickened from 1px to
                 2px for non-color signal. */}
             <nav className="hidden md:flex items-center gap-10" aria-label="Primary">
-              {navItems.map((item) => {
+              {NAV_ITEMS.map((item) => {
                 const active = isActivePath(pathname, item.path)
                 return (
                   <Link
@@ -207,6 +230,8 @@ export default function Navigation() {
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden p-2 rounded-sm transition-colors hover:bg-gray-100"
               aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-drawer"
             >
               {mobileOpen ? (
                 <X size={22} style={{ color: 'var(--color-text)' }} />
@@ -229,6 +254,8 @@ export default function Navigation() {
           role="presentation"
         >
           <div
+            ref={drawerRef}
+            id="mobile-nav-drawer"
             className="absolute top-0 right-0 w-72 h-full shadow-2xl"
             style={{ backgroundColor: 'var(--color-surface)' }}
             onClick={(e) => e.stopPropagation()}
@@ -257,7 +284,7 @@ export default function Navigation() {
             </div>
 
             <div className="py-2">
-              {navItems.map((item) => {
+              {NAV_ITEMS.map((item) => {
                 const active = isActivePath(pathname, item.path)
                 return (
                   <Link

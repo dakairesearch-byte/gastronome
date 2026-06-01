@@ -186,6 +186,15 @@ export default async function ExplorePage({
 
   // Unfiltered experience: Top 10 trending + editorial collection cards.
   if (!isFiltering) {
+    // Total restaurants in the active city — drives the count subline under
+    // the "Restaurants in {activeCity}" header. The dedicated cities browse
+    // page was removed, so Explore itself now orients the user with this
+    // header + count instead of relying on a separate city landing page.
+    const { count: cityCount } = await supabase
+      .from('restaurants')
+      .select('id', { count: 'exact', head: true })
+      .ilike('city', activeCity)
+
     const trending = await topTrendingRestaurants(supabase, {
       city: activeCity,
       window: '30d',
@@ -291,6 +300,36 @@ export default async function ExplorePage({
         <ExploreSearchBar cities={cities} initialCity={activeCity} />
 
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+          {/* City orientation header. The dedicated cities browse page was
+              removed, so Explore leads with an H1 naming the active city and
+              a count subline. The city picker in the search bar above doubles
+              as the inline "change city" control, so there's no separate
+              control rendered here. Brand slate tokens only — no emerald hero. */}
+          <header className="mb-10">
+            <h1
+              className="text-3xl sm:text-4xl"
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                color: 'var(--color-text)',
+              }}
+            >
+              Restaurants in {activeCity}
+            </h1>
+            <p
+              className="mt-2 text-sm"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              {cityCount != null
+                ? `${cityCount.toLocaleString()} ${cityCount === 1 ? 'restaurant' : 'restaurants'} · change city in the search bar above`
+                : 'Change city in the search bar above'}
+            </p>
+          </header>
+
           {top10.length > 0 && (
             <Top10Trending city={activeCity} restaurants={top10} />
           )}

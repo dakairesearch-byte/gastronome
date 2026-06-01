@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Compass, Search, Users, User } from 'lucide-react'
+import { User } from 'lucide-react'
 import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
+import { NAV_ITEMS } from '@/components/navItems'
 
 /**
  * Exact-prefix match: `/exploreXYZ` must NOT activate `/explore`. Match
@@ -19,17 +20,9 @@ export default function BottomNav() {
   const pathname = usePathname()
   const authed = !!useAuthUser()
 
-  // Search was previously absent from the bottom nav — the primary verb
-  // of the product on mobile had no reachable surface. Sweep v2 flagged
-  // this as a P0. Added between Explore and Community so the most-used
-  // discover-by-intent action is in thumb reach.
-  const navTabs = [
-    { href: '/', icon: Home, label: 'Home' },
-    { href: '/explore', icon: Compass, label: 'Explore' },
-    { href: '/search', icon: Search, label: 'Search' },
-    { href: '/community', icon: Users, label: 'Community' },
-  ] as const
-
+  // Tabs come from the shared NAV_ITEMS spine (Home, Explore, Search,
+  // Community) so the bottom bar never drifts from the desktop header.
+  // Profile is appended separately below because it is auth-gated.
   const profileActive = isActivePath(pathname, '/profile')
 
   return (
@@ -47,13 +40,13 @@ export default function BottomNav() {
           by the outer <nav>'s paddingBottom, so it stacks on top of this
           rather than eating into the label space. */}
       <div className="flex items-center justify-around min-h-16 px-2">
-        {navTabs.map((tab) => {
-          const active = isActivePath(pathname, tab.href)
+        {NAV_ITEMS.map((tab) => {
+          const active = isActivePath(pathname, tab.path)
           const Icon = tab.icon
           return (
             <Link
-              key={tab.href}
-              href={tab.href}
+              key={tab.path}
+              href={tab.path}
               aria-current={active ? 'page' : undefined}
               className="relative z-10 flex flex-col items-center justify-center gap-0.5 flex-1 py-2"
               style={{

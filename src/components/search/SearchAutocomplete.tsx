@@ -156,10 +156,10 @@ export default function SearchAutocomplete({
     }
   }
 
-  const dropdownVisible =
-    open &&
-    query.trim().length >= MIN_CHARS &&
-    (loading || suggestions.length > 0)
+  // Once the query clears the minimum length we always show the dropdown
+  // — even with zero suggestions — so the persistent "Search all results"
+  // footer is reachable for long-tail queries that match no restaurant.
+  const dropdownVisible = open && query.trim().length >= MIN_CHARS
 
   const inputEl = (
     <input
@@ -279,7 +279,7 @@ export default function SearchAutocomplete({
                 fontFamily: 'var(--font-body)',
               }}
             >
-              No matches. Press Enter to search anyway.
+              No matching restaurants.
             </div>
           ) : (
             <ul className="max-h-80 overflow-y-auto">
@@ -341,6 +341,34 @@ export default function SearchAutocomplete({
               })}
             </ul>
           )}
+
+          {/* Persistent full-search escape hatch. Always present (even with
+              zero suggestions) so long-tail queries that match no restaurant
+              still have a one-click path to /search?q=. Mirrors the Enter
+              fallback in handleSubmit. Uses onMouseDown so it fires before
+              the input's blur closes the dropdown. */}
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              submit(query)
+            }}
+            className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm transition-colors hover:opacity-90"
+            style={{
+              borderTop: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-background)',
+              color: 'var(--color-text-secondary)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            <Search className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--color-accent)' }} />
+            <span className="truncate">
+              Search all results for{' '}
+              <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>
+                &ldquo;{query.trim()}&rdquo;
+              </span>
+            </span>
+          </button>
         </div>
       )}
     </div>

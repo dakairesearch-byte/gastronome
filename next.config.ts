@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
       // The nav, footer, and inline links were all updated, but we keep
       // these so external links and bookmarks don't 404.
       { source: '/restaurants', destination: '/explore', permanent: true },
+      { source: '/cities', destination: '/explore', permanent: true },
+      { source: '/cities/:slug', destination: '/explore', permanent: true },
       { source: '/feed', destination: '/recent', permanent: true },
       { source: '/top-rated', destination: '/explore', permanent: true },
       { source: '/discover', destination: '/explore', permanent: true },

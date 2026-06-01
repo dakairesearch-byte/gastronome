@@ -593,7 +593,7 @@ function ProblemStep() {
         style={{
           color: 'var(--color-text-secondary)',
           fontFamily: 'var(--font-body)',
-          fontWeight: 300,
+          fontWeight: 400,
           lineHeight: 1.6,
         }}
       >
@@ -680,7 +680,7 @@ function SolutionStep() {
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
-            fontWeight: 300,
+            fontWeight: 400,
             lineHeight: 1.6,
           }}
         >
@@ -721,7 +721,7 @@ function SolutionStep() {
                 style={{
                   color: 'var(--color-text-secondary)',
                   fontFamily: 'var(--font-body)',
-                  fontWeight: 300,
+                  fontWeight: 400,
                 }}
               >
                 {desc}
@@ -772,7 +772,7 @@ function CityStep({
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
-            fontWeight: 300,
+            fontWeight: 400,
           }}
         >
           Choose the one city you want to explore. You can change it later in
@@ -787,6 +787,7 @@ function CityStep({
             <button
               key={city.id}
               type="button"
+              aria-pressed={on}
               onClick={() => onSelect(on ? '' : city.name)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs uppercase transition-all"
               style={{
@@ -912,7 +913,7 @@ function SignUpStep({
           style={{
             color: 'var(--color-text-secondary)',
             fontFamily: 'var(--font-body)',
-            fontWeight: 300,
+            fontWeight: 400,
           }}
         >
           {selectedCity
@@ -1091,7 +1092,7 @@ function AuthedReadyStep({
         style={{
           color: 'var(--color-text-secondary)',
           fontFamily: 'var(--font-body)',
-          fontWeight: 300,
+          fontWeight: 400,
         }}
       >
         {city
@@ -1140,7 +1141,7 @@ function ConfirmEmailStep({
         style={{
           color: 'var(--color-text-secondary)',
           fontFamily: 'var(--font-body)',
-          fontWeight: 300,
+          fontWeight: 400,
         }}
       >
         We sent a confirmation link to{' '}

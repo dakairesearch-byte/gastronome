@@ -541,12 +541,17 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           // The Places key (NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) does NOT have
           // the Maps Embed API enabled, so the iframe renders a raw Google
           // rejection error. Removing the || fallback means `mapsKey` is
-          // falsy when no Embed key is configured, which makes `embedSrc`
-          // null and lets the SVG-grid fallback render instead of the error.
+          // falsy when no Embed key is configured.
           const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY
           const embedSrc = center && mapsKey
             ? `https://www.google.com/maps/embed/v1/view?key=${mapsKey}&center=${center.lat},${center.lng}&zoom=${zoom}&maptype=roadmap`
             : null
+          // R1 carry-over: with no Embed key (or no derivable bbox) we used to
+          // render a dead SVG-grid panel with floating pins that read as a
+          // broken/blank map. Drop the panel entirely in that case — the
+          // numbered list already stands on its own, and the lg:grid-cols-2
+          // wrapper collapses to a single column with just the list.
+          if (!embedSrc) return null
           return (
         <div
           className="hidden lg:block relative rounded-sm overflow-hidden"
@@ -562,63 +567,15 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
               remain interactive — users still pan/zoom by clicking the
               "View larger map" link inside the iframe controls (which we
               hide via gestureHandling=none on the embed URL). */}
-          {embedSrc ? (
-            <iframe
-              title={`Map of trending restaurants in ${city}`}
-              src={embedSrc}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ border: 0 }}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              aria-hidden
-            />
-          ) : (
-            // Intentional static fallback (used when there's no Maps Embed
-            // key configured or we couldn't derive a bbox). Previously this
-            // was a bare grid pattern with no context, so it read as a
-            // dead/broken map. We keep the subtle streetmap-evoking grid but
-            // add a centered caption so it's clearly a deliberate stand-in,
-            // and the numbered pins below still convey relative position.
-            <>
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ opacity: 0.45 }}
-                aria-hidden
-              >
-                <defs>
-                  <pattern
-                    id="top10-grid"
-                    width="64"
-                    height="64"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 64 0 L 0 0 0 64"
-                      fill="none"
-                      stroke="var(--color-border, rgba(0,0,0,0.08))"
-                      strokeWidth="1"
-                    />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#top10-grid)" />
-              </svg>
-              <div
-                className="absolute inset-x-0 top-6 flex justify-center pointer-events-none px-6"
-                aria-hidden
-              >
-                <span
-                  className="text-xs uppercase text-center"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font-body)',
-                    letterSpacing: '0.14em',
-                  }}
-                >
-                  Map preview unavailable
-                </span>
-              </div>
-            </>
-          )}
+          <iframe
+            title={`Map of trending restaurants in ${city}`}
+            src={embedSrc}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            aria-hidden
+          />
 
           {items.map((r, i) => {
             const { x, y } = pinPosition(r, i, bounds)

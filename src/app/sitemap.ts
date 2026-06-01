@@ -8,10 +8,10 @@ export const revalidate = 86400
 /**
  * Dynamic sitemap (Next.js 16 `sitemap.ts` convention).
  *
- * Enumerates the static browse routes plus every restaurant and city
- * route pulled live from Supabase. Resilient by design: if either query
- * fails (DB outage, missing env at build time), we fall back to the
- * static route set rather than throwing and producing no sitemap at all.
+ * Enumerates the static browse routes plus every restaurant route pulled
+ * live from Supabase. Resilient by design: if the query fails (DB outage,
+ * missing env at build time), we fall back to the static route set rather
+ * than throwing and producing no sitemap at all.
  *
  * `metadataBase` (set in layout.tsx) does NOT apply to sitemap URLs —
  * the spec requires absolute `<loc>` values, so we build them from
@@ -31,7 +31,6 @@ const STATIC_ROUTES: StaticRoute[] = [
   { path: '/', changeFrequency: 'daily', priority: 1 },
   { path: '/explore', changeFrequency: 'daily', priority: 0.9 },
   { path: '/search', changeFrequency: 'weekly', priority: 0.7 },
-  { path: '/cities', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/recent', changeFrequency: 'daily', priority: 0.7 },
   { path: '/community', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
@@ -61,7 +60,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const [restaurantsRes, citiesRes] = await Promise.all([
       supabase.from('restaurants').select('id'),
-      supabase.from('cities').select('slug').eq('is_active', true),
+      supabase.from('cities').select('name').eq('is_active', true),
     ])
 
     if (!restaurantsRes.error && restaurantsRes.data) {
@@ -76,11 +75,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
+    // The dedicated /cities pages were removed; city now lives only as a
+    // case-insensitive `?city=` filter on /explore. Point per-city URLs at
+    // that filter (matched against restaurants.city via ilike on /explore).
     if (!citiesRes.error && citiesRes.data) {
-      for (const { slug } of citiesRes.data) {
-        if (!slug) continue
+      for (const { name } of citiesRes.data) {
+        if (!name) continue
         dynamicEntries.push({
-          url: `${SITE_URL}/cities/${slug}`,
+          url: `${SITE_URL}/explore?city=${encodeURIComponent(name)}`,
           lastModified: now,
           changeFrequency: 'weekly',
           priority: 0.7,

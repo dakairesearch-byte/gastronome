@@ -10,7 +10,6 @@ import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
 import GastronomeScoreBadge from '@/components/GastronomeScoreBadge'
-import { citySlug } from '@/lib/restaurant'
 import { gastronomeScore } from '@/lib/score'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
 import type { Metadata } from 'next'
@@ -327,15 +326,16 @@ export default async function RestaurantPage({
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
           <div className="flex items-center justify-between gap-3 mb-4">
             {/* Breadcrumb replaces the bare "Back" label so deep-linked
-                users see where they are (Cities › City › Restaurant)
-                and can jump up a level. */}
+                users see where they are (Explore › City › Restaurant)
+                and can jump up a level. City links into Explore's
+                case-insensitive ?city= filter. */}
             <Breadcrumb
               light
               crumbs={[
-                { label: 'Cities', href: '/cities' },
+                { label: 'Explore', href: '/explore' },
                 {
                   label: restaurant.city,
-                  href: `/cities/${citySlug(restaurant.city)}`,
+                  href: `/explore?city=${encodeURIComponent(restaurant.city)}`,
                 },
                 { label: restaurant.name },
               ]}
