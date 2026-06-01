@@ -79,6 +79,7 @@ export default function OnboardingFlow() {
   const [showPassword, setShowPassword] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -284,6 +285,41 @@ export default function OnboardingFlow() {
    * your email" state — the trigger-side profile row will already
    * carry the city via `home_city` in user metadata.
    */
+  /**
+   * Google OAuth sign-up from the onboarding funnel. Mirrors SignInModal's
+   * handler so the onboarding wall offers parity with the modal. On success
+   * the browser redirects to Google, then back through /auth/callback. If the
+   * Google provider isn't enabled in Supabase yet, we surface a friendly note
+   * rather than a raw "provider is not enabled" error.
+   */
+  const handleGoogle = async () => {
+    setError(null)
+    setOauthLoading(true)
+    try {
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback?next=/`
+          : undefined
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      })
+      if (oauthError) {
+        const lower = oauthError.message.toLowerCase()
+        setError(
+          lower.includes('provider') || lower.includes('not enabled')
+            ? 'Google sign-in isn’t enabled yet. Use email and password for now.'
+            : 'Could not start Google sign-in. Please try again.'
+        )
+        setOauthLoading(false)
+      }
+      // On success the browser redirects to Google — no further state update.
+    } catch {
+      setError('Could not start Google sign-in. Please try again.')
+      setOauthLoading(false)
+    }
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -467,6 +503,8 @@ export default function OnboardingFlow() {
                 setUsername={setUsername}
                 setShowPassword={setShowPassword}
                 onSubmit={handleSignUp}
+                onGoogle={handleGoogle}
+                oauthLoading={oauthLoading}
                 submitting={submitting}
                 selectedCity={selectedCity}
               />
@@ -942,6 +980,8 @@ function SignUpStep({
   setUsername,
   setShowPassword,
   onSubmit,
+  onGoogle,
+  oauthLoading,
   submitting,
   selectedCity,
 }: {
@@ -958,6 +998,8 @@ function SignUpStep({
   setUsername: (v: string) => void
   setShowPassword: (v: boolean) => void
   onSubmit: (e: React.FormEvent) => void
+  onGoogle: () => void
+  oauthLoading: boolean
   submitting: boolean
   selectedCity: string
 }) {
@@ -1026,6 +1068,44 @@ function SignUpStep({
           We use your email only to save your lists and home city — no spam,
           no selling your data. That&rsquo;s the whole reason for an account.
         </p>
+      </div>
+
+      {/* Google OAuth — offered up front so new users can sign up in one tap.
+          Dormant until the Google provider is enabled in Supabase, in which
+          case it surfaces a friendly note instead of failing silently. */}
+      <button
+        type="button"
+        onClick={onGoogle}
+        disabled={oauthLoading || submitting}
+        className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-sm border transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text)',
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        {oauthLoading ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <GoogleIcon />
+        )}
+        <span className="text-sm font-medium">Continue with Google</span>
+      </button>
+
+      <div className="flex items-center gap-3 my-5">
+        <span className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
+        <span
+          className="text-[10px] uppercase"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.2em',
+          }}
+        >
+          or
+        </span>
+        <span className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -1165,6 +1245,21 @@ function SignUpStep({
         .
       </p>
     </div>
+  )
+}
+
+/**
+ * Inline Google "G" mark — no img/SVG asset dependency so the button renders
+ * instantly on cold edge caches. Mirrors the one in SignInModal.
+ */
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        d="M21.35 11.1h-9.17v2.96h5.3c-.23 1.48-1.65 4.34-5.3 4.34-3.19 0-5.8-2.65-5.8-5.9s2.61-5.9 5.8-5.9c1.82 0 3.04.77 3.74 1.44l2.54-2.46C16.92 3.98 14.76 3 12.18 3 6.98 3 2.75 7.23 2.75 12.5S6.98 22 12.18 22c7.03 0 9.35-4.93 9.35-7.43 0-.5-.06-.88-.18-1.47Z"
+        fill="#4285F4"
+      />
+    </svg>
   )
 }
 
