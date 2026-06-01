@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Star } from 'lucide-react'
 import SectionHeader from '@/components/SectionHeader'
+import StaticMapTile from '@/components/StaticMapTile'
 import {
   BibGourmandIcon,
   EaterIcon,
@@ -506,10 +507,18 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
 
         {/* --- Map panel --- */}
         {(() => {
-          // Center + zoom for the Google Maps Embed v1/view iframe. We fit
-          // the padded bbox the pins use; if bounds are missing/degenerate
-          // we fall back to a tasteful zoom-12 over the average so the
-          // iframe never renders at zoom-0 (the "ocean view" default).
+          // Center + zoom for the Google Static Maps tile. We frame the
+          // padded bbox the pins use; if bounds are missing/degenerate we
+          // fall back to a tasteful zoom-12 over the average so the tile
+          // never renders at zoom-0 (the "ocean view" default).
+          //
+          // [W0] The map panel previously used the Maps Embed iframe gated
+          // on a dedicated NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY, and returned
+          // null (empty half-column / "map missing" owner complaint) when
+          // that key was unset. Static Maps is a different Google product
+          // that works on the existing Places key, so we render a real tile
+          // via StaticMapTile and only fall back to a token-styled
+          // placeholder when StaticMapTile itself returns null (no key).
           const center = bounds
             ? {
                 lat: (bounds.minLat + bounds.maxLat) / 2,
@@ -537,21 +546,19 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
               : span > 0.05
               ? 13
               : 14
-          // [sweep-2026-05-26-v3 R1] Use ONLY the dedicated Maps Embed key.
-          // The Places key (NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) does NOT have
-          // the Maps Embed API enabled, so the iframe renders a raw Google
-          // rejection error. Removing the || fallback means `mapsKey` is
-          // falsy when no Embed key is configured.
-          const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY
-          const embedSrc = center && mapsKey
-            ? `https://www.google.com/maps/embed/v1/view?key=${mapsKey}&center=${center.lat},${center.lng}&zoom=${zoom}&maptype=roadmap`
-            : null
-          // R1 carry-over: with no Embed key (or no derivable bbox) we used to
-          // render a dead SVG-grid panel with floating pins that read as a
-          // broken/blank map. Drop the panel entirely in that case — the
-          // numbered list already stands on its own, and the lg:grid-cols-2
-          // wrapper collapses to a single column with just the list.
-          if (!embedSrc) return null
+          const tile = (
+            <StaticMapTile
+              lat={center?.lat}
+              lng={center?.lng}
+              zoom={zoom}
+              label={`trending restaurants in ${city}`}
+            />
+          )
+          // StaticMapTile returns null when there are no coords to center on
+          // OR the Places key is unset. Rather than collapse the column to a
+          // dead empty half (the owner complaint), render a tasteful
+          // token-styled placeholder that keeps the two-column rhythm.
+          const hasTile = center != null && !!process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
           return (
         <div
           className="hidden lg:block relative rounded-sm overflow-hidden"
@@ -562,20 +569,30 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
           role="img"
           aria-label={`Map with ${items.length} numbered pins showing trending restaurants in ${city}`}
         >
-          {/* Real Google Maps tile under the pins. `pointer-events: none`
-              keeps the iframe from intercepting clicks so the pins above
-              remain interactive — users still pan/zoom by clicking the
-              "View larger map" link inside the iframe controls (which we
-              hide via gestureHandling=none on the embed URL). */}
-          <iframe
-            title={`Map of trending restaurants in ${city}`}
-            src={embedSrc}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ border: 0 }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            aria-hidden
-          />
+          {/* Real Google Static Maps tile under the pins. The <img> is
+              non-interactive by default, so the numbered pins above remain
+              the clickable affordance. When no tile is available we paint a
+              soft token-styled placeholder so the panel never reads as a
+              broken/blank map. */}
+          {hasTile ? (
+            <div className="absolute inset-0">{tile}</div>
+          ) : (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center"
+              style={{
+                backgroundColor: 'var(--color-surface-alt, #EFEAE1)',
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              <span className="text-sm" style={{ letterSpacing: '0.04em' }}>
+                Map preview unavailable
+              </span>
+              <span className="text-xs">
+                {items.length} trending spots in {city}
+              </span>
+            </div>
+          )}
 
           {items.map((r, i) => {
             const { x, y } = pinPosition(r, i, bounds)

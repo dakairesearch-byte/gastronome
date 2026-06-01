@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
 import GastronomeScoreBadge from '@/components/GastronomeScoreBadge'
+import StaticMapTile from '@/components/StaticMapTile'
 import { gastronomeScore } from '@/lib/score'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
 import type { Metadata } from 'next'
@@ -1316,18 +1317,22 @@ export default async function RestaurantPage({
                 coordQuery || addressQuery
               }${dirPlaceParam}`
 
-              // DT9: a Google Static Maps <img> built from lat/lng. Unlike
-              // the Embed iframe, the Static Maps API is enabled on the
-              // existing Places key, so this works without the dedicated
-              // Embed key and renders a real, recognizable map tile in place
-              // of the flat gradient "dead map" panel. Gated on coordinates;
-              // the deep links below work regardless. The img is a single
-              // static request (no JS map widget), so it stays cheap.
-              const placesKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-              const staticMapUrl =
-                hasCoords && placesKey
-                  ? `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=480x480&scale=2&markers=color:0x6B95A8%7C${lat},${lng}&key=${placesKey}`
-                  : null
+              // DT9 / W0: the static map tile now routes through the shared
+              // StaticMapTile component (also used by the Discover/map work).
+              // Unlike the Embed iframe, Static Maps is enabled on the
+              // existing Places key, so it renders a real map tile without the
+              // dedicated Embed key. StaticMapTile returns null when lat/lng
+              // are missing OR the key is unset — in which case we fall back to
+              // the gradient "neighborhood + pin" panel below. The deep links
+              // work regardless of which branch renders.
+              const staticTile = (
+                <StaticMapTile
+                  lat={lat}
+                  lng={lng}
+                  label={`Map showing the location of ${restaurant.name}`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )
 
               return (
                 <div
@@ -1360,10 +1365,13 @@ export default async function RestaurantPage({
                         allowFullScreen
                       />
                     </div>
-                  ) : staticMapUrl ? (
-                    // DT9: Google Static Maps image — a real map tile that
-                    // links out to the full interactive map. Replaces the
-                    // flat gradient "dead map" panel whenever we have coords.
+                  ) : hasCoords &&
+                    process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ? (
+                    // DT9 / W0: Google Static Maps tile (shared StaticMapTile)
+                    // — a real map image that links out to the full
+                    // interactive map. Replaces the flat gradient "dead map"
+                    // panel whenever we have coords and the Places key. If the
+                    // tile 403s it just fails gracefully as a broken img.
                     <a
                       href={viewUrl}
                       target="_blank"
@@ -1371,13 +1379,7 @@ export default async function RestaurantPage({
                       className="block aspect-square relative group"
                       aria-label={`Open ${restaurant.name} on Google Maps`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={staticMapUrl}
-                        alt={`Map showing the location of ${restaurant.name}`}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
+                      {staticTile}
                       <span
                         className="absolute bottom-2 right-2 text-[10px] uppercase tracking-wider px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{

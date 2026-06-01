@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, User, X } from 'lucide-react'
+import { ChevronDown, MapPin, Menu, User, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthUser } from '@/lib/hooks/useAuthUser'
+import { useCity } from '@/lib/hooks/useCity'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
 import { NAV_ITEMS } from '@/components/navItems'
 
@@ -25,6 +26,42 @@ export default function Navigation() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const user = useAuthUser()
   const drawerRef = useRef<HTMLDivElement | null>(null)
+
+  // Global city switcher (W0). The hook resolves the active city from the
+  // URL ?city= param, then a sticky localStorage preference, then a
+  // default; `setCity` persists and routes to the canonical browse surface.
+  const { city, cities, setCity } = useCity()
+  const [cityMenuOpen, setCityMenuOpen] = useState(false)
+  const cityMenuRef = useRef<HTMLDivElement | null>(null)
+
+  // Close the desktop city dropdown on outside-click / Escape.
+  useEffect(() => {
+    if (!cityMenuOpen) return
+    function onPointer(e: MouseEvent) {
+      if (cityMenuRef.current && !cityMenuRef.current.contains(e.target as Node)) {
+        setCityMenuOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setCityMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [cityMenuOpen])
+
+  // The dropdown should always include the active city even if the DB list
+  // hasn't loaded or omits a custom URL city, so the current selection reads.
+  const cityOptions = cities.includes(city) ? cities : [city, ...cities]
+
+  const selectCity = (next: string) => {
+    setCityMenuOpen(false)
+    setMobileOpen(false)
+    setCity(next)
+  }
 
   // NV7 account control: derive a display avatar / initial from the
   // Supabase user. Falls back to the first email character, then a
@@ -178,6 +215,75 @@ export default function Navigation() {
                 when on a /profile route so the active location still reads
                 to AT even though Profile left the primary cluster. */}
             <div className="hidden md:flex items-center gap-2">
+              {/* Global city switcher — current city + dropdown of active
+                  cities. Selecting routes to /explore?city=<name>, the
+                  canonical city-filtered browse surface. */}
+              <div ref={cityMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setCityMenuOpen((o) => !o)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-sm transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  aria-haspopup="listbox"
+                  aria-expanded={cityMenuOpen}
+                  aria-label={`Change city, current city ${city}`}
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  <MapPin size={16} strokeWidth={1.5} />
+                  <span
+                    className="text-xs uppercase"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.12em',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    {city}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={1.5}
+                    style={{
+                      transform: cityMenuOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.15s',
+                    }}
+                  />
+                </button>
+                {cityMenuOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Cities"
+                    className="absolute right-0 mt-1 w-48 max-h-80 overflow-y-auto rounded-sm shadow-2xl py-1 z-50"
+                    style={{
+                      backgroundColor: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    {cityOptions.map((name) => {
+                      const selected = name === city
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => selectCity(name)}
+                          className="flex w-full items-center px-4 py-2.5 text-xs uppercase transition-colors hover:bg-gray-100"
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            letterSpacing: '0.1em',
+                            fontWeight: selected ? 500 : 400,
+                            color: selected ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                            backgroundColor: selected ? 'rgba(107,149,168,0.08)' : 'transparent',
+                          }}
+                        >
+                          {name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
               {user ? (
                 <Link
                   href="/profile"
@@ -278,6 +384,55 @@ export default function Navigation() {
               >
                 <X size={20} style={{ color: 'var(--color-text-secondary)' }} />
               </button>
+            </div>
+
+            {/* Mobile city switcher — a labelled native-feel list. Lives
+                inside the drawer so its controls stay within the focus
+                trap. Selecting a city closes the drawer and routes to the
+                canonical /explore?city=<name> surface. */}
+            <div
+              className="px-5 py-3"
+              style={{ borderBottom: '1px solid var(--color-border)' }}
+            >
+              <div
+                className="flex items-center gap-1.5 mb-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                <MapPin size={14} strokeWidth={1.5} />
+                <span
+                  className="text-[0.65rem] uppercase"
+                  style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.14em' }}
+                >
+                  City
+                </span>
+              </div>
+              <div role="listbox" aria-label="Cities" className="flex flex-wrap gap-1.5">
+                {cityOptions.map((name) => {
+                  const selected = name === city
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => selectCity(name)}
+                      className="px-2.5 py-1.5 rounded-sm text-[0.7rem] uppercase transition-colors"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.08em',
+                        fontWeight: selected ? 500 : 400,
+                        color: selected ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                        backgroundColor: selected ? 'rgba(107,149,168,0.12)' : 'transparent',
+                        border: selected
+                          ? '1px solid var(--color-accent)'
+                          : '1px solid var(--color-border)',
+                      }}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="py-2">

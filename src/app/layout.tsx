@@ -106,7 +106,12 @@ export default function RootLayout({
           Skip to content
         </a>
         <Navigation />
-        <main id="main-content" className="flex-1">{children}</main>
+        <main
+          id="main-content"
+          className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+        >
+          {children}
+        </main>
         <Footer />
         <BottomNav />
         <SignInModalHost />
