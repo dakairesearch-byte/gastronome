@@ -130,6 +130,28 @@ describe('gastronomeScore (calibrated absolute)', () => {
     expect(best.score).toBeLessThan(10)
   })
 
+  it('applies social buzz ONLY when the ratings are already strong (consensus-gated)', () => {
+    const base = {
+      google_rating: 4.8, google_review_count: 8788,
+      yelp_rating: 4.5, yelp_review_count: 4461,
+    }
+    const noSocial = gastronomeScore(base)!
+    const withSocial = gastronomeScore({ ...base, social_score: 1 })!
+    // A strong, corroborated place that's also blowing up gets a real lift.
+    expect(withSocial.score).toBeGreaterThan(noSocial.score)
+    expect(withSocial.socialBoost).toBeGreaterThan(0)
+  })
+
+  it('gives a viral-but-mediocre restaurant no social lift', () => {
+    const dudNoSocial = gastronomeScore({ google_rating: 4.0, google_review_count: 1000 })!
+    const dudViral = gastronomeScore({
+      google_rating: 4.0, google_review_count: 1000, social_score: 1,
+    })!
+    // Mediocre ratings → the gate is closed → virality buys nothing.
+    expect(dudViral.score).toBe(dudNoSocial.score)
+    expect(dudViral.socialBoost).toBe(0)
+  })
+
   it('is monotonic in rating at fixed volume', () => {
     const vol = { google_review_count: 2000 }
     const a = gastronomeScore({ google_rating: 4.2, ...vol })!.score

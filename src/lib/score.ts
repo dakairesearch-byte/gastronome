@@ -82,7 +82,17 @@ const YELP_ANCHORS: [number, number][] = [
 // but it can never reach the corroborated tier.
 const SINGLE_SOURCE_CAP = { base: 8.0, span: 0.5, ref: 15000, ceiling: 8.5 }
 const TOPBAND = { knee: 9.2, floorConf: 0.55, spanConf: 0.45, volMin: 100, volFull: 12000 }
-const DUAL_SOURCE_CEILING = 9.95 // corroborated places top out just under 10
+const DUAL_SOURCE_CEILING = 9.9 // corroborated places top out at 9.9 — a 10.0 is
+// deliberately unreachable even after the social boost (9.95 would round up to 10).
+// CONSENSUS-GATED SOCIAL boost. TikTok/Instagram buzz (restaurants.social_score,
+// 0..1, precomputed per-city from restaurant_videos) only LIFTS a restaurant
+// when the ratings already agree it's good — so a genuinely loved place that's
+// also blowing up gets a boost, while a viral-but-mediocre spot gets little or
+// nothing (virality != quality). The lift ramps in only above gateLo and is
+// proportional to social_score; it's applied before the corroboration ceiling,
+// so it can't break the "needs 2 sources for the top" rule.
+const SOCIAL = { max: 0.6, gateLo: 6.5, gateHi: 8.5 }
+
 // Cross-source AGREEMENT (consensus) penalty. Gastronome is a consensus
 // product: a restaurant every crowd agrees on is a surer bet than one Google
 // loves and Yelp is lukewarm on. When present sources DISAGREE by more than a
@@ -122,6 +132,8 @@ export interface GastronomeScore {
   contributingSources: string[]
   /** Per-source contributions, for the methodology tooltip. */
   breakdown: ScoreContribution[]
+  /** The consensus-gated social lift actually applied (0 when none), for the tooltip. */
+  socialBoost: number
 }
 
 interface ScoreInput {
@@ -132,6 +144,8 @@ interface ScoreInput {
   /** Optional review-volume anchors (used by the Bayesian shrink + gates). */
   google_review_count?: number | null
   yelp_review_count?: number | null
+  /** Precomputed 0..1 TikTok+Instagram buzz (restaurants.social_score). */
+  social_score?: number | null
 }
 
 const clamp10 = (n: number) => Math.max(0, Math.min(10, n))
@@ -253,6 +267,16 @@ export function gastronomeScore(r: ScoreInput): GastronomeScore | null {
     q = TOPBAND.knee + (q - TOPBAND.knee) * conf
   }
 
+  // (c) CONSENSUS-GATED SOCIAL boost. Only lifts when the rating-derived score
+  //     is already strong (gate ramps 6.5 -> 8.5), scaled by social_score, so
+  //     buzz amplifies a genuinely-good place but never rescues a viral dud.
+  const ss = Number.isFinite(r.social_score)
+    ? Math.max(0, Math.min(1, r.social_score as number))
+    : 0
+  const socialGate = clamp01((q - SOCIAL.gateLo) / (SOCIAL.gateHi - SOCIAL.gateLo))
+  const socialBoost = SOCIAL.max * ss * socialGate
+  q = q + socialBoost
+
   // (b) Corroboration ceiling. A lone source is capped (the cap rises with its
   //     volume so huge single-source institutions aren't crushed); two or more
   //     corroborating sources may reach just under 10.
@@ -272,5 +296,6 @@ export function gastronomeScore(r: ScoreInput): GastronomeScore | null {
     reviewCount,
     contributingSources: contributions.map((c) => c.source),
     breakdown: contributions,
+    socialBoost: Math.round(socialBoost * 100) / 100,
   }
 }

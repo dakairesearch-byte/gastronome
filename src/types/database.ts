@@ -87,6 +87,7 @@ export type Database = {
           infatuation_url: string | null
           infatuation_review_snippet: string | null
           beli_score: number | null
+          social_score: number | null
           beli_url: string | null
           instagram_handle: string | null
           instagram_url: string | null
@@ -145,6 +146,7 @@ export type Database = {
           infatuation_url?: string | null
           infatuation_review_snippet?: string | null
           beli_score?: number | null
+          social_score?: number | null
           beli_url?: string | null
           instagram_handle?: string | null
           instagram_url?: string | null
@@ -198,6 +200,7 @@ export type Database = {
           infatuation_url?: string | null
           infatuation_review_snippet?: string | null
           beli_score?: number | null
+          social_score?: number | null
           beli_url?: string | null
           instagram_handle?: string | null
           instagram_url?: string | null

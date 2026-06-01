@@ -183,7 +183,7 @@ export default function OnboardingFlow() {
       const { data } = await supabase
         .from('restaurants')
         .select(
-          'id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls, google_rating, google_review_count, google_url, yelp_rating, yelp_review_count, yelp_url, infatuation_rating, infatuation_url, beli_score, beli_url, michelin_stars, michelin_designation, michelin_url, james_beard_winner, eater_38'
+          'id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls, google_rating, google_review_count, google_url, yelp_rating, yelp_review_count, yelp_url, infatuation_rating, infatuation_url, beli_score, beli_url, michelin_stars, michelin_designation, michelin_url, james_beard_winner, eater_38, social_score'
         )
         .eq('city', targetCity || '')
         .or('photo_url.not.is.null,google_photo_url.not.is.null')
