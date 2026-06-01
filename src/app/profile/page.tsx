@@ -778,8 +778,11 @@ function SettingsPanel({
       const { data, error: updateError } = await supabase
         .from('profiles')
         .update(updates)
+        // Explicit columns (not '*') — SELECT on profiles.email is revoked from
+        // the API role (PII), so '*' would 403 on the email column and fail the
+        // whole save. email is never read off the row.
+        .select('id, username, display_name, bio, avatar_url, is_critic, created_at, updated_at, creative_mode_enabled, home_city, onboarding_completed, favorite_cities, favorite_cuisines')
         .eq('id', user.id)
-        .select('*')
         .single()
       if (updateError) {
         setError('Failed to update settings: ' + updateError.message)

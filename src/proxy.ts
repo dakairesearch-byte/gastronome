@@ -17,6 +17,9 @@ export const config = {
      * - _next/static  (build static files)
      * - _next/image   (image optimization endpoint)
      * - favicon.ico   (favicon file)
+     * - robots.txt / sitemap.xml — crawler-facing route handlers that MUST
+     *   be publicly reachable; without exempting them the onboarding gate
+     *   307s them to /onboarding and search engines never see the sitemap.
      * - any path ending in a static asset extension
      *   (svg/png/jpg/jpeg/gif/webp/avif/ico/webmanifest)
      *   — `webmanifest` is required so the PWA manifest at
@@ -33,6 +36,6 @@ export const config = {
      * Excluding asset extensions lets /public files serve directly and
      * skips the per-asset Supabase client instantiation entirely.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|webmanifest)$).*)',
   ],
 }
