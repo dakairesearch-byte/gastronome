@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 import type { GastronomeScore } from '@/lib/score'
 
@@ -75,9 +75,32 @@ export default function GastronomeScoreBadge({
   // the click handler is the sole authority on touch devices, while pointer
   // (mouse) hover continues to open/close on desktop.
   const touchedRef = useRef(false)
+  // Root wraps the trigger + popover so an outside-tap/click can be
+  // detected (anything outside this node closes the popover).
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  // While open: close on Escape, and on any pointer/touch outside the
+  // root. Pointerdown (not click) so a tap that starts outside dismisses
+  // immediately on touch, and capture so we beat any inner stopPropagation.
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
+    const onPointerDown = (e: Event) => {
+      if (!rootRef.current?.contains(e.target as Node)) close()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+    }
+  }, [open])
 
   return (
-    <div className="relative inline-flex flex-col gap-0.5">
+    <div ref={rootRef} className="relative inline-flex flex-col gap-0.5">
       <div className="flex items-center gap-2">
         <span
           className="text-3xl leading-none"
@@ -136,7 +159,7 @@ export default function GastronomeScoreBadge({
       {open && (
         <div
           role="tooltip"
-          className="absolute top-full left-0 mt-2 w-72 rounded-lg shadow-2xl z-50 p-4 text-left"
+          className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg shadow-2xl z-50 p-4 text-left"
           style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
         >
           <p

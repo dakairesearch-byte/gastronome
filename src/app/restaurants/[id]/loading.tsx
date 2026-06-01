@@ -1,10 +1,14 @@
 /**
  * Route-level loading skeleton for /restaurants/[id].
- * Hero photo + title block + ratings row + content columns.
+ * Hero photo + title block + ratings row + content columns. Container
+ * width + horizontal padding mirror the real detail page
+ * (max-w-6xl, px-6 lg:px-8). This page is a single record (no card
+ * grid), so the canonical card skeletons don't apply here. The wrapper
+ * inherits the cream --color-background from <body> — no white flash.
  */
 export default function RestaurantDetailLoading() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-6 lg:px-8 py-6">
       <div className="animate-shimmer h-4 rounded w-48 mb-6" />
       <div className="animate-shimmer h-64 sm:h-80 rounded-2xl mb-6" />
       <div className="space-y-4 mb-8">

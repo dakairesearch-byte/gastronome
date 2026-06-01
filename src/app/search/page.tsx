@@ -655,12 +655,21 @@ function SearchContent() {
   const resultsCapped = restaurants.length >= RESULT_CAP
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Search</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1
+            className="text-2xl"
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 700,
+              color: 'var(--color-text)',
+            }}
+          >
+            Search
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
             Find restaurants by name, cuisine, city, or neighborhood — or
             search dishes directly to see which spots do them best.
           </p>
@@ -697,12 +706,23 @@ function SearchContent() {
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
-                className="lg:hidden relative flex items-center gap-1.5 px-3 min-h-[44px] text-sm font-semibold rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                className="lg:hidden relative flex items-center gap-1.5 px-3 min-h-[44px] text-sm font-semibold rounded-xl border hover:opacity-90 transition-opacity"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-surface)',
+                  color: 'var(--color-text)',
+                }}
               >
                 <Sliders size={16} />
                 Filters
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-emerald-500 text-white rounded-full">
+                  <span
+                    className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
+                    style={{
+                      backgroundColor: 'var(--color-accent)',
+                      color: 'var(--color-surface)',
+                    }}
+                  >
                     {activeFilterCount}
                   </span>
                 )}
@@ -728,22 +748,26 @@ function SearchContent() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setFilters({ ...filters, mode: key })}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
-                      active
-                        ? 'border-transparent text-white'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors"
                     style={
                       active
-                        ? { backgroundColor: 'var(--color-primary)' }
-                        : undefined
+                        ? {
+                            backgroundColor: 'var(--color-primary)',
+                            borderColor: 'transparent',
+                            color: 'var(--color-surface)',
+                          }
+                        : {
+                            backgroundColor: 'var(--color-surface)',
+                            borderColor: 'var(--color-border)',
+                            color: 'var(--color-text-secondary)',
+                          }
                     }
                   >
                     {label}
                   </button>
                 )
               })}
-              <span className="text-[11px] text-gray-400 ml-1 hidden sm:inline">
+              <span className="text-[11px] ml-1 hidden sm:inline" style={{ color: 'var(--color-text-secondary)' }}>
                 {filters.mode === 'dishes'
                   ? 'Searching dishes — ranked by how often they’re raved about.'
                   : filters.mode === 'restaurants'
@@ -755,17 +779,23 @@ function SearchContent() {
             {/* Neighborhood context header — when the user is clearly
                 browsing one neighborhood, name it and offer a clear chip. */}
             {activeNeighborhood && (
-              <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2.5">
+              <div
+                className="flex items-center justify-between border rounded-lg px-3 py-2.5"
+                style={{
+                  backgroundColor: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
                 <div className="flex items-center gap-2 min-w-0">
                   <MapPin
                     size={15}
                     style={{ color: 'var(--color-primary)' }}
                     aria-hidden="true"
                   />
-                  <span className="text-sm font-semibold text-gray-900 truncate">
+                  <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
                     Restaurants in {activeNeighborhood}
                   </span>
-                  <span className="text-xs text-gray-500 flex-shrink-0">
+                  <span className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
                     {restaurants.length}
                     {resultsCapped ? '+' : ''}{' '}
                     {restaurants.length === 1 ? 'spot' : 'spots'}
@@ -774,7 +804,8 @@ function SearchContent() {
                 <button
                   type="button"
                   onClick={clearNeighborhood}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1 text-xs font-semibold transition-colors flex-shrink-0 hover:opacity-80"
+                  style={{ color: 'var(--color-text-secondary)' }}
                 >
                   <X size={12} /> Clear
                 </button>
@@ -783,20 +814,28 @@ function SearchContent() {
 
             {/* Active filter summary (also visible on desktop for quick reset) */}
             {activeFilterCount > 0 && (
-              <div className="flex items-center justify-between text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">
+              <div
+                className="flex items-center justify-between text-xs border rounded-lg px-3 py-2"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
                 <span>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
                     {activeFilterCount}
                   </span>{' '}
                   {activeFilterCount === 1 ? 'filter' : 'filters'} active{' '}
-                  <span className="text-gray-400">
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
                     · filters persist across visits until you reset
                   </span>
                 </span>
                 <button
                   type="button"
                   onClick={handleResetAll}
-                  className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                  className="font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: 'var(--color-accent)' }}
                 >
                   Reset all
                 </button>
@@ -809,7 +848,8 @@ function SearchContent() {
               <div className="flex items-center justify-end gap-2">
                 <label
                   htmlFor="search-sort"
-                  className="text-xs font-medium text-gray-500"
+                  className="text-xs font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
                 >
                   Sort by
                 </label>
@@ -818,7 +858,18 @@ function SearchContent() {
                     id="search-sort"
                     value={sort}
                     onChange={(e) => setSort(parseSortKey(e.target.value))}
-                    className="appearance-none text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:border-emerald-400"
+                    className="appearance-none text-xs font-semibold border rounded-lg pl-3 pr-7 py-1.5 cursor-pointer transition-colors focus:outline-none"
+                    style={{
+                      color: 'var(--color-text)',
+                      backgroundColor: 'var(--color-surface)',
+                      borderColor: 'var(--color-border)',
+                    }}
+                    onFocus={(e) =>
+                      (e.currentTarget.style.borderColor = 'var(--color-accent)')
+                    }
+                    onBlur={(e) =>
+                      (e.currentTarget.style.borderColor = 'var(--color-border)')
+                    }
                   >
                     {SORT_OPTIONS.map((o) => (
                       <option key={o.key} value={o.key}>
@@ -828,7 +879,8 @@ function SearchContent() {
                   </select>
                   <ChevronDown
                     size={13}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: 'var(--color-text-secondary)' }}
                   />
                 </div>
               </div>
@@ -882,20 +934,24 @@ function SearchContent() {
                 {dishes.length > 0 && (
                   <>
                     <div className="flex items-center gap-2 pt-1">
-                      <div className="h-px bg-gray-200 flex-1" />
-                      <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                      <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
+                      <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
                         <Utensils size={12} />
                         {searchQuery
                           ? <>Dishes matching &ldquo;{searchQuery}&rdquo;</>
                           : 'Top dishes'}
                       </span>
-                      <div className="h-px bg-gray-200 flex-1" />
+                      <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
                     </div>
                     {dishes.map((d, i) => (
                       <Link
                         key={`${d.restaurant.id}-${d.dish_name}-${i}`}
                         href={`/restaurants/${d.restaurant.id}`}
-                        className="block bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                        className="block rounded-lg border p-4 hover:shadow-md transition-shadow"
+                        style={{
+                          backgroundColor: 'var(--color-surface)',
+                          borderColor: 'var(--color-border)',
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
@@ -903,7 +959,7 @@ function SearchContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-semibold text-gray-900 truncate">
+                              <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
                                 {d.dish_name}
                               </p>
                               {d.isTopDish && (
@@ -912,7 +968,7 @@ function SearchContent() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 truncate">
+                            <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
                               at {d.restaurant.name}
                               {d.restaurant.city ? ` · ${d.restaurant.city}` : ''}
                             </p>
@@ -928,27 +984,27 @@ function SearchContent() {
                     ))}
                     {restaurants.length > 0 && (
                       <div className="flex items-center gap-2 pt-2">
-                        <div className="h-px bg-gray-200 flex-1" />
-                        <span className="text-xs text-gray-400 font-medium">
+                        <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                           Restaurants
                         </span>
-                        <div className="h-px bg-gray-200 flex-1" />
+                        <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
                       </div>
                     )}
                   </>
                 )}
 
                 {restaurants.length > 0 && (
-                  <p className="text-xs text-gray-500 pt-1">
+                  <p className="text-xs pt-1" style={{ color: 'var(--color-text-secondary)' }}>
                     Showing{' '}
-                    <span className="font-semibold text-gray-700">
+                    <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
                       {restaurants.length}
                     </span>{' '}
                     {restaurants.length === 1 ? 'restaurant' : 'restaurants'}
                     {/* Honest cap notice — no fake "+" implying more are a
                         scroll away. Results are limited to RESULT_CAP. */}
                     {resultsCapped && (
-                      <span className="text-gray-400">
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
                         {' '}· showing the top {RESULT_CAP} — narrow with
                         filters to see more
                       </span>
@@ -978,16 +1034,30 @@ function SearchContent() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileFiltersOpen(false)}
           />
-          <div className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-xl overflow-y-auto">
-            <div className="sticky top-0 flex items-center justify-between bg-white border-b border-gray-100 px-4 py-3">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900">
+          <div
+            className="absolute right-0 top-0 h-full w-80 max-w-[85vw] shadow-xl overflow-y-auto"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              paddingRight: 'env(safe-area-inset-right)',
+            }}
+          >
+            <div
+              className="sticky top-0 flex items-center justify-between border-b px-4 py-3"
+              style={{
+                backgroundColor: 'var(--color-surface)',
+                borderColor: 'var(--color-border)',
+                paddingTop: 'calc(0.75rem + env(safe-area-inset-top))',
+              }}
+            >
+              <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-text)' }}>
                 Filters
               </h2>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
                 aria-label="Close filters"
-                className="p-1 text-gray-500 hover:text-gray-700"
+                className="p-1 transition-opacity hover:opacity-70"
+                style={{ color: 'var(--color-text-secondary)' }}
               >
                 <X size={18} />
               </button>
@@ -1002,11 +1072,22 @@ function SearchContent() {
                 availableCuisines={availableCuisines}
               />
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-3">
+            <div
+              className="sticky bottom-0 border-t p-3"
+              style={{
+                backgroundColor: 'var(--color-surface)',
+                borderColor: 'var(--color-border)',
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
-                className="w-full py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                className="w-full py-2 text-sm font-semibold rounded-lg transition-opacity hover:opacity-90"
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  color: 'var(--color-surface)',
+                }}
               >
                 {/* Show the live result count so users don't close the
                     sheet and discover zero results. Sweep v2 P1. */}
@@ -1070,7 +1151,7 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
  */
 function SearchShell() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <h1
           className="text-3xl mb-2"

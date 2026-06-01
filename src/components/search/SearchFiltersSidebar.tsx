@@ -91,11 +91,17 @@ export default function SearchFiltersSidebar({
   return (
     <aside className="w-full lg:w-72 flex-shrink-0 space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2 uppercase tracking-wider">
+        <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider" style={{ color: 'var(--color-text)' }}>
           <Sliders size={14} />
           Filters
           {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-emerald-500 text-white rounded-full">
+            <span
+              className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
+              style={{
+                backgroundColor: 'var(--color-accent)',
+                color: 'var(--color-surface)',
+              }}
+            >
               {activeCount}
             </span>
           )}
@@ -104,7 +110,8 @@ export default function SearchFiltersSidebar({
           <button
             type="button"
             onClick={onReset}
-            className="text-xs font-semibold text-gray-500 hover:text-emerald-600 transition-colors"
+            className="text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ color: 'var(--color-accent)' }}
           >
             Reset all
           </button>
@@ -113,7 +120,10 @@ export default function SearchFiltersSidebar({
 
       {/* Search mode */}
       <Section title="Looking for">
-        <div className="grid grid-cols-3 gap-1 p-1 bg-gray-100 rounded-lg">
+        <div
+          className="grid grid-cols-3 gap-1 p-1 rounded-lg"
+          style={{ backgroundColor: 'var(--color-background)' }}
+        >
           {(
             [
               { key: 'all', label: 'All' },
@@ -127,18 +137,23 @@ export default function SearchFiltersSidebar({
                 key={key}
                 type="button"
                 onClick={() => set('mode', key)}
-                className={`py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className="py-1.5 text-xs font-semibold rounded-md transition-colors"
+                style={
                   active
-                    ? 'bg-white text-emerald-700 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                    ? {
+                        backgroundColor: 'var(--color-surface)',
+                        color: 'var(--color-accent)',
+                        boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
+                      }
+                    : { color: 'var(--color-text-secondary)' }
+                }
               >
                 {label}
               </button>
             )
           })}
         </div>
-        <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">
+        <p className="text-[11px] mt-1.5 leading-snug" style={{ color: 'var(--color-text-secondary)' }}>
           {filters.mode === 'dishes'
             ? 'Only specific dishes match — e.g. "cacio e pepe".'
             : filters.mode === 'restaurants'
@@ -252,7 +267,7 @@ export default function SearchFiltersSidebar({
         <div className="space-y-2.5">
           {/* Michelin stars — each button shows the rosette repeated N times. */}
           <div>
-            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+            <span className="text-xs font-semibold flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--color-text)' }}>
               <MichelinStarIcon size={12} title="Michelin" />
               Michelin Stars
             </span>
@@ -276,8 +291,16 @@ export default function SearchFiltersSidebar({
                     className={`flex items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-md border transition-colors ${
                       active
                         ? 'bg-red-50 border-red-400'
-                        : 'bg-white border-gray-200 hover:bg-red-50 hover:border-red-200'
+                        : 'hover:bg-red-50 hover:border-red-200'
                     }`}
+                    style={
+                      active
+                        ? undefined
+                        : {
+                            backgroundColor: 'var(--color-surface)',
+                            borderColor: 'var(--color-border)',
+                          }
+                    }
                   >
                     {Array.from({ length: n }).map((_, i) => (
                       <MichelinStarIcon
@@ -301,11 +324,14 @@ export default function SearchFiltersSidebar({
           />
 
           <div className="pt-1">
-            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-1.5">
+            <span className="text-xs font-semibold flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--color-text)' }}>
               <JamesBeardIcon size={14} title="James Beard" />
               James Beard
             </span>
-            <div className="grid grid-cols-2 gap-1 p-0.5 bg-gray-100 rounded-md">
+            <div
+              className="grid grid-cols-2 gap-1 p-0.5 rounded-md"
+              style={{ backgroundColor: 'var(--color-background)' }}
+            >
               {(
                 [
                   { key: 'any', label: 'Any' },
@@ -326,10 +352,9 @@ export default function SearchFiltersSidebar({
                     type="button"
                     onClick={() => set('jamesBeard', key)}
                     className={`px-2 py-1 text-[10px] font-semibold rounded transition-colors ${
-                      active
-                        ? 'bg-white text-amber-800 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
+                      active ? 'bg-white text-amber-800 shadow-sm' : ''
                     }`}
+                    style={active ? undefined : { color: 'var(--color-text-secondary)' }}
                   >
                     {label}
                   </button>
@@ -366,7 +391,10 @@ function Section({
 }) {
   return (
     <section>
-      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+      <h3
+        className="text-[11px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5"
+        style={{ color: 'var(--color-text-secondary)' }}
+      >
         {titleIcon}
         {title}
       </h3>
@@ -390,7 +418,7 @@ function CheckRow({
 }) {
   return (
     <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors flex items-center gap-1.5">
+      <span className="text-xs font-semibold transition-colors flex items-center gap-1.5" style={{ color: 'var(--color-text)' }}>
         {icon}
         {label}
       </span>
@@ -401,7 +429,7 @@ function CheckRow({
         onClick={() => onChange(!checked)}
         className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
         style={{
-          backgroundColor: checked ? accent : '#E5E7EB',
+          backgroundColor: checked ? accent : 'var(--color-border)',
         }}
       >
         <span
@@ -436,8 +464,8 @@ function RatingSlider({
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-semibold text-gray-600">{label}</span>
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-900">
+        <span className="text-[11px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--color-text)' }}>
           {badge ?? (
             <Star size={11} style={{ color: iconColor, fill: iconColor }} />
           )}
@@ -451,9 +479,10 @@ function RatingSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1 rounded-full appearance-none cursor-pointer accent-emerald-600"
+        className="w-full h-1 rounded-full appearance-none cursor-pointer"
         style={{
-          background: `linear-gradient(to right, ${iconColor} 0%, ${iconColor} ${pct}%, #E5E7EB ${pct}%, #E5E7EB 100%)`,
+          accentColor: 'var(--color-accent)',
+          background: `linear-gradient(to right, ${iconColor} 0%, ${iconColor} ${pct}%, var(--color-border) ${pct}%, var(--color-border) 100%)`,
         }}
       />
     </div>
@@ -483,8 +512,8 @@ function ReviewCountSlider({
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-semibold text-gray-600">{label}</span>
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-gray-900">
+        <span className="text-[11px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: 'var(--color-text)' }}>
           {badge}
           {reviewCountLabel(value)}
         </span>
@@ -498,7 +527,8 @@ function ReviewCountSlider({
         onChange={(e) => onChange(REVIEW_COUNT_STEPS[parseInt(e.target.value, 10)])}
         className="w-full h-1 rounded-full appearance-none cursor-pointer"
         style={{
-          background: `linear-gradient(to right, ${iconColor} 0%, ${iconColor} ${pct}%, #E5E7EB ${pct}%, #E5E7EB 100%)`,
+          accentColor: 'var(--color-accent)',
+          background: `linear-gradient(to right, ${iconColor} 0%, ${iconColor} ${pct}%, var(--color-border) ${pct}%, var(--color-border) 100%)`,
         }}
       />
     </div>
@@ -543,10 +573,21 @@ function MultiSelect({
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg border transition-colors ${
-            selected.length > 0
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold'
-              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+            selected.length > 0 ? 'font-semibold' : ''
           }`}
+          style={
+            selected.length > 0
+              ? {
+                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))',
+                  borderColor: 'var(--color-accent)',
+                  color: 'var(--color-accent)',
+                }
+              : {
+                  backgroundColor: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text)',
+                }
+          }
         >
           <span className="truncate">
             {selected.length === 0
@@ -563,26 +604,50 @@ function MultiSelect({
           />
         </button>
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+          <div
+            className="absolute top-full left-0 right-0 mt-1 border rounded-xl shadow-lg z-50 py-1 max-h-72 overflow-y-auto"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
             {searchable && options.length > 6 && (
-              <div className="px-2 pb-1 pt-0.5 sticky top-0 bg-white border-b border-gray-100">
+              <div
+                className="px-2 pb-1 pt-0.5 sticky top-0 border-b"
+                style={{
+                  backgroundColor: 'var(--color-surface)',
+                  borderColor: 'var(--color-border)',
+                }}
+              >
                 <div className="relative">
                   <Search
                     size={12}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="absolute left-2 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-text-secondary)' }}
                   />
                   <input
                     type="text"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder={`Search ${title.toLowerCase()}...`}
-                    className="w-full pl-6 pr-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-emerald-400"
+                    className="w-full pl-6 pr-2 py-1 text-xs border rounded-md focus:outline-none transition-colors"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                    }}
+                    onFocus={(e) =>
+                      (e.currentTarget.style.borderColor = 'var(--color-accent)')
+                    }
+                    onBlur={(e) =>
+                      (e.currentTarget.style.borderColor = 'var(--color-border)')
+                    }
                   />
                 </div>
               </div>
             )}
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400">No matches</p>
+              <p className="px-3 py-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>No matches</p>
             ) : (
               filtered.map((option) => {
                 const isSelected = selected.includes(option)
@@ -592,16 +657,23 @@ function MultiSelect({
                     key={option}
                     onClick={() => onToggle(option)}
                     className={`w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-emerald-50 text-emerald-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                      isSelected ? 'font-medium' : ''
                     }`}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))',
+                            color: 'var(--color-accent)',
+                          }
+                        : { color: 'var(--color-text)' }
+                    }
                   >
                     <span className="truncate">{option}</span>
                     {isSelected && (
                       <Check
                         size={14}
-                        className="text-emerald-500 flex-shrink-0 ml-2"
+                        className="flex-shrink-0 ml-2"
+                        style={{ color: 'var(--color-accent)' }}
                       />
                     )}
                   </button>
@@ -615,13 +687,17 @@ function MultiSelect({
             {selected.map((v) => (
               <span
                 key={v}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md text-[11px] font-medium"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 18%, var(--color-surface))',
+                  color: 'var(--color-accent)',
+                }}
               >
                 {v}
                 <button
                   type="button"
                   onClick={() => onToggle(v)}
-                  className="hover:text-emerald-900"
+                  className="transition-opacity hover:opacity-70"
                 >
                   <X size={10} />
                 </button>

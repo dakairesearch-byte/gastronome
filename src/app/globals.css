@@ -13,7 +13,13 @@
   --color-primary: #D4A574;
   --color-primary-hover: #C4955F;
   --color-secondary: #2C3E50;
+  /* Brand accent — a muted slate-blue that replaces the de-facto emerald
+   * that had leaked across CTAs/empty-states/badges. `*-hover` is a
+   * darker step for interactive states; `--color-on-accent` is the
+   * readable foreground (white passes WCAG AA on both accent steps). */
   --color-accent: #6B95A8;
+  --color-accent-hover: #557D90;
+  --color-on-accent: #FFFFFF;
   --color-background: #FFFEFB;
   --color-surface: #FFFFFF;
   --color-text: #1C1C1C;
@@ -48,6 +54,8 @@
   --color-gastro-primary-hover: var(--color-primary-hover);
   --color-gastro-secondary: var(--color-secondary);
   --color-gastro-accent: var(--color-accent);
+  --color-gastro-accent-hover: var(--color-accent-hover);
+  --color-gastro-on-accent: var(--color-on-accent);
   --color-gastro-bg: var(--color-background);
   --color-gastro-surface: var(--color-surface);
   --color-gastro-text: var(--color-text);
@@ -164,6 +172,15 @@ a:focus-visible {
   outline: 2px solid var(--color-secondary);
   outline-offset: 3px;
   box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.22);
+}
+
+/*
+ * Accent CTA hover — the background is bound to var(--color-accent) via
+ * inline style (EmptyState et al.), which Tailwind can't hover-swap, so
+ * the darker hover step lives here against the accent-hover token.
+ */
+.gastro-accent-cta:hover {
+  background-color: var(--color-accent-hover) !important;
 }
 
 /* Shimmer animation for loading skeletons */

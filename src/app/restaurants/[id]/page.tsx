@@ -303,6 +303,62 @@ export default async function RestaurantPage({
     restaurant.eater_38
   const photoUrl = restaurant.photo_url || restaurant.google_photo_url
 
+  // DT1 decision-bar inputs ------------------------------------------------
+  // Price tier: price_range is a 1–4 integer from Google Places; anything
+  // outside that range (incl. 0/null) means "unknown" → render nothing.
+  const priceTier =
+    restaurant.price_range >= 1 && restaurant.price_range <= 4
+      ? '$'.repeat(restaurant.price_range)
+      : null
+  // Open/closed status from the lifecycle column. We only surface a chip for
+  // the two states a diner can act on; OPERATIONAL is the happy path,
+  // CLOSED_* is a hard stop. Unknown/null → no chip (avoid false signal).
+  const status = restaurant.business_status
+  const isPermanentlyClosed = status === 'CLOSED_PERMANENTLY'
+  const isTemporarilyClosed = status === 'CLOSED_TEMPORARILY'
+  const isOperational = status === 'OPERATIONAL'
+
+  // DT1 directions deep-link — mirrors the sidebar map logic so the
+  // top-of-page "Get Directions" action always points at native Maps
+  // navigation rather than the reviews page google_url resolves to.
+  const hasCoords = restaurant.latitude != null && restaurant.longitude != null
+  const dirDest = hasCoords
+    ? `${restaurant.latitude},${restaurant.longitude}`
+    : encodeURIComponent(
+        restaurant.address
+          ? `${restaurant.name}, ${restaurant.address}`
+          : restaurant.name,
+      )
+  const dirPlace = restaurant.google_place_id
+    ? `&destination_place_id=${restaurant.google_place_id}`
+    : ''
+  const decisionDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${dirDest}${dirPlace}`
+  const hasDecisionInfo =
+    !!priceTier ||
+    !!status ||
+    !!restaurant.website ||
+    hasCoords ||
+    !!restaurant.google_url ||
+    !!restaurant.google_place_id ||
+    !!restaurant.address
+
+  // DT5/DT7 photo strip — union of the primary photo + the photo_urls[]
+  // backfill, de-duped, capped at 5. Only rendered when ≥2 distinct photos
+  // exist so a single-photo restaurant doesn't get a one-tile "strip".
+  const photoStrip = Array.from(
+    new Set(
+      [restaurant.photo_url, restaurant.google_photo_url, ...(restaurant.photo_urls ?? [])]
+        .filter((u): u is string => !!u),
+    ),
+  ).slice(0, 5)
+
+  // DT2 menu-format gate — tasting-menu temples / omakase counters don't
+  // publish an a-la-carte item list, so the dish-less "Menu coming soon"
+  // empty state misreads as missing data. When the format is non-a-la-carte
+  // and we have a note, show the note instead.
+  const isTastingFormat =
+    !!restaurant.menu_format && restaurant.menu_format !== 'a_la_carte'
+
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       {/* Hero */}
@@ -321,7 +377,12 @@ export default async function RestaurantPage({
             className="absolute inset-0 w-full h-full object-cover opacity-55"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/20" />
+        {/* DT5: lightened hero gradient. Was from-black/85 via-black/50
+            to-black/20 — a heavy near-opaque wash that buried the photo we
+            had just bumped to 55% opacity. Eased to /70 → /35 → /5 so the
+            food photography reads while the bottom third stays dark enough
+            for the title to remain legible. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/5" />
 
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
           <div className="flex items-center justify-between gap-3 mb-4">
@@ -455,6 +516,120 @@ export default async function RestaurantPage({
         </div>
       </div>
 
+      {/* DT1 Decision bar — the "should I eat here?" action strip. Pinned
+          directly under the hero so a foodie sees price, whether the place
+          is open, and the two actions that matter (Website / Reserve and
+          Get Directions) before scrolling. Gated as a whole on having any
+          actionable info. */}
+      {hasDecisionInfo && (
+        <div
+          className="border-b"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 py-3.5">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              {priceTier && (
+                <span
+                  className="text-base"
+                  style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontWeight: 600,
+                    color: 'var(--color-text)',
+                  }}
+                  title={`Price: ${'$'.repeat(restaurant.price_range)} (Google price level ${restaurant.price_range} of 4)`}
+                >
+                  <span style={{ color: 'var(--color-text)' }}>{priceTier}</span>
+                  {restaurant.price_range < 4 && (
+                    <span style={{ color: 'var(--color-border)' }}>
+                      {'$'.repeat(4 - restaurant.price_range)}
+                    </span>
+                  )}
+                </span>
+              )}
+
+              {(isOperational || isTemporarilyClosed || isPermanentlyClosed) && (
+                <span
+                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    borderRadius: '999px',
+                    backgroundColor: isOperational
+                      ? 'rgba(22,163,74,0.12)'
+                      : 'rgba(220,38,38,0.12)',
+                    color: isOperational ? '#15803d' : '#b91c1c',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '999px',
+                      backgroundColor: isOperational ? '#16a34a' : '#dc2626',
+                    }}
+                  />
+                  {isOperational
+                    ? 'Open'
+                    : isTemporarilyClosed
+                    ? 'Temporarily closed'
+                    : 'Permanently closed'}
+                </span>
+              )}
+
+              {/* Push actions to the right on wide screens. */}
+              <div className="flex flex-wrap items-center gap-2.5 sm:ml-auto">
+                {restaurant.website && (
+                  <a
+                    href={restaurant.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs uppercase px-3.5 py-2"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.08em',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#fff',
+                    }}
+                  >
+                    <Globe size={13} aria-hidden="true" />
+                    Reserve / Website
+                  </a>
+                )}
+                {(hasCoords ||
+                  !!restaurant.google_url ||
+                  !!restaurant.google_place_id ||
+                  !!restaurant.address) && (
+                  <a
+                    href={decisionDirectionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs uppercase px-3.5 py-2"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.08em',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                      border: '1px solid var(--color-accent)',
+                      color: 'var(--color-accent)',
+                    }}
+                  >
+                    <MapPin size={13} aria-hidden="true" />
+                    Get Directions
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Accolades Banner */}
       {hasAccolades && (
         <div
@@ -470,11 +645,88 @@ export default async function RestaurantPage({
         </div>
       )}
 
+      {/* DT5/DT7 photo strip — a thin secondary-tier row of additional
+          photos, shown only when the union yields ≥2 distinct images so the
+          hero photo isn't simply repeated. Horizontally scrollable on
+          mobile. */}
+      {photoStrip.length >= 2 && (
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 pt-6">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {photoStrip.map((url, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={url}
+                src={url}
+                alt={`${restaurant.name} photo ${i + 1}`}
+                loading="lazy"
+                className="h-28 w-40 flex-shrink-0 object-cover"
+                style={{
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-border)',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 lg:px-8 py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
           {/* Main column */}
           <div className="space-y-9">
+            {/* DT3 Critic's Note — the Infatuation review snippet promoted to
+                a leading callout. A pull-quote from a trusted critic is the
+                single most persuasive "should I eat here?" signal, so it
+                leads the main column rather than hiding in a tooltip. */}
+            {restaurant.infatuation_review_snippet && (
+              <section>
+                <div
+                  className="px-5 py-4"
+                  style={{
+                    borderLeft: '3px solid var(--color-accent)',
+                    backgroundColor: 'var(--color-surface)',
+                    borderRadius: '0 8px 8px 0',
+                  }}
+                >
+                  <span
+                    className="text-[11px] uppercase block mb-2"
+                    style={{
+                      color: 'var(--color-accent)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.16em',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Critic&rsquo;s Note · The Infatuation
+                  </span>
+                  <p
+                    className="italic"
+                    style={{
+                      color: 'var(--color-text)',
+                      fontFamily: 'var(--font-heading)',
+                      fontWeight: 400,
+                      fontSize: '17px',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    &ldquo;{restaurant.infatuation_review_snippet}&rdquo;
+                  </p>
+                  {restaurant.infatuation_url && (
+                    <a
+                      href={restaurant.infatuation_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-2.5 text-xs uppercase tracking-wider font-medium"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      Read the full review &rarr;
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Ratings Scoreboard — hidden entirely when no source has a
                 rating, so a brand-new restaurant page doesn't render an
                 empty dashboard box. */}
@@ -576,8 +828,13 @@ export default async function RestaurantPage({
                     style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
                   />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {dishes.map((dish) => {
+                {/* DT8: ranked list (not a chip cloud). Each row leads with
+                    its rank, the dish name, the promoted inline sample quote
+                    (DT3 — no longer hover-only), a "{n} mentions" count, the
+                    confidence chip, and the per-source glyph strip. A glyph
+                    legend below decodes the source marks once. */}
+                <ol className="space-y-2.5">
+                  {dishes.map((dish, idx) => {
                     // Prefer a ★ rating chip when we have enough Google
                     // rating samples (≥3), otherwise fall back to a 👍
                     // positive-share chip from LLM sentiment (≥3 samples).
@@ -589,7 +846,7 @@ export default async function RestaurantPage({
                       dish.positivePct !== null && dish.sentimentSample >= 3
                     const ratingChip = hasRating ? (
                       <span
-                        className="inline-flex items-center gap-1 text-[11px]"
+                        className="inline-flex items-center gap-1 text-[11px] flex-shrink-0"
                         style={{
                           backgroundColor: 'rgba(234,179,8,0.12)',
                           color: '#a16207',
@@ -599,16 +856,12 @@ export default async function RestaurantPage({
                         }}
                         title={`${dish.ratingSample} Google review${dish.ratingSample !== 1 ? 's' : ''} mentioned this`}
                       >
-                        <Star
-                          size={10}
-                          fill="#ca8a04"
-                          stroke="#ca8a04"
-                        />
+                        <Star size={10} fill="#ca8a04" stroke="#ca8a04" />
                         {dish.avgRating!.toFixed(1)}
                       </span>
                     ) : hasSentiment ? (
                       <span
-                        className="inline-flex items-center gap-1 text-[11px]"
+                        className="inline-flex items-center gap-1 text-[11px] flex-shrink-0"
                         style={{
                           backgroundColor:
                             dish.positivePct! >= 70
@@ -633,86 +886,176 @@ export default async function RestaurantPage({
                       </span>
                     ) : null
                     return (
-                      <span
+                      <li
                         key={dish.name}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-sm"
+                        className="flex gap-3.5 px-4 py-3"
                         style={{
                           backgroundColor: 'var(--color-surface)',
                           border: '1px solid var(--color-border)',
-                          borderRadius: '999px',
+                          borderRadius: '10px',
                           fontFamily: 'var(--font-body)',
                           color: 'var(--color-text)',
                         }}
-                        title={dish.sampleQuote ?? undefined}
                       >
-                        <span style={{ fontWeight: 500 }}>{dish.name}</span>
-                        {ratingChip}
-                        {(dish.google > 0 ||
-                          dish.tiktok > 0 ||
-                          dish.instagram > 0) && (
-                          <span
-                            className="inline-flex items-center gap-1"
-                            style={{ opacity: 0.85 }}
-                          >
-                            {dish.google > 0 && (
-                              <GoogleGIcon
-                                size={11}
-                                title={`${dish.google} Google mention${dish.google !== 1 ? 's' : ''}`}
-                              />
-                            )}
-                            {dish.tiktok > 0 && (
-                              // Sweep 2026-05-26-v3 QW: raised from text-[9px]
-                              // to text-[11px] (legibility floor).
-                              <span
-                                className="inline-flex items-center justify-center text-[11px]"
-                                style={{
-                                  backgroundColor: '#000',
-                                  color: '#fff',
-                                  width: 16,
-                                  height: 16,
-                                  borderRadius: '3px',
-                                  fontWeight: 700,
-                                  letterSpacing: '-0.03em',
-                                }}
-                                title={`${dish.tiktok} TikTok mention${dish.tiktok !== 1 ? 's' : ''}`}
-                              >
-                                TT
+                        <span
+                          className="flex-shrink-0 flex items-center justify-center text-sm"
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: '999px',
+                            backgroundColor: 'var(--color-accent)',
+                            color: '#fff',
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-heading)',
+                          }}
+                          aria-hidden="true"
+                        >
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm" style={{ fontWeight: 600 }}>
+                              {dish.name}
+                            </span>
+                            {ratingChip}
+                            {(dish.google > 0 ||
+                              dish.tiktok > 0 ||
+                              dish.instagram > 0) && (
+                              <span className="inline-flex items-center gap-1 flex-shrink-0">
+                                {dish.google > 0 && (
+                                  <GoogleGIcon
+                                    size={12}
+                                    title={`${dish.google} Google mention${dish.google !== 1 ? 's' : ''}`}
+                                  />
+                                )}
+                                {dish.tiktok > 0 && (
+                                  <span
+                                    className="inline-flex items-center justify-center text-[11px]"
+                                    style={{
+                                      backgroundColor: '#000',
+                                      color: '#fff',
+                                      width: 16,
+                                      height: 16,
+                                      borderRadius: '3px',
+                                      fontWeight: 700,
+                                      letterSpacing: '-0.03em',
+                                    }}
+                                    title={`${dish.tiktok} TikTok mention${dish.tiktok !== 1 ? 's' : ''}`}
+                                  >
+                                    TT
+                                  </span>
+                                )}
+                                {dish.instagram > 0 && (
+                                  <span
+                                    className="inline-flex items-center justify-center text-[11px]"
+                                    style={{
+                                      background:
+                                        'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',
+                                      color: '#fff',
+                                      width: 16,
+                                      height: 16,
+                                      borderRadius: '3px',
+                                      fontWeight: 700,
+                                      letterSpacing: '-0.03em',
+                                    }}
+                                    title={`${dish.instagram} Instagram mention${dish.instagram !== 1 ? 's' : ''}`}
+                                  >
+                                    IG
+                                  </span>
+                                )}
                               </span>
                             )}
-                            {dish.instagram > 0 && (
-                              // Sweep 2026-05-26-v3 QW: raised from text-[9px]
-                              // to text-[11px] (legibility floor).
+                            {dish.count > 0 && (
                               <span
-                                className="inline-flex items-center justify-center text-[11px]"
-                                style={{
-                                  background:
-                                    'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',
-                                  color: '#fff',
-                                  width: 16,
-                                  height: 16,
-                                  borderRadius: '3px',
-                                  fontWeight: 700,
-                                  letterSpacing: '-0.03em',
-                                }}
-                                title={`${dish.instagram} Instagram mention${dish.instagram !== 1 ? 's' : ''}`}
+                                className="text-[11px] ml-auto flex-shrink-0"
+                                style={{ color: 'var(--color-text-secondary)' }}
                               >
-                                IG
+                                {dish.count} mention{dish.count !== 1 ? 's' : ''}
                               </span>
                             )}
-                          </span>
-                        )}
-                        {dish.count > 0 && (
-                          <span
-                            className="text-[11px]"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            {dish.count}
-                          </span>
-                        )}
-                      </span>
+                          </div>
+                          {dish.sampleQuote && (
+                            <p
+                              className="italic mt-1.5 text-sm"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                                fontFamily: 'var(--font-heading)',
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              &ldquo;{dish.sampleQuote}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </li>
                     )
                   })}
-                </div>
+                </ol>
+                {/* Glyph legend — decodes the per-source marks shown on each
+                    dish row once, instead of relying on hover titles. Only
+                    surfaces the sources actually present across the list. */}
+                {(() => {
+                  const anyGoogle = dishes.some((d) => d.google > 0)
+                  const anyTikTok = dishes.some((d) => d.tiktok > 0)
+                  const anyInsta = dishes.some((d) => d.instagram > 0)
+                  if (!anyGoogle && !anyTikTok && !anyInsta) return null
+                  return (
+                    <div
+                      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[11px]"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      <span style={{ letterSpacing: '0.08em' }}>Mentioned on</span>
+                      {anyGoogle && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <GoogleGIcon size={12} title="Google" />
+                          Google reviews
+                        </span>
+                      )}
+                      {anyTikTok && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="inline-flex items-center justify-center text-[10px]"
+                            style={{
+                              backgroundColor: '#000',
+                              color: '#fff',
+                              width: 15,
+                              height: 15,
+                              borderRadius: '3px',
+                              fontWeight: 700,
+                            }}
+                            aria-hidden="true"
+                          >
+                            TT
+                          </span>
+                          TikTok
+                        </span>
+                      )}
+                      {anyInsta && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="inline-flex items-center justify-center text-[10px]"
+                            style={{
+                              background:
+                                'linear-gradient(135deg,#f58529,#dd2a7b,#8134af)',
+                              color: '#fff',
+                              width: 15,
+                              height: 15,
+                              borderRadius: '3px',
+                              fontWeight: 700,
+                            }}
+                            aria-hidden="true"
+                          >
+                            IG
+                          </span>
+                          Instagram
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
               </section>
             )}
 
@@ -734,7 +1077,7 @@ export default async function RestaurantPage({
                       fontWeight: 500,
                     }}
                   >
-                    Across reviews &amp; social
+                    {isTastingFormat ? 'How they serve it' : 'Across reviews & social'}
                   </span>
                   <h2
                     className="text-2xl"
@@ -745,26 +1088,39 @@ export default async function RestaurantPage({
                       letterSpacing: '-0.005em',
                     }}
                   >
-                    Signature Dishes
+                    {isTastingFormat ? 'The Menu' : 'Signature Dishes'}
                   </h2>
                   <div
                     className="mt-3.5"
                     style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
                   />
                 </div>
+                {/* DT2: for tasting-menu / omakase / prix-fixe formats there
+                    is no a-la-carte item list to gather, so the "Menu coming
+                    soon" copy is actively misleading. Show the format note
+                    instead — it's the accurate "what to expect" signal. */}
                 <div
                   className="rounded-lg px-4 py-5 text-sm"
                   style={{
                     backgroundColor: 'var(--color-surface)',
-                    border: '1px dashed var(--color-border)',
+                    border: isTastingFormat
+                      ? '1px solid var(--color-border)'
+                      : '1px dashed var(--color-border)',
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  <p>
-                    Menu coming soon — our dish recommendations come from
-                    reviews and social posts, and we&rsquo;re still gathering
-                    them for {restaurant.name}.
-                  </p>
+                  {isTastingFormat ? (
+                    <p style={{ color: 'var(--color-text)', lineHeight: 1.6 }}>
+                      {restaurant.menu_note ||
+                        `${restaurant.name} serves a set ${restaurant.menu_format!.replace(/_/g, ' ')} rather than an à la carte menu.`}
+                    </p>
+                  ) : (
+                    <p>
+                      Menu coming soon — our dish recommendations come from
+                      reviews and social posts, and we&rsquo;re still gathering
+                      them for {restaurant.name}.
+                    </p>
+                  )}
                   {restaurant.website && (
                     <a
                       href={restaurant.website}
@@ -773,7 +1129,9 @@ export default async function RestaurantPage({
                       className="inline-flex items-center gap-1 mt-3 text-xs uppercase tracking-wider font-medium"
                       style={{ color: 'var(--color-accent)' }}
                     >
-                      View the menu on the restaurant&rsquo;s site →
+                      {isTastingFormat
+                        ? 'See the menu & reserve →'
+                        : 'View the menu on the restaurant’s site →'}
                     </a>
                   )}
                 </div>
@@ -958,6 +1316,19 @@ export default async function RestaurantPage({
                 coordQuery || addressQuery
               }${dirPlaceParam}`
 
+              // DT9: a Google Static Maps <img> built from lat/lng. Unlike
+              // the Embed iframe, the Static Maps API is enabled on the
+              // existing Places key, so this works without the dedicated
+              // Embed key and renders a real, recognizable map tile in place
+              // of the flat gradient "dead map" panel. Gated on coordinates;
+              // the deep links below work regardless. The img is a single
+              // static request (no JS map widget), so it stays cheap.
+              const placesKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+              const staticMapUrl =
+                hasCoords && placesKey
+                  ? `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=480x480&scale=2&markers=color:0x6B95A8%7C${lat},${lng}&key=${placesKey}`
+                  : null
+
               return (
                 <div
                   className="overflow-hidden"
@@ -972,7 +1343,10 @@ export default async function RestaurantPage({
                       we skip straight to the static fallback so we never
                       emit a `center=null,null` view embed. */}
                   {embedKey && (restaurant.google_place_id || hasCoords) ? (
-                    <div className="aspect-square bg-gray-100">
+                    <div
+                      className="aspect-square"
+                      style={{ backgroundColor: 'var(--color-border)' }}
+                    >
                       <iframe
                         title={`Map of ${restaurant.name}`}
                         src={
@@ -986,9 +1360,39 @@ export default async function RestaurantPage({
                         allowFullScreen
                       />
                     </div>
+                  ) : staticMapUrl ? (
+                    // DT9: Google Static Maps image — a real map tile that
+                    // links out to the full interactive map. Replaces the
+                    // flat gradient "dead map" panel whenever we have coords.
+                    <a
+                      href={viewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block aspect-square relative group"
+                      aria-label={`Open ${restaurant.name} on Google Maps`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={staticMapUrl}
+                        alt={`Map showing the location of ${restaurant.name}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <span
+                        className="absolute bottom-2 right-2 text-[10px] uppercase tracking-wider px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          color: '#fff',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Open in Maps →
+                      </span>
+                    </a>
                   ) : (
-                    // Static fallback when no embed key configured — no
-                    // network call, no iframe, no chance of the Maps API
+                    // Static fallback when no embed key AND no coordinates —
+                    // no network call, no iframe, no chance of the Maps API
                     // error leaking onto the page. The neighborhood +
                     // pin act as a recognizable map-shaped affordance.
                     <a
