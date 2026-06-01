@@ -225,7 +225,10 @@ export default function DiscoverSearchResults({
         </section>
       )}
 
-      {/* 3 · Neighborhoods — each opens Browse filtered to that neighborhood */}
+      {/* 3 · Neighborhoods — each re-runs search scoped to that neighborhood.
+          We route through ?q=<neighborhood> (which the engine matches via
+          neighborhood.ilike) rather than a ?nbhd= param the shell doesn't read,
+          so the link lands on a real, relevant result set. */}
       {neighborhoodHits.length > 0 && (
         <section className="space-y-3">
           <SectionHeading
@@ -237,7 +240,7 @@ export default function DiscoverSearchResults({
             {neighborhoodHits.map((n) => (
               <Link
                 key={n}
-                href={`/discover?city=${encodeURIComponent(city)}&nbhd=${encodeURIComponent(n)}`}
+                href={`/discover?city=${encodeURIComponent(city)}&q=${encodeURIComponent(n)}`}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm transition-colors hover:shadow-sm"
                 style={{
                   color: 'var(--color-text)',

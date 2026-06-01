@@ -158,6 +158,10 @@ export default function DiscoverMapView({ city }: { city: string }) {
   const [areaBounds, setAreaBounds] = useState<MapBounds | null>(null)
   const lastBoundsRef = useRef<MapBounds | null>(null)
   const [boundsMoved, setBoundsMoved] = useState(false)
+  // Imperative recenter target for the map (driven by "Near me"). Passed to
+  // RestaurantMap.centerOn so the single host-owned geolocation control both
+  // moves the map and scopes the list.
+  const [centerOn, setCenterOn] = useState<{ lat: number; lng: number } | null>(null)
 
   const handleBoundsChange = useCallback((b: MapBounds) => {
     lastBoundsRef.current = b
@@ -360,6 +364,22 @@ export default function DiscoverMapView({ city }: { city: string }) {
             )}
           </div>
         )}
+
+        {/* Honesty notice: "Search this area" clamps the already-fetched, top-40
+            slice to the viewport — it does NOT re-query the DB by geography, so
+            a high-scoring city may hide lower-ranked places that are in view.
+            Surface that rather than imply full geographic coverage. */}
+        {areaBounds && capped && (
+          <div className="pointer-events-auto mx-auto max-w-2xl">
+            <p
+              className="rounded-lg px-3 py-1.5 text-xs shadow-sm"
+              style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-secondary)' }}
+            >
+              Showing the city&rsquo;s top {RESULT_CAP} by score within this area — refine
+              filters to surface more.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ---- desktop: map + side panel ; mobile: full map + sheet ---- */}
@@ -372,18 +392,23 @@ export default function DiscoverMapView({ city }: { city: string }) {
             onSelect={handleSelect}
             onBoundsChange={handleBoundsChange}
             hideSearchAreaButton
+            hideNearMe
+            centerOn={centerOn}
             renderPreview={(r, close) => (
               <PreviewCard restaurant={r} onClose={close} />
             )}
             className="h-full w-full"
           />
 
-          {/* Near me — bottom-left so it doesn't collide with the map's own
-              crosshair (bottom-right) or the preview card (bottom-center). */}
+          {/* Near me — the SINGLE geolocation control (RestaurantMap's own
+              crosshair is hidden via hideNearMe). Bottom-left so it clears the
+              preview card (bottom-center). It both recenters the map (centerOn)
+              and scopes the list to a box around the user. */}
           <div className="absolute bottom-4 left-3 z-10">
             <NearMeButton
               onLocate={(lat, lng) => {
-                // Recenter via a tiny bounds box so the area filter + map
+                setCenterOn({ lat, lng })
+                // Scope the list via a tiny bounds box so the area filter + map
                 // converge on the user's location.
                 const d = 0.03
                 const b: MapBounds = {
@@ -451,7 +476,7 @@ export default function DiscoverMapView({ city }: { city: string }) {
           onPointerDown={onHandlePointerDown}
           onPointerUp={onHandlePointerUp}
           className="flex w-full flex-col items-center gap-1.5 px-4 pb-1 pt-2.5"
-          aria-label={`${count} results — drag to resize`}
+          aria-label={`${count} results — swipe up or down, or tap, to resize`}
         >
           <span
             className="h-1.5 w-10 rounded-full"
@@ -542,28 +567,49 @@ function NearMeButton({
   onLocate: (lat: number, lng: number) => void
 }) {
   const [busy, setBusy] = useState(false)
+  // User-facing error so a denied/unsupported geolocation doesn't look inert.
+  const [error, setError] = useState<string | null>(null)
   const locate = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    setError(null)
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setError("Location isn't available in this browser.")
+      return
+    }
     setBusy(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setBusy(false)
         onLocate(pos.coords.latitude, pos.coords.longitude)
       },
-      () => setBusy(false),
+      () => {
+        setBusy(false)
+        setError("Couldn't access your location — check browser permissions.")
+      },
       { enableHighAccuracy: true, timeout: 8000 }
     )
   }
   return (
-    <button
-      type="button"
-      onClick={locate}
-      aria-label="Center map on my location"
-      className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md transition hover:opacity-90"
-      style={{ color: 'var(--color-action)' }}
-    >
-      <Crosshair size={20} className={busy ? 'animate-pulse' : ''} />
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={locate}
+        aria-label="Center map on my location"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md transition hover:opacity-90"
+        style={{ color: 'var(--color-action)' }}
+      >
+        <Crosshair size={20} className={busy ? 'animate-pulse' : ''} />
+      </button>
+      {error && (
+        <span
+          role="status"
+          aria-live="polite"
+          className="max-w-[12rem] rounded-lg px-2.5 py-1.5 text-xs shadow-md"
+          style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+        >
+          {error}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -807,6 +853,10 @@ function ResultRow({
           href={`/restaurants/${restaurant.id}`}
           className="absolute inset-0 z-0"
           aria-label={`View ${restaurant.name}`}
+          // Keyboard parity with mouse hover: focusing the row's link selects
+          // it, so keyboard/SR users drive the pin↔row sync too (Enter still
+          // navigates to the detail page via the link's default action).
+          onFocus={() => onSelect(restaurant.id)}
           onClick={(e) => {
             // Let select fire, then navigate — but don't block navigation.
             e.stopPropagation()

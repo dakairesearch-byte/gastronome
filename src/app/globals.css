@@ -35,6 +35,12 @@
   --color-on-accent: #FFFFFF;
   --color-background: #FFFEFB;
   --color-surface: #FFFFFF;
+  /* Warm off-white surfaces for map placeholders / skeleton panels. Promoted
+   * out of the inline hex fallbacks that DiscoverBrowse + RestaurantMap +
+   * Top10Trending were carrying (var(--color-surface-alt, #EFEAE1) etc.) so the
+   * token is real and the design system owns the value. */
+  --color-surface-alt: #EFEAE1;
+  --color-surface-muted: #F1EDE6;
   --color-text: #1C1C1C;
   /* Bumped from #757575 → #5E5E5E so 11px/12px secondary copy meets
    * WCAG AA 4.5:1 against the cream background. Flagged by typography

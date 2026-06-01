@@ -42,6 +42,18 @@ interface RestaurantMapProps {
    * RestaurantMap importing card components.
    */
   renderPreview?: (restaurant: Restaurant, close: () => void) => React.ReactNode
+  /**
+   * When true, the built-in "near me" crosshair is hidden so the host owns a
+   * single geolocation control (avoids the duplicate-button / duplicate
+   * aria-label problem). Defaults to false (W3 split-pane keeps its own).
+   */
+  hideNearMe?: boolean
+  /**
+   * Imperative recenter target. When this value changes to a new {lat,lng},
+   * the map pans/zooms to it. Lets a host-owned "near me" button move the map
+   * without RestaurantMap exposing a ref. Null/undefined = no-op.
+   */
+  centerOn?: { lat: number; lng: number } | null
 }
 
 // The Maps JS key. Mirrors the autocomplete file but prefers a dedicated
@@ -83,6 +95,8 @@ export default function RestaurantMap({
   onBoundsChange,
   hideSearchAreaButton = false,
   renderPreview,
+  hideNearMe = false,
+  centerOn,
 }: RestaurantMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
@@ -98,6 +112,19 @@ export default function RestaurantMap({
   useEffect(() => {
     onBoundsChangeRef.current = onBoundsChange
   }, [onBoundsChange])
+
+  // Keep selection + the select callback in refs so the marker-BUILD effect
+  // can read them WITHOUT listing them as deps. Listing selectedId there made
+  // every selection (incl. list-row HOVER, which fires onSelect per row) tear
+  // down and rebuild all markers and re-fit the viewport — the map visibly
+  // jumped on every hover. Selection styling is owned by the cheap highlight
+  // effect below; the build effect now only re-runs when `located` changes.
+  const selectedIdRef = useRef(selectedId)
+  const onSelectRef = useRef(onSelect)
+  useEffect(() => {
+    selectedIdRef.current = selectedId
+    onSelectRef.current = onSelect
+  }, [selectedId, onSelect])
 
   const [sdkReady, setSdkReady] = useState(false)
   // MAPS_KEY is a module constant, so the "no key" failure is known at first
@@ -241,7 +268,7 @@ export default function RestaurantMap({
 
     const bounds = new g.maps.LatLngBounds()
     located.forEach((r) => {
-      const isSel = r.id === selectedId
+      const isSel = r.id === selectedIdRef.current
       const score = gastronomeScore(r)?.score
       const marker = new g.maps.Marker({
         position: { lat: r.latitude!, lng: r.longitude! },
@@ -263,7 +290,7 @@ export default function RestaurantMap({
               }
             : undefined,
       })
-      const listener = marker.addListener('click', () => onSelect?.(r.id))
+      const listener = marker.addListener('click', () => onSelectRef.current?.(r.id))
       listenersRef.current.push(listener)
       markersRef.current.set(r.id, marker)
       bounds.extend(marker.getPosition())
@@ -280,7 +307,9 @@ export default function RestaurantMap({
       listenersRef.current.forEach((l) => g.maps.event.removeListener(l))
       listenersRef.current = []
     }
-  }, [sdkReady, located, selectedId, onSelect])
+    // selectedId/onSelect intentionally excluded — read via refs above so a
+    // selection/hover does NOT rebuild markers or re-fit the viewport.
+  }, [sdkReady, located])
 
   // Highlight the selected pin without a full rebuild (cheap re-icon + pan).
   useEffect(() => {
@@ -291,12 +320,24 @@ export default function RestaurantMap({
       marker.setIcon({
         url: pinSvg(isSel),
         scaledSize: new g.maps.Size(isSel ? 42 : 34, isSel ? 54 : 44),
-        labelOrigin: new g.maps.Point(isSel ? 21 : 17, isSel ? 17 : 17),
+        // Match the build-effect labelOrigin exactly so the score label doesn't
+        // nudge vertically depending on which path last set the icon.
+        labelOrigin: new g.maps.Point(isSel ? 21 : 17, isSel ? 21 : 17),
       })
       marker.setZIndex(isSel ? 999 : 1)
       if (isSel) mapRef.current.panTo(marker.getPosition())
     })
   }, [selectedId, sdkReady])
+
+  // Imperative recenter: pan/zoom to a host-supplied {lat,lng} when it changes
+  // (e.g. the host's "near me" button). Kept separate from marker building so
+  // it never triggers a rebuild.
+  useEffect(() => {
+    if (!sdkReady || !mapRef.current || !centerOn) return
+    const g = window.google as any
+    mapRef.current.panTo(new g.maps.LatLng(centerOn.lat, centerOn.lng))
+    mapRef.current.setZoom(14)
+  }, [sdkReady, centerOn])
 
   const handleSearchArea = useCallback(() => {
     if (!mapRef.current || !onSearchArea) return
@@ -371,17 +412,19 @@ export default function RestaurantMap({
         </div>
       )}
 
-      <div className="absolute bottom-4 right-3">
-        <button
-          type="button"
-          onClick={handleNearMe}
-          aria-label="Center map on my location"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md transition hover:opacity-90"
-          style={{ color: 'var(--color-action)' }}
-        >
-          <Crosshair size={20} />
-        </button>
-      </div>
+      {!hideNearMe && (
+        <div className="absolute bottom-4 right-3">
+          <button
+            type="button"
+            onClick={handleNearMe}
+            aria-label="Center map on my location"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md transition hover:opacity-90"
+            style={{ color: 'var(--color-action)' }}
+          >
+            <Crosshair size={20} />
+          </button>
+        </div>
+      )}
 
       {/* Loading shimmer until the map paints. */}
       {!sdkReady && (

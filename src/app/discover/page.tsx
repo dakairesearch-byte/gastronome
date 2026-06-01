@@ -34,6 +34,11 @@ import { LayoutGrid, Map as MapIcon, Search, X } from 'lucide-react'
 import DiscoverBrowse from '@/components/discover/DiscoverBrowse'
 import DiscoverMapView from '@/components/discover/DiscoverMapView'
 import DiscoverSearchResults from '@/components/discover/DiscoverSearchResults'
+import DiscoverCollection from '@/components/discover/DiscoverCollection'
+import {
+  getEditorialCollectionBySlug,
+  getEditorialCollectionByFilter,
+} from '@/lib/collections/editorial'
 import { DEFAULT_CITY } from '@/lib/hooks/useCity'
 
 /* ------------------------------------------------------------------ */
@@ -62,6 +67,17 @@ function DiscoverShellContent() {
 
   const query = searchParams.get('q') ?? ''
   const mode = parseMode(searchParams.get('mode'))
+
+  // Editorial collection deep-link: ?preset=<slug> (Browse cards) or the legacy
+  // ?accolade= / ?cuisine= (home Editorial Picks + the /explore→/discover
+  // redirect). Resolve to a collection so the shell renders the actual filtered
+  // list + CollectionHeader instead of bouncing to the unfiltered Browse view.
+  const preset = searchParams.get('preset')
+  const accolade = searchParams.get('accolade')
+  const cuisineParam = searchParams.get('cuisine')
+  const collection =
+    (preset ? getEditorialCollectionBySlug(preset) : null) ??
+    getEditorialCollectionByFilter({ accolade, cuisine: cuisineParam })
 
   // Local, controlled mirror of the query so typing is instant; the URL is
   // updated (debounced) so the result body and shareable link stay in sync.
@@ -101,11 +117,6 @@ function DiscoverShellContent() {
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft])
-
-  const setMode = useCallback(
-    (next: Mode) => patchParams({ mode: next === 'browse' ? null : next }),
-    [patchParams]
-  )
 
   const clearQuery = useCallback(() => {
     setDraft('')
@@ -183,9 +194,9 @@ function DiscoverShellContent() {
           )}
         </form>
 
-        {/* Browse | Map segmented toggle — always visible. Disabled-looking
-            (de-emphasized) while searching, since search results override the
-            mode body; clicking a tab clears the query and returns to it. */}
+        {/* Browse | Map toggle — always visible. De-emphasized (neither
+            pressed) while a search query or a collection deep-link overrides
+            the mode body; clicking a tab clears both and returns to it. */}
         <div className="flex items-center gap-3">
           <div
             className="inline-flex items-center gap-0.5 p-0.5 rounded-lg border"
@@ -193,7 +204,7 @@ function DiscoverShellContent() {
               borderColor: 'var(--color-border)',
               backgroundColor: 'var(--color-surface)',
             }}
-            role="tablist"
+            role="group"
             aria-label="Discover mode"
           >
             {(
@@ -202,18 +213,25 @@ function DiscoverShellContent() {
                 { key: 'map', label: 'Map', Icon: MapIcon },
               ] as { key: Mode; label: string; Icon: typeof LayoutGrid }[]
             ).map(({ key, label, Icon }) => {
-              const active = !searching && mode === key
+              const active = !searching && !collection && mode === key
               return (
                 <button
                   key={key}
                   type="button"
-                  role="tab"
-                  aria-selected={active}
+                  aria-pressed={active}
                   aria-label={`${label} mode`}
                   onClick={() => {
-                    // Switching mode also exits search so the chosen mode shows.
-                    if (searching) clearQuery()
-                    setMode(key)
+                    // One coalesced URL patch: clear the query + any collection
+                    // deep-link AND set the mode in a single replace(), so the
+                    // two writes can't clobber each other off the same snapshot.
+                    setDraft('')
+                    patchParams({
+                      q: null,
+                      preset: null,
+                      accolade: null,
+                      cuisine: null,
+                      mode: key === 'browse' ? null : key,
+                    })
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors"
                   style={
@@ -232,7 +250,7 @@ function DiscoverShellContent() {
             })}
           </div>
 
-          {searching && (
+          {searching ? (
             <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               Showing search results ·{' '}
               <button
@@ -244,12 +262,29 @@ function DiscoverShellContent() {
                 back to {mode === 'map' ? 'map' : 'browse'}
               </button>
             </span>
-          )}
+          ) : collection ? (
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Viewing a collection ·{' '}
+              <button
+                type="button"
+                onClick={() =>
+                  patchParams({ preset: null, accolade: null, cuisine: null })
+                }
+                className="font-semibold underline-offset-2 hover:underline"
+                style={{ color: 'var(--color-action)' }}
+              >
+                back to browse
+              </button>
+            </span>
+          ) : null}
         </div>
 
-        {/* Body — render priority: search query > map mode > browse (default) */}
+        {/* Body — render priority: search query > collection deep-link >
+            map mode > browse (default). */}
         {searching ? (
           <DiscoverSearchResults query={query} city={city} />
+        ) : collection ? (
+          <DiscoverCollection collection={collection} city={city} />
         ) : mode === 'map' ? (
           <DiscoverMapView city={city} />
         ) : (
