@@ -7,6 +7,7 @@ import RecentSearches from '@/components/home/RecentSearches'
 import FavoritesSection from '@/components/home/FavoritesSection'
 import EditorialPickImage from '@/components/home/EditorialPickImage'
 import SearchAutocomplete from '@/components/search/SearchAutocomplete'
+import { EDITORIAL_COLLECTIONS } from '@/lib/collections/editorial'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
@@ -27,12 +28,37 @@ const FALLBACK_CITY = 'New York'
  * involved). Renamed + rephrased to set honest expectations. The
  * hover-bookmark affordance was also removed downstream — they're not
  * saveable, so the bookmark icon was a false signal.
+ *
+ * D1 (Wave 5) — taxonomy reconciliation + honest copy:
+ *  - The Michelin pick used to be named "Special Occasions" here but
+ *    "Michelin Stars" on Explore — two names for one collection. It now
+ *    pulls its name + blurb from the canonical EDITORIAL_COLLECTIONS
+ *    (matched by accolade filter value) so home and Explore can never
+ *    drift. Same for Eater 38.
+ *  - `tagline` replaced the old `type`, which leaked internal predicate
+ *    codes ("High rating · low review count") into the UI. Each pick now
+ *    states the user benefit instead.
+ *  - Date Night / Quick Lunch / Hidden Gems are home-only shortcuts (not
+ *    canonical collections), so they carry local benefit copy.
  */
+
+/** Canonical collection blurb keyed by its accolade filter value, so a
+ *  home pick that maps to a real Explore collection borrows the exact
+ *  same title + description. Falls back to the pick's local copy. */
+function canonicalByAccolade(value: string) {
+  return EDITORIAL_COLLECTIONS.find(
+    (c) => c.filter.kind === 'accolade' && c.filter.value === value,
+  )
+}
+
+const michelin = canonicalByAccolade('michelin_star')
+const eater = canonicalByAccolade('eater_38')
+
 const EDITORIAL_PICKS = [
   {
     id: 'date-night',
     name: 'Date Night',
-    type: 'French · romance',
+    tagline: 'Romantic French rooms for the occasion',
     image:
       'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
     href: '/explore?cuisine=French',
@@ -40,7 +66,7 @@ const EDITORIAL_PICKS = [
   {
     id: 'quick-lunch',
     name: 'Quick Lunch',
-    type: 'Sandwiches · weekday',
+    tagline: 'Fast, great sandwiches for the workday',
     image:
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
     // Data uses the plural cuisine value "Sandwiches"; the old singular
@@ -48,9 +74,12 @@ const EDITORIAL_PICKS = [
     href: '/explore?cuisine=Sandwiches',
   },
   {
-    id: 'special-occasions',
-    name: 'Special Occasions',
-    type: 'Michelin · celebration',
+    // Renamed Special Occasions -> Michelin Stars so the collection has
+    // ONE name across home + Explore. Name/blurb sourced from canonical.
+    id: 'michelin-stars',
+    name: michelin?.title ?? 'Michelin Stars',
+    tagline:
+      michelin?.description ?? 'Every starred table in this city, one tap away.',
     image:
       'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=600&q=80',
     href: '/explore?accolade=michelin_star',
@@ -58,10 +87,19 @@ const EDITORIAL_PICKS = [
   {
     id: 'hidden-gems',
     name: 'Hidden Gems',
-    type: 'High rating · low review count',
+    tagline: 'Under-the-radar high scorers, not yet crowded',
     image:
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
     href: '/explore?accolade=hidden_gems',
+  },
+  {
+    id: 'eater-38',
+    name: eater?.title ?? 'Eater 38',
+    tagline:
+      eater?.description ?? "Eater's essential list of must-try restaurants.",
+    image:
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80',
+    href: '/explore?accolade=eater_38',
   },
 ]
 
@@ -135,6 +173,7 @@ export default async function HomePage() {
           .ilike('city', city)
         if (cuisine) q = q.ilike('cuisine', cuisine)
         if (accolade === 'michelin_star') q = q.gt('michelin_stars', 0)
+        if (accolade === 'eater_38') q = q.eq('eater_38', true)
         if (accolade === 'hidden_gems')
           q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
         const { count } = await q
@@ -290,12 +329,16 @@ export default async function HomePage() {
         {/* Editorial picks — was "Saved Collections" which implied user
             data. Renamed to make the curated-entry intent explicit. The
             bookmark hover icon was removed (these aren't user saves).
-            Eyebrow updated from internal "Editor's gateways" to user-facing
-            "Curated for you" (sweep-2026-05-26-v3 microcopy QW). */}
+            D1 (Wave 5): eyebrow is now "Editor's picks" — these are NOT
+            personalized, so the old "Curated for you" overpromised. Each
+            tile surfaces the live count computed above and a plain-English
+            benefit tagline (not the internal predicate code), and the rail
+            carries a "See all collections" link into the Explore taxonomy
+            so home + Explore read as one system. */}
         {editorialPicks.length > 0 && (
         <section>
           <SectionHeader
-            label="Curated for you"
+            label="Editor's picks"
             title="Editorial Picks"
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -305,7 +348,7 @@ export default async function HomePage() {
                 href={c.href}
                 className="overflow-hidden cursor-pointer transition-all hover:shadow-2xl group rounded-sm block"
                 style={{ backgroundColor: 'var(--color-surface)' }}
-                aria-label={`${c.name} — ${c.type}`}
+                aria-label={`${c.name} — ${c.tagline} (${c.count} in ${city})`}
               >
                 <div className="overflow-hidden relative rounded-sm aspect-square">
                   <EditorialPickImage src={c.image} />
@@ -322,18 +365,44 @@ export default async function HomePage() {
                     {c.name}
                   </h3>
                   <p
-                    className="text-xs uppercase"
+                    className="text-sm mb-2"
                     style={{
                       color: 'var(--color-text-secondary)',
                       fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.12em',
                     }}
                   >
-                    {c.type}
+                    {c.tagline}
+                  </p>
+                  <p
+                    className="text-xs uppercase"
+                    style={{
+                      color: 'var(--color-accent)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.1em',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {c.count} {c.count === 1 ? 'spot' : 'spots'} in {city}
                   </p>
                 </div>
               </Link>
             ))}
+          </div>
+          {/* Bridge into the full Explore taxonomy so the home rail does
+              not read as a separate, competing set of collections. */}
+          <div className="mt-6">
+            <Link
+              href="/explore"
+              className="inline-flex items-center gap-1 text-sm hover:underline underline-offset-2"
+              style={{
+                color: 'var(--color-accent)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 500,
+              }}
+            >
+              See all collections
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </section>
         )}

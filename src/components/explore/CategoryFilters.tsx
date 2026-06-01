@@ -43,6 +43,17 @@ const SORT_LABELS: Record<CategoryFiltersProps['currentSort'], string> = {
   az: 'A–Z',
 }
 
+// Accolade chips offered on a cuisine landing so the user can COMPOSE
+// "French" → "French + Michelin" in a single tap instead of dead-ending
+// on a bare cuisine facet (D6 cross-faceting). consensus_picks is omitted
+// on purpose: it's a city-only algorithm that can't combine with cuisine.
+const ACCOLADE_CHIPS: { value: string; label: string }[] = [
+  { value: 'michelin_star', label: 'Michelin' },
+  { value: 'bib_gourmand', label: 'Bib Gourmand' },
+  { value: 'eater_38', label: 'Eater 38' },
+  { value: 'james_beard', label: 'James Beard' },
+]
+
 export default function CategoryFilters({
   cities,
   cuisines,
@@ -59,8 +70,24 @@ export default function CategoryFilters({
   // filter is hidden for Consensus Picks because that algorithm is
   // city-only (capped at 20 by the ranker — adding cuisine on top would
   // shrink the list below the threshold of usefulness).
+  //
+  // showCuisine previously gated on `currentAccolade !== 'consensus_picks'`,
+  // which meant a cuisine LANDING (accolade null, cuisine set) still showed
+  // the picker — fine — but more importantly the rail offered no way to
+  // ADD an accolade on top of a cuisine, so "French" was a dead-end facet.
+  // We now: (a) keep the cuisine picker on every non-consensus page, and
+  // (b) surface accolade chips whenever a cuisine is active so the two
+  // compose ("French" -> "French + Michelin"). The chips are also shown on
+  // a bare cuisine landing (no accolade yet) — that's the whole point.
   const showStars = currentAccolade === 'michelin_star'
-  const showCuisine = currentAccolade !== 'consensus_picks'
+  const showCuisine =
+    currentAccolade !== 'consensus_picks' && cuisines.length > 0
+  // Cross-faceting affordance: offer accolade chips once the user is on a
+  // cuisine page (with or without an accolade already applied). Hidden on
+  // pure-accolade pages (no cuisine) to avoid duplicating the primary
+  // category, and on consensus_picks which can't combine.
+  const showAccoladeChips =
+    Boolean(currentCuisine) && currentAccolade !== 'consensus_picks'
 
   function navigateWith(updates: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString())
@@ -95,13 +122,65 @@ export default function CategoryFilters({
           />
         )}
 
-        {showCuisine && cuisines.length > 0 && (
+        {showCuisine && (
           <Dropdown
             label="Cuisine"
             value={currentCuisine ?? 'All'}
             options={['All', ...cuisines]}
             onChange={(v) => navigateWith({ cuisine: v === 'All' ? null : v })}
           />
+        )}
+
+        {/* Accolade cross-faceting chips. On a cuisine page these let the
+            user layer an accolade on top ("French" -> "French + Michelin")
+            in one tap. Tapping the active chip clears the accolade (toggles
+            back to the pure cuisine view). Stars reset when the accolade
+            changes so we don't carry a stale ★★★ onto a non-Michelin chip. */}
+        {showAccoladeChips && (
+          <div
+            className="inline-flex items-center rounded-full border bg-white p-0.5 gap-0.5"
+            style={{ borderColor: 'var(--color-border)' }}
+            role="group"
+            aria-label="Add an accolade filter"
+          >
+            <span
+              className="text-[10px] uppercase font-medium px-3"
+              style={{
+                letterSpacing: '0.14em',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              Accolade
+            </span>
+            {ACCOLADE_CHIPS.map((chip) => {
+              const active = currentAccolade === chip.value
+              return (
+                <button
+                  key={chip.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    navigateWith({
+                      accolade: active ? null : chip.value,
+                      // Stars only apply to Michelin; clear on any switch.
+                      stars: null,
+                    })
+                  }
+                  className="px-2.5 py-1 rounded-full text-xs transition-colors"
+                  style={
+                    active
+                      ? {
+                          backgroundColor: 'var(--color-text)',
+                          color: 'var(--color-background)',
+                        }
+                      : { color: 'var(--color-text-secondary)' }
+                  }
+                >
+                  {chip.label}
+                </button>
+              )
+            })}
+          </div>
         )}
 
         <Dropdown

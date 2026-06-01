@@ -2,22 +2,51 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import {
+  MichelinStarIcon,
+  JamesBeardIcon,
+  EaterIcon,
+} from '@/components/brands/BrandIcons'
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'
+
+type CollectionBrand = 'michelin' | 'jbf' | 'eater' | 'infatuation' | 'gastronome'
 
 interface ExploreCollectionCardProps {
   title: string
   description: string
   image: string
   count: number
+  /** Real authority label, e.g. "Michelin Guide 2025", "Eater NYC",
+   *  "Gastronome Editorial" — supplied by the caller, NOT a hardcoded
+   *  literal. Rendered in the footer alongside the brand mark. */
   curator: string
   href: string
+  /** Optional brand for a logo mark next to the curator label. The
+   *  infatuation/gastronome cases have no BrandIcons asset, so they
+   *  render the curator text alone. */
+  brand?: CollectionBrand
   /** Optional 1/2/3 star breakdown rendered as a third line under the
    *  count. Only set for the Michelin Stars tile so the user can see
    *  the prestige distribution in the active city before clicking in.
    */
   breakdown?: { one: number; two: number; three: number } | null
+}
+
+function CardBrandMark({ brand }: { brand: CollectionBrand }) {
+  switch (brand) {
+    case 'michelin':
+      return <MichelinStarIcon size={12} title="Michelin Guide" />
+    case 'jbf':
+      return <JamesBeardIcon size={12} title="James Beard Foundation" />
+    case 'eater':
+      return <EaterIcon size={12} title="Eater" />
+    case 'infatuation':
+    case 'gastronome':
+    default:
+      return null
+  }
 }
 
 /**
@@ -33,10 +62,12 @@ interface ExploreCollectionCardProps {
  */
 export default function ExploreCollectionCard({
   title,
+  description,
   image,
   count,
   curator,
   href,
+  brand,
   breakdown,
 }: ExploreCollectionCardProps) {
   const [src, setSrc] = useState(image)
@@ -76,6 +107,18 @@ export default function ExploreCollectionCard({
           {title}
         </h3>
 
+        {description ? (
+          <p
+            className="mb-2 line-clamp-1 text-xs"
+            style={{
+              color: 'var(--color-text-secondary)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {description}
+          </p>
+        ) : null}
+
         {breakdown && (
           <p
             className="text-xs mb-2"
@@ -99,15 +142,18 @@ export default function ExploreCollectionCard({
           className="flex items-center justify-between pt-3 border-t"
           style={{ borderColor: 'var(--color-border)' }}
         >
-          <span
-            className="text-[10px] uppercase tracking-wider"
-            style={{
-              color: 'var(--color-text-secondary)',
-              fontFamily: 'var(--font-body)',
-              letterSpacing: '0.10em',
-            }}
-          >
-            {curator}
+          <span className="inline-flex items-center gap-1.5">
+            {brand ? <CardBrandMark brand={brand} /> : null}
+            <span
+              className="text-[10px] uppercase tracking-wider"
+              style={{
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.10em',
+              }}
+            >
+              {curator}
+            </span>
           </span>
           <span
             className="text-sm"

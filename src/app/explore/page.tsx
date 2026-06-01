@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { Suspense } from 'react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
@@ -8,9 +7,15 @@ import Top10Trending from '@/components/explore/Top10Trending'
 import ExploreCollectionCard from '@/components/cards/ExploreCollectionCard'
 import EmptyState from '@/components/EmptyState'
 import CategoryFilters from '@/components/explore/CategoryFilters'
+import CollectionHeader from '@/components/explore/CollectionHeader'
 import RestaurantCard from '@/components/RestaurantCard'
 import { MapPin } from 'lucide-react'
 import type { Restaurant } from '@/types/database'
+import {
+  EDITORIAL_COLLECTIONS,
+  applyEditorialFilter,
+  type EditorialFilter,
+} from '@/lib/collections/editorial'
 
 export const revalidate = 60
 
@@ -116,6 +121,82 @@ const ACCOLADE_TITLES: Record<string, string> = {
 // `applyCuisineFilter` that ran client-side over a `.limit(500)` page.
 // Both predicates are now pushed into the Supabase query in the filtered
 // branch of `ExplorePage` so we don't silently drop rows past the cap.
+// The accolade predicates themselves now come from `applyEditorialFilter`
+// (one source of truth shared with /collections), not duplicated here.
+
+// Slug used in the explore ?accolade= query string -> the canonical
+// EDITORIAL_COLLECTIONS entry. The editorial `filter.value` for accolade
+// collections matches our query slug 1:1 (michelin_star, bib_gourmand,
+// james_beard, eater_38), so we can look the collection up by that value.
+function editorialCollectionForAccolade(accolade: string) {
+  return (
+    EDITORIAL_COLLECTIONS.find(
+      (c) =>
+        (c.filter.kind === 'accolade' && c.filter.value === accolade) ||
+        (c.filter.kind === 'algorithm' && c.filter.name === accolade),
+    ) ?? null
+  )
+}
+
+// Ordered authorities publish a curated order, so re-sorting them by
+// google_rating DESC would destroy the curation (Eater 38 / JBF / Bib are
+// editorial lists, not rating leaderboards). The restaurants table carries
+// no per-list rank column, so we preserve a STABLE neutral order (by name)
+// rather than fabricating a ranking out of Google's rating. Michelin keeps
+// its own star-tier grouping below and is intentionally excluded here.
+const ORDERED_AUTHORITIES = new Set(['eater_38', 'bib_gourmand', 'james_beard'])
+
+// Brand mark + eyebrow + rankBasis copy for the CollectionHeader band,
+// derived per accolade. eyebrow is the SOURCE authority in caps; rankBasis
+// states what the ordering means so the user trusts the list isn't a
+// rating dump. Cuisine-only and the non-editorial hidden_gems heuristic
+// fall back to a Gastronome-editorial framing.
+const ACCOLADE_PRESENTATION: Record<
+  string,
+  {
+    eyebrow: string
+    rankBasis: string
+    brand: 'michelin' | 'jbf' | 'eater' | 'infatuation' | 'gastronome'
+    unit: string
+  }
+> = {
+  michelin_star: {
+    eyebrow: 'THE MICHELIN GUIDE 2025',
+    rankBasis: 'Source: Michelin Guide 2025 · grouped by star tier',
+    brand: 'michelin',
+    unit: 'starred tables',
+  },
+  bib_gourmand: {
+    eyebrow: 'THE MICHELIN GUIDE 2025',
+    rankBasis: 'Source: Michelin Guide 2025 · Bib Gourmand selections',
+    brand: 'michelin',
+    unit: 'Bib Gourmand picks',
+  },
+  james_beard: {
+    eyebrow: 'JAMES BEARD FOUNDATION',
+    rankBasis: 'Source: James Beard Foundation Awards',
+    brand: 'jbf',
+    unit: 'James Beard winners',
+  },
+  eater_38: {
+    eyebrow: 'EATER',
+    rankBasis: "Source: Eater's essential list",
+    brand: 'eater',
+    unit: 'essential restaurants',
+  },
+  hidden_gems: {
+    eyebrow: 'GASTRONOME EDITORIAL',
+    rankBasis: 'Ranked by Gastronome Score',
+    brand: 'gastronome',
+    unit: 'hidden gems',
+  },
+  consensus_picks: {
+    eyebrow: 'GASTRONOME EDITORIAL',
+    rankBasis: 'Ranked by cross-platform consensus',
+    brand: 'gastronome',
+    unit: 'consensus picks',
+  },
+}
 
 export default async function ExplorePage({
   searchParams,
@@ -402,8 +483,16 @@ export default async function ExplorePage({
       .ilike('city', activeCity)
       .limit(500)
 
-    // Sort: top-rated by default, A–Z when explicitly requested.
-    if (activeSort === 'az') {
+    // Ordered authorities (Eater 38 / JBF / Bib) publish a CURATED list, so
+    // forcing google_rating DESC would re-sort and destroy that curation.
+    // We don't have a per-list rank column, so we preserve a stable neutral
+    // order (alphabetical) instead of pretending the rating IS the ranking.
+    // Michelin is grouped by star tier downstream, so its default ordering
+    // here is irrelevant. A–Z stays honored everywhere. Everything else
+    // (cuisine-only, hidden_gems) keeps the top-rated default.
+    const isOrdered =
+      activeAccolade != null && ORDERED_AUTHORITIES.has(activeAccolade)
+    if (activeSort === 'az' || isOrdered) {
       query = query.order('name', { ascending: true })
     } else {
       query = query.order('google_rating', {
@@ -413,23 +502,34 @@ export default async function ExplorePage({
     }
 
     if (activeCuisine) query = query.ilike('cuisine', activeCuisine)
+
+    // Accolade predicate — one source of truth via applyEditorialFilter.
+    // Michelin needs the star-count refinement layered on top, which the
+    // editorial helper (intentionally generic) doesn't model, so we add the
+    // narrowing .eq() here while still routing the base predicate through
+    // the shared helper. hidden_gems is a Gastronome heuristic, not an
+    // editorial collection, so it keeps its inline predicate.
     if (activeAccolade === 'michelin_star') {
-      // When the user picks a specific star count, narrow to that
-      // bucket; otherwise show all starred (1/2/3) entries.
       if (activeStars != null) {
         query = query.eq('michelin_stars', activeStars)
       } else {
-        query = query.gt('michelin_stars', 0)
+        query = applyEditorialFilter(query, {
+          kind: 'accolade',
+          value: 'michelin_star',
+        } satisfies EditorialFilter)
       }
-    }
-    if (activeAccolade === 'bib_gourmand')
-      query = query.eq('michelin_designation', 'bib_gourmand')
-    if (activeAccolade === 'james_beard')
-      // james_beard_nominated column was dropped; winners only.
-      query = query.eq('james_beard_winner', true)
-    if (activeAccolade === 'eater_38') query = query.eq('eater_38', true)
-    if (activeAccolade === 'hidden_gems')
+    } else if (
+      activeAccolade === 'bib_gourmand' ||
+      activeAccolade === 'james_beard' ||
+      activeAccolade === 'eater_38'
+    ) {
+      query = applyEditorialFilter(query, {
+        kind: 'accolade',
+        value: activeAccolade,
+      } satisfies EditorialFilter)
+    } else if (activeAccolade === 'hidden_gems') {
       query = query.gte('google_rating', 4.3).lte('google_review_count', 500)
+    }
 
     const { data: rows, count } = await query
     filtered = (rows ?? []) as Restaurant[]
@@ -488,23 +588,64 @@ export default async function ExplorePage({
     ).sort()
   }
 
-  // Count of restaurants in the city (ignoring the filter) — used for
-  // the "… of N total" footer.
-  const { count: cityTotal } = await supabase
-    .from('restaurants')
-    .select('id', { count: 'exact', head: true })
-    .ilike('city', activeCity)
+  // --- CollectionHeader props -------------------------------------------
+  // Derive the editorial band's content from the canonical
+  // EDITORIAL_COLLECTIONS (title/description) plus the per-accolade
+  // presentation table (eyebrow/brand/rankBasis). This replaces the old
+  // bare eyebrow+title+count treatment and the ACCOLADE_TITLES lookup so
+  // there's one source of truth for what each category says.
+  const editorial = activeAccolade
+    ? editorialCollectionForAccolade(activeAccolade)
+    : null
+  const presentation = activeAccolade
+    ? ACCOLADE_PRESENTATION[activeAccolade] ?? null
+    : null
 
-  // Friendly label for the collection that was clicked.
-  const matching = COLLECTIONS.find(
-    (c) =>
-      c.href === `/explore?cuisine=${activeCuisine}` ||
-      c.href === `/explore?accolade=${activeAccolade}`
-  )
-  const heading =
-    matching?.title ||
-    (activeAccolade ? ACCOLADE_TITLES[activeAccolade] : null) ||
-    [activeCuisine, activeAccolade?.replace(/_/g, ' ')].filter(Boolean).join(' · ')
+  // Title: cuisine compounds with the accolade ("French · Michelin Stars"),
+  // a pure accolade uses the editorial title, a pure cuisine uses the
+  // cuisine name. activeStars further refines the Michelin title.
+  const accoladeTitle =
+    editorial?.title ??
+    (activeAccolade ? ACCOLADE_TITLES[activeAccolade] : null) ??
+    activeAccolade?.replace(/_/g, ' ') ??
+    null
+  const starSuffix =
+    activeAccolade === 'michelin_star' && activeStars != null
+      ? ` · ${'★'.repeat(activeStars)}`
+      : ''
+  const headerTitle =
+    [activeCuisine, accoladeTitle].filter(Boolean).join(' · ') + starSuffix ||
+    'Filtered'
+
+  const headerEyebrow = activeCuisine
+    ? // Cuisine cross-facet: lead with the city/cuisine context, keep the
+      // authority in the rankBasis line below.
+      `${activeCity.toUpperCase()} · ${activeCuisine.toUpperCase()}`
+    : presentation?.eyebrow ?? `${activeCity.toUpperCase()} · EXPLORE`
+
+  const headerDescription =
+    editorial?.longDescription ||
+    editorial?.description ||
+    (activeCuisine
+      ? `${activeCuisine} restaurants in ${activeCity}.`
+      : `Restaurants in ${activeCity}.`)
+
+  const headerRankBasis =
+    presentation?.rankBasis ??
+    (activeAccolade && ORDERED_AUTHORITIES.has(activeAccolade)
+      ? 'Curated order preserved'
+      : 'Ranked by Gastronome Score')
+
+  const headerCount = filteredTotal ?? filtered.length
+  // Count-sentence unit, e.g. "27 starred tables in New York". Cuisine
+  // cross-facets fall back to a generic noun since the unit is the cuisine.
+  const headerUnit = activeCuisine
+    ? `${activeCuisine} spots`
+    : presentation?.unit ?? 'places'
+  // Brand mark is suppressed on cuisine cross-facets so a "French + Michelin"
+  // header doesn't read as a pure Michelin page; the authority still shows
+  // in the rankBasis line.
+  const headerBrand = activeCuisine ? undefined : presentation?.brand
 
   // Group results by Michelin star count when we're on the Michelin
   // page with no specific star filter. This replaces the wall of 100+
@@ -554,22 +695,25 @@ export default async function ExplorePage({
         />
       </Suspense>
 
+      {/* Editorial band: replaces the old bare eyebrow+title+count. Carries
+          the source authority (eyebrow + brand mark), the curated
+          description, the live count, and a rankBasis line that tells the
+          user WHY the list is ordered the way it is (curated vs scored), so
+          ordered authorities no longer look like an un-attributed rating
+          dump. Derived entirely from EDITORIAL_COLLECTIONS + presentation. */}
+      <CollectionHeader
+        eyebrow={headerEyebrow}
+        title={headerTitle}
+        description={headerDescription}
+        count={headerCount}
+        rankBasis={headerRankBasis}
+        clearHref="/explore"
+        brand={headerBrand}
+        countUnit={headerUnit}
+        locality={activeCity}
+      />
+
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <div className="mb-6 flex items-center justify-between">
-          <SectionHeader label={activeCity.toUpperCase()} title={heading || 'Filtered'} />
-          <Link
-            href="/explore"
-            className="text-sm underline"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Clear filters
-          </Link>
-        </div>
-
-        <p className="text-xs mb-8" style={{ color: 'var(--color-text-secondary)' }}>
-          {filteredTotal ?? filtered.length} matching · {cityTotal ?? '—'} {activeCity} restaurants total
-        </p>
-
         {filtered.length === 0 ? (
           <EmptyState
             icon={MapPin}
