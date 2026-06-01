@@ -58,7 +58,7 @@ const EDITORIAL_PICKS = [
   {
     id: 'date-night',
     name: 'Date Night',
-    tagline: 'Romantic French rooms for the occasion',
+    tagline: 'Low-lit French rooms that do the work for you',
     image:
       'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
     href: '/discover?cuisine=French',
@@ -66,7 +66,7 @@ const EDITORIAL_PICKS = [
   {
     id: 'quick-lunch',
     name: 'Quick Lunch',
-    tagline: 'Fast, great sandwiches for the workday',
+    tagline: 'Great sandwiches, in and out, back to work',
     image:
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
     // Data uses the plural cuisine value "Sandwiches"; the old singular
@@ -87,7 +87,7 @@ const EDITORIAL_PICKS = [
   {
     id: 'hidden-gems',
     name: 'Hidden Gems',
-    tagline: 'Under-the-radar high scorers, not yet crowded',
+    tagline: 'Neighborhood favorites the crowds have not found',
     image:
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
     href: '/discover?accolade=hidden_gems',
@@ -215,9 +215,8 @@ export default async function HomePage() {
               maxWidth: '36rem',
             }}
           >
-            Every rating — Google, Yelp, Michelin, Eater, James Beard, The
-            Infatuation, TikTok — in one place. Decide in one tab instead of
-            six.
+            The critics, the crowd, and the feed — every verdict on one page.
+            Stop opening six tabs to pick dinner.
           </p>
           {/* Real autocomplete (hero variant) — the static <Link> here
               looked like a search box but typing did nothing and no query
@@ -338,7 +337,7 @@ export default async function HomePage() {
         <section>
           <SectionHeader
             label="Editor's picks"
-            title="Editorial Picks"
+            title="Start here"
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {editorialPicks.map((c) => (

@@ -25,7 +25,7 @@ export default function EventCard({ event }: EventCardProps) {
   const relative = formatDistanceToNow(timestamp, { addSuffix: true })
 
   return (
-    <article className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-emerald-200 hover:shadow-sm transition-all">
+    <article className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-4 hover:border-[var(--color-action)] hover:shadow-sm transition-all">
       <span
         className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}
       >
@@ -48,7 +48,7 @@ export default function EventCard({ event }: EventCardProps) {
       </div>
       <Link
         href={`/restaurants/${event.restaurant_id}`}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors whitespace-nowrap self-center"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--color-action)] hover:text-[var(--color-action-hover)] transition-colors whitespace-nowrap self-center"
       >
         Visit restaurant
         <ArrowRight size={13} />
@@ -67,8 +67,8 @@ function describeEvent(event: FeedEvent): {
     case 'restaurant_added':
       return {
         Icon: Sparkles,
-        iconBg: 'bg-emerald-100',
-        iconColor: 'text-emerald-600',
+        iconBg: 'bg-[var(--color-action)]/10',
+        iconColor: 'text-[var(--color-action)]',
         title: (
           <>
             <span className="font-semibold">{event.restaurant_name}</span>

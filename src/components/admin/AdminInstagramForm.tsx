@@ -89,7 +89,7 @@ export default function AdminInstagramForm({
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
           placeholder="carbonenyc"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[var(--color-action)] focus:border-transparent outline-none transition text-sm"
           autoComplete="off"
         />
         <p className="text-[11px] text-gray-400 mt-1">
@@ -111,7 +111,7 @@ export default function AdminInstagramForm({
           onChange={(e) => setReelUrlsText(e.target.value)}
           rows={6}
           placeholder={'https://www.instagram.com/reel/ABC123/\nhttps://www.instagram.com/p/XYZ789/'}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-sm font-mono"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[var(--color-action)] focus:border-transparent outline-none transition text-sm font-mono"
         />
         <p className="text-[11px] text-gray-400 mt-1">
           Accepts <code>/reel/</code>, <code>/reels/</code>, <code>/p/</code>,
@@ -122,7 +122,7 @@ export default function AdminInstagramForm({
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center justify-center px-4 py-2 bg-[var(--color-action)] text-[var(--color-on-action)] rounded-lg hover:bg-[var(--color-action-hover)] transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? 'Saving…' : 'Save'}
       </button>
@@ -134,7 +134,7 @@ export default function AdminInstagramForm({
       )}
 
       {result.kind === 'success' && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-sm space-y-1">
+        <div className="p-3 bg-[var(--color-action)]/10 border border-[var(--color-action)]/30 text-[var(--color-action)] rounded-lg text-sm space-y-1">
           <p>
             {result.handleUpdated ? 'Handle saved. ' : ''}
             {result.inserted > 0

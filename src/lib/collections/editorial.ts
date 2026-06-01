@@ -47,6 +47,12 @@ export interface EditorialCollection {
   /** Human-readable sort basis, e.g. "Ranked by Gastronome Score". */
   rankBasis: string
   /**
+   * Optional "How we score" detail — the scoring mechanics moved out of the
+   * teaser copy so the description can assert a reason to GO. Consumers may
+   * surface this behind a disclosure ("How we score") rather than inline.
+   */
+  howWeScore?: string
+  /**
    * True for hand-ordered source lists (Eater 38, JBF) that must keep
    * their published order — never re-sort by google_rating.
    */
@@ -74,15 +80,17 @@ export type EditorialFilter =
 export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
     slug: 'consensus-picks',
-    title: 'Consensus Picks',
+    title: 'The Consensus',
     description:
-      'The rare places where Google, Yelp, TikTok, and Instagram all agree.',
+      'The places the critics, the crowd, and the feed all agree on. Almost nothing makes this list.',
     longDescription:
-      'Restaurants where all four signals — Google ratings, Yelp ratings, TikTok buzz, and Instagram engagement — converge. Scored by a weighted composite (30% Google, 30% Yelp, 20% TikTok, 20% Instagram) with log-normalized social signals and a quality floor. Capped at 20. This is a category only Gastronome can offer since no other platform combines review ratings with social engagement data.',
+      'When Google, Yelp, TikTok, and Instagram point at the same table, that table is a sure thing. These are the restaurants every signal endorses at once — the rare overlap where reviewers and the internet stop arguing. Book one and you will not be wrong.',
     curator: 'Gastronome',
     eyebrow: 'GASTRONOME EDITORIAL',
     brand: 'gastronome',
     rankBasis: 'Ranked by cross-platform consensus',
+    howWeScore:
+      'A weighted composite of every signal — 30% Google, 30% Yelp, 20% TikTok, 20% Instagram — with social numbers log-normalized and a quality floor applied, then capped at the top 20. No other platform combines review ratings with social engagement this way.',
     preserveOrder: true,
     filter: { kind: 'algorithm', name: 'consensus_picks' },
     image:
@@ -91,13 +99,15 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
     slug: 'hidden-gems',
     title: 'Hidden Gems',
-    description: 'Highly-rated spots that still fly under the radar.',
+    description: 'The neighborhood favorites that have not gone viral yet. Get there first.',
     longDescription:
-      'Highly-rated restaurants that have not yet been discovered by the crowds — a Google rating of 4.3 or better with fewer than 500 reviews. Gastronome surfaces quality before it goes mainstream.',
+      'Quietly excellent restaurants the crowds have not found — beloved by the few who know, still easy to get into. Eat here now, before the line shows up.',
     curator: 'Gastronome',
     eyebrow: 'GASTRONOME EDITORIAL',
     brand: 'gastronome',
     rankBasis: 'Ranked by Gastronome Score',
+    howWeScore:
+      'A Google rating of 4.3 or better paired with fewer than 500 reviews — high praise, low profile. That gap is where the gems hide.',
     preserveOrder: false,
     filter: { kind: 'accolade', value: 'hidden_gems' },
     image:
@@ -106,9 +116,9 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
     slug: 'michelin-stars',
     title: 'Michelin Stars',
-    description: 'Every starred table in this city, one tap away.',
+    description: 'The starred tables, for the nights that matter most.',
     longDescription:
-      'Every Michelin-starred restaurant in the city, sourced from the official 2025 Guide. Includes 1-, 2-, and 3-star designations.',
+      'Every starred restaurant in the city, straight from the inspectors — one, two, and three stars. When the occasion calls for the best, this is where it lives.',
     curator: 'The Michelin Guide',
     eyebrow: 'THE MICHELIN GUIDE 2025',
     brand: 'michelin',
@@ -122,9 +132,9 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
     slug: 'bib-gourmand',
     title: 'Bib Gourmand',
     description:
-      'Michelin-recommended value cooking that punches above its price.',
+      'Michelin-level cooking at a price you can actually book on a Tuesday.',
     longDescription:
-      "Michelin Guide Bib Gourmand selections — the inspectors' picks for restaurants serving high-quality food at moderate prices.",
+      'The inspectors keep a separate list for the places that overdeliver — serious food, sane prices. This is where the value lives, with Michelin standing behind every pick.',
     curator: 'The Michelin Guide',
     eyebrow: 'THE MICHELIN GUIDE 2025',
     brand: 'michelin',
@@ -138,9 +148,9 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
     slug: 'james-beard',
     title: 'James Beard Spotlight',
     description:
-      'Restaurants and chefs recognized by the James Beard Foundation.',
+      "American cooking at its peak — the kitchens that took home the country's top food award.",
     longDescription:
-      'James Beard Award winners — the most prestigious recognition in American food, awarded annually to chefs and restaurants for culinary excellence.',
+      'The James Beard Award is the highest honor in American food, and these are the winners. Going here means eating the work that the field itself decided was the best.',
     curator: 'James Beard Foundation',
     eyebrow: 'JAMES BEARD FOUNDATION',
     brand: 'jbf',
@@ -153,9 +163,9 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
     slug: 'eater-38',
     title: 'Eater 38',
-    description: "Eater's essential list of the city's must-try restaurants.",
+    description: "The 38 restaurants Eater says define eating in this city right now.",
     longDescription:
-      "Eater's 38 essential restaurants in the city, updated quarterly by their local editors.",
+      "Eater's local editors keep one running answer to 'where should I eat here' — 38 spots, no filler, refreshed every quarter. Work your way down it and you will know the city.",
     curator: 'Eater',
     eyebrow: 'EATER 38',
     brand: 'eater',
@@ -168,9 +178,9 @@ export const EDITORIAL_COLLECTIONS: EditorialCollection[] = [
   {
     slug: 'brunch',
     title: 'Best for Brunch',
-    description: 'Weekend brunch destinations worth the wait.',
+    description: 'The long, late, lingering-table kind of morning. These are the rooms for it.',
     longDescription:
-      'Weekend brunch destinations worth the wait — the city’s best spots for a long, late morning table.',
+      'Brunch worth getting out of bed for — the spots built for a slow weekend, a second coffee, and nowhere to be. Bring the group; stay too long.',
     curator: 'Gastronome',
     eyebrow: 'GASTRONOME EDITORIAL',
     brand: 'gastronome',

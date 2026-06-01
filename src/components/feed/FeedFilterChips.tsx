@@ -46,9 +46,9 @@ export default function FeedFilterChips({ active }: FeedFilterChipsProps) {
           key={key}
           type="button"
           onClick={() => onClick(key)}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 outline-none ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-action)] outline-none ${
             active === key
-              ? 'bg-emerald-600 text-white border-emerald-600'
+              ? 'bg-[var(--color-action)] text-[var(--color-on-action)] border-[var(--color-action)]'
               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
           }`}
         >

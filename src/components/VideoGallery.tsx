@@ -242,7 +242,7 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
               onClick={() => setPlatform(tab.value)}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 platform === tab.value
-                  ? 'bg-white text-emerald-700 shadow-sm'
+                  ? 'bg-white text-[var(--color-action)] shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >

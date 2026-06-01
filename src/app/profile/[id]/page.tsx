@@ -55,7 +55,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-lg font-bold text-gray-900 mb-1">Profile not found</h2>
-          <Link href="/" className="text-sm text-emerald-600 hover:text-emerald-700">Go home</Link>
+          <Link href="/" className="text-sm text-[var(--color-action)] hover:text-[var(--color-action-hover)]">Go home</Link>
         </div>
       </div>
     )
@@ -77,7 +77,7 @@ export default function ProfilePage({ params: paramsPromise }: { params: Promise
             (or an empty avatar slot) is misleading. We derive a simple
             initial badge from the display name instead. */}
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[var(--color-action)] flex items-center justify-center text-[var(--color-on-action)] text-2xl font-bold flex-shrink-0">
             {initial}
           </div>
 

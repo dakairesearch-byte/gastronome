@@ -320,8 +320,7 @@ function DiscoverContent() {
               Discover
             </h1>
             <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              Search restaurants and dishes, filter by city, cuisine, and
-              accolade, and view results as a list, map, or grid.
+              Find the right restaurant — search, narrow it down, see it on the map.
             </p>
           </div>
         )}
@@ -468,15 +467,15 @@ function DiscoverContent() {
             tone={searchQuery || !isDefaultFilters(filters) ? 'attention' : 'neutral'}
             title={
               searchQuery || !isDefaultFilters(filters)
-                ? 'No results found'
-                : 'Start discovering'
+                ? 'Nothing matches yet'
+                : 'Where to tonight?'
             }
             description={
               searchQuery
-                ? `No matches for “${searchQuery}”. Check the spelling or try a broader term, or loosen a filter.`
+                ? `Nothing for “${searchQuery}”. Try a broader term or loosen a filter.`
                 : !isDefaultFilters(filters)
-                ? 'Nothing matches the active filters. Try removing one.'
-                : 'Search for a restaurant, cuisine, city, or dish — or pick a filter to get started.'
+                ? 'Your filters are too tight. Drop one and try again.'
+                : 'Start typing a restaurant, cuisine, or dish — or open a filter.'
             }
           />
         )}
@@ -646,7 +645,7 @@ function DiscoverShell() {
           Discover
         </h1>
         <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-          Search restaurants and dishes, filter, and view as a list, map, or grid.
+          Find the right restaurant — search, narrow it down, see it on the map.
         </p>
         <div className="animate-shimmer h-12 rounded-xl max-w-2xl" />
       </div>

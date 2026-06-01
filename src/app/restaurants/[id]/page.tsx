@@ -10,6 +10,8 @@ import { notFound } from 'next/navigation'
 import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
 import GastronomeScoreBadge from '@/components/GastronomeScoreBadge'
+import ConsensusBreakdown from '@/components/ConsensusBreakdown'
+import ScoreSparkline from '@/components/ScoreSparkline'
 import StaticMapTile from '@/components/StaticMapTile'
 import { gastronomeScore } from '@/lib/score'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
@@ -215,71 +217,6 @@ async function getRestaurantData(restaurantId: string) {
   }
 }
 
-type ScoreSource = {
-  key: string
-  label: string
-  icon: string
-  rating: number | null
-  maxRating: number
-  reviewCount?: number | null
-  url: string | null
-  badgeBg: string
-}
-
-function buildScoreSources(
-  restaurant: NonNullable<Awaited<ReturnType<typeof getRestaurantData>>>['restaurant']
-): ScoreSource[] {
-  const all: ScoreSource[] = [
-    {
-      key: 'google',
-      label: 'Google',
-      icon: 'G',
-      rating: restaurant.google_rating,
-      maxRating: 5,
-      reviewCount: restaurant.google_review_count,
-      url: restaurant.google_url,
-      badgeBg: '#DBEAFE',
-    },
-    {
-      key: 'yelp',
-      label: 'Yelp',
-      icon: 'Y',
-      rating: restaurant.yelp_rating,
-      maxRating: 5,
-      reviewCount: restaurant.yelp_review_count,
-      url: restaurant.yelp_url,
-      badgeBg: '#FEE2E2',
-    },
-    {
-      key: 'infatuation',
-      label: 'Infatuation',
-      icon: 'TI',
-      rating: restaurant.infatuation_rating,
-      maxRating: 10,
-      reviewCount: null,
-      url: restaurant.infatuation_url,
-      badgeBg: '#FFEDD5',
-    },
-    {
-      // Beli feeds the Gastronome Score (weight 0.2 in score.ts), so it
-      // belongs in the receipts row alongside the other contributing
-      // sources. Beli scores are already on a /10 scale.
-      key: 'beli',
-      label: 'Beli',
-      icon: 'B',
-      rating: restaurant.beli_score,
-      maxRating: 10,
-      reviewCount: null,
-      url: restaurant.beli_url,
-      badgeBg: '#E0E7FF',
-    },
-  ]
-  // Only surface sources that have a rating. An empty cell with a dash
-  // looks like a data bug and makes the comparison row feel broken —
-  // users have reported it as "this restaurant has no Infatuation page".
-  return all.filter((s) => s.rating != null)
-}
-
 export default async function RestaurantPage({
   params,
 }: {
@@ -291,7 +228,6 @@ export default async function RestaurantPage({
   if (!data) notFound()
 
   const { restaurant, relatedRestaurants, videoCount, dishes } = data
-  const scoreSources = buildScoreSources(restaurant)
   // Compute the Gastronome Score once — it was previously recomputed three
   // times in the hero (gate + render + non-null assertion), each rebuilding
   // the full breakdown array.
@@ -439,7 +375,7 @@ export default async function RestaurantPage({
               style={{
                 fontFamily: 'var(--font-heading)',
                 // Bumped from 500 → 700 so the restaurant name visibly
-                // outweighs the "By the Numbers" h2 below — was the same
+                // outweighs the section h2s below — was the same
                 // text-2xl @ weight-500 as section headings, collapsing
                 // the hierarchy. Typography spec P1.
                 fontWeight: 700,
@@ -460,12 +396,14 @@ export default async function RestaurantPage({
 
             {/* Gastronome Score — the unified number the product is
                 named for. Replaces the old sourceless "4.3 ★" hero
-                rating; the per-source breakdown still lives in the
-                "By the Numbers" dashboard below as receipts. Falls back
-                to nothing when no rating source exists. Sweep v2 P0 #2. */}
+                rating; the full per-source breakdown now lives in "The
+                Consensus" panel below. Falls back to nothing when no
+                rating source exists. Sweep v2 P0 #2. The sparkline self-
+                degrades to null when no snapshot history exists. */}
             {score && (
-              <div className="mt-3">
+              <div className="mt-3 flex items-end gap-4 flex-wrap">
                 <GastronomeScoreBadge score={score} />
+                <ScoreSparkline restaurantId={id} className="mb-1 opacity-90" />
               </div>
             )}
 
@@ -728,54 +666,13 @@ export default async function RestaurantPage({
               </section>
             )}
 
-            {/* Ratings Scoreboard — hidden entirely when no source has a
-                rating, so a brand-new restaurant page doesn't render an
-                empty dashboard box. */}
-            {scoreSources.length > 0 && (
-              <section>
-                <div className="mb-3.5">
-                  <span
-                    className="text-xs uppercase block mb-2.5"
-                    style={{
-                      color: 'var(--color-accent)',
-                      fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.18em',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Aggregated Reviews
-                  </span>
-                  <h2
-                    className="text-2xl"
-                    style={{
-                      fontFamily: 'var(--font-heading)',
-                      fontWeight: 500,
-                      color: 'var(--color-text)',
-                      letterSpacing: '-0.005em',
-                    }}
-                  >
-                    By the Numbers
-                  </h2>
-                  <div
-                    className="mt-3.5"
-                    style={{ width: 48, height: 1, backgroundColor: 'var(--color-accent)' }}
-                  />
-                </div>
-                <div
-                  className="grid overflow-hidden"
-                  style={{
-                    gridTemplateColumns: `repeat(${scoreSources.length}, minmax(0, 1fr))`,
-                    backgroundColor: 'var(--color-surface)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  {scoreSources.map((source, i) => (
-                    <ScoreCell key={source.key} source={source} last={i === scoreSources.length - 1} />
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* The Consensus — replaces the old equal-width "By the
+                Numbers" grid that mixed /5 and /10 scales. Plots every
+                contributing source on one normalized 0–10 axis, shows the
+                spread/agreement band and per-source model weights, and
+                connects the inputs to the headline Gastronome Score.
+                Hidden entirely when no source has a rating. */}
+            {score && <ConsensusBreakdown score={score} />}
 
             {/* Signature Dishes — sourced from restaurant_highlighted_dishes,
                 which unions LLM-extracted mentions from TikTok captions,
@@ -1502,102 +1399,83 @@ export default async function RestaurantPage({
           </div>
         </div>
       </div>
-    </div>
-  )
-}
 
-function ScoreCell({ source, last }: { source: ScoreSource; last: boolean }) {
-  const hasRating = source.rating != null
-
-  const wrapper = source.url ? 'a' : 'div'
-  const linkProps = source.url
-    ? { href: source.url, target: '_blank' as const, rel: 'noopener noreferrer' as const }
-    : {}
-
-  const Tag = wrapper as React.ElementType
-
-  return (
-    <Tag
-      {...linkProps}
-      className="block py-5 px-4 transition-colors"
-      style={{
-        borderRight: last ? 'none' : '1px solid var(--color-border)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <div
-          className="w-[22px] h-[22px] flex items-center justify-center flex-shrink-0"
-          style={{
-            borderRadius: '4px',
-            backgroundColor: source.badgeBg,
-            fontFamily: 'var(--font-body)',
-            fontSize: '10px',
-            fontWeight: 700,
-            color: 'var(--color-text)',
-          }}
-        >
-          {source.icon}
-        </div>
-        <span
-          className="text-[10px] uppercase"
-          style={{
-            fontFamily: 'var(--font-body)',
-            letterSpacing: '0.14em',
-            fontWeight: 500,
-            color: 'var(--color-text-secondary)',
-          }}
-        >
-          {source.label}
-        </span>
-      </div>
-      {hasRating ? (
-        <>
-          <div
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '1.875rem',
-              fontWeight: 500,
-              lineHeight: 1,
-              color: 'var(--color-text)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {source.rating!.toFixed(1)}
-            <span
-              style={{
-                fontSize: '14px',
-                color: 'var(--color-text-secondary)',
-                fontWeight: 400,
-                marginLeft: '2px',
-              }}
-            >
-              /{source.maxRating}
-            </span>
-          </div>
-          {source.reviewCount != null && source.reviewCount > 0 && (
-            <span
-              className="text-[11px] mt-1.5 block"
-              style={{
-                fontFamily: 'var(--font-body)',
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              {source.reviewCount.toLocaleString()} reviews
-            </span>
-          )}
-        </>
-      ) : (
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '1.875rem',
-            fontWeight: 400,
-            color: 'var(--color-text-secondary)',
-          }}
-        >
-          —
-        </span>
+      {/* Spacer so the sticky mobile action bar never occludes the last
+          content (Similar Restaurants). Matches the bar's height; mobile
+          only since the bar is md:hidden. */}
+      {(restaurant.website ||
+        hasCoords ||
+        !!restaurant.google_url ||
+        !!restaurant.google_place_id ||
+        !!restaurant.address) && (
+        <div className="md:hidden" style={{ height: 60 }} aria-hidden="true" />
       )}
-    </Tag>
+
+      {/* Sticky mobile action bar — pins the two decisions a foodie acts
+          on (Reserve/Website + Get Directions) above the bottom nav so
+          they're always reachable without scrolling back to the decision
+          strip. Mobile only (md:hidden); the desktop layout keeps the
+          actions inline in the hero/decision bar. Sits at z-40 just under
+          BottomNav (z-50), offset above its 64px row + the home-indicator
+          inset via calc(). Only renders when there's at least one action. */}
+      {(restaurant.website ||
+        hasCoords ||
+        !!restaurant.google_url ||
+        !!restaurant.google_place_id ||
+        !!restaurant.address) && (
+        <div
+          className="md:hidden fixed left-0 right-0 z-40"
+          style={{
+            bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+            backgroundColor: 'var(--color-surface)',
+            borderTop: '1px solid var(--color-border)',
+          }}
+        >
+          <div className="flex items-stretch gap-2.5 px-4 py-2.5">
+            {restaurant.website && (
+              <a
+                href={restaurant.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs uppercase py-2.5"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  letterSpacing: '0.08em',
+                  fontWeight: 600,
+                  borderRadius: 'var(--r-input)',
+                  backgroundColor: 'var(--color-action)',
+                  color: 'var(--color-on-action)',
+                }}
+              >
+                <Globe size={14} aria-hidden="true" />
+                Reserve / Website
+              </a>
+            )}
+            {(hasCoords ||
+              !!restaurant.google_url ||
+              !!restaurant.google_place_id ||
+              !!restaurant.address) && (
+              <a
+                href={decisionDirectionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs uppercase py-2.5"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  letterSpacing: '0.08em',
+                  fontWeight: 600,
+                  borderRadius: 'var(--r-input)',
+                  border: '1px solid var(--color-action)',
+                  color: 'var(--color-action)',
+                }}
+              >
+                <MapPin size={14} aria-hidden="true" />
+                Directions
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

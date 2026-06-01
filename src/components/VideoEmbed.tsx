@@ -148,7 +148,7 @@ export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
             href={video.video_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--color-action)] hover:text-[var(--color-action-hover)] transition-colors"
           >
             Watch on {video.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
             <ExternalLink size={11} />

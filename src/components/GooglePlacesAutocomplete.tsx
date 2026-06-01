@@ -381,12 +381,12 @@ export default function GooglePlacesAutocomplete({
             if (results.length > 0) setIsOpen(true)
           }}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white text-gray-900"
+          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[var(--color-action)] focus:border-transparent outline-none transition bg-white text-gray-900"
           autoComplete="off"
         />
 
         {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-action)]">
             <Loader2 size={18} className="animate-spin" />
           </div>
         )}
@@ -421,7 +421,7 @@ export default function GooglePlacesAutocomplete({
                       onClick={() => handleSelectResult(result)}
                       className={`w-full px-4 py-3 text-left border-b border-gray-100 transition-colors ${
                         selectedIndex === resultIndex
-                          ? 'bg-emerald-50'
+                          ? 'bg-[var(--color-action)]/10'
                           : 'hover:bg-gray-50'
                       }`}
                     >
@@ -441,7 +441,7 @@ export default function GooglePlacesAutocomplete({
                         </div>
                         {restaurant.avg_rating && (
                           <div className="flex-shrink-0">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[var(--color-action)]/10 text-[var(--color-action)]">
                               {restaurant.avg_rating.toFixed(1)}
                             </span>
                           </div>
@@ -470,7 +470,7 @@ export default function GooglePlacesAutocomplete({
                       onClick={() => handleSelectResult(result)}
                       className={`w-full px-4 py-3 text-left border-b border-gray-100 transition-colors ${
                         selectedIndex === resultIndex
-                          ? 'bg-emerald-50'
+                          ? 'bg-[var(--color-action)]/10'
                           : 'hover:bg-gray-50'
                       }`}
                     >
@@ -497,7 +497,7 @@ export default function GooglePlacesAutocomplete({
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-gray-400 hover:text-emerald-600 transition-colors"
+                            className="text-gray-400 hover:text-[var(--color-action)] transition-colors"
                           >
                             <ExternalLink size={16} />
                           </a>
