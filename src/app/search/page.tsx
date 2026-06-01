@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import SearchBar from '@/components/SearchBar'
@@ -31,17 +31,16 @@ import {
   writeStoredFilters,
 } from '@/components/search/filterState'
 
-interface GooglePlaceResult {
-  placeId: string
-  name: string
-  address: string
-  city: string
-  rating?: number
-}
-
 interface DishHit {
   dish_name: string
+  /** Cross-source mention total backing the dish (total_mentions). */
   mention_count: number
+  /** Quality tier from restaurant_top_dishes (e.g. "must_order"); null for
+   *  the noisier highlighted-dishes fallback. */
+  tier: string | null
+  /** True when this hit is the restaurant's single strongest matching dish
+   *  (top_dishes path). Drives the "Top dish" signal. */
+  isTopDish: boolean
   restaurant: Restaurant
 }
 
@@ -76,6 +75,19 @@ const RESULT_CAP = 40
 function cityIlikeClause(cities: string[]): string {
   return cities
     .map((c) => `city.ilike.${c.replace(/[%_\\]/g, '')}`)
+    .join(',')
+}
+
+/**
+ * Whole-value, case-insensitive `.or()` clause matching `neighborhood`
+ * against any selected neighborhood name. Same rationale as
+ * cityIlikeClause: restaurants.neighborhood has casing drift, so an exact
+ * `.in()` would silently drop rows. Wildcards are stripped so the value is
+ * matched whole (no user-controlled `%`/`_`).
+ */
+function neighborhoodIlikeClause(neighborhoods: string[]): string {
+  return neighborhoods
+    .map((n) => `neighborhood.ilike.${n.replace(/[%_\\]/g, '')}`)
     .join(',')
 }
 
@@ -172,10 +184,12 @@ function SearchContent() {
   )
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [googlePlaces, setGooglePlaces] = useState<GooglePlaceResult[]>([])
   const [dishes, setDishes] = useState<DishHit[]>([])
   const [availableCuisines, setAvailableCuisines] = useState<string[]>([])
   const [availableCities, setAvailableCities] = useState<string[]>([])
+  const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>(
+    []
+  )
   const [loading, setLoading] = useState(true)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
@@ -225,93 +239,6 @@ function SearchContent() {
   }, [filters, searchQuery, sort, pathname, router])
 
   /* ------------------------------------------------------------------ */
-  /*  Google Places autocomplete                                         */
-  /* ------------------------------------------------------------------ */
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const autocompleteServiceRef = useRef<any>(null)
-  const [googleApiReady, setGoogleApiReady] = useState(false)
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-
-  useEffect(() => {
-    if (!apiKey) return
-    if (window.google?.maps?.places) {
-      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
-      setGoogleApiReady(true)
-      return
-    }
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      if (window.google?.maps?.places) {
-        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService()
-        setGoogleApiReady(true)
-      }
-    }
-    document.head.appendChild(script)
-    return () => {
-      if (script.parentNode) script.parentNode.removeChild(script)
-    }
-  }, [apiKey])
-
-  const searchGooglePlaces = useCallback(
-    async (q: string): Promise<GooglePlaceResult[]> => {
-      if (!q.trim() || !autocompleteServiceRef.current) return []
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const predictions = await new Promise<any[]>((resolve) => {
-          autocompleteServiceRef.current.getPlacePredictions(
-            { input: q, types: ['establishment'] },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (predictions: any[], status: string) => {
-              if (status === 'OK' && predictions) resolve(predictions)
-              else resolve([])
-            }
-          )
-        })
-        // Build the typeahead straight from the (cheap) Autocomplete
-        // predictions. Calling Place Details (getDetails) per prediction on
-        // every keystroke fired up to 8 billed requests per character — orders
-        // of magnitude more expensive. Details (geometry/rating) can be fetched
-        // lazily on selection if a consumer ever needs them.
-        const results: GooglePlaceResult[] = predictions
-          .filter((p) => {
-            const types = p.types || []
-            return (
-              types.includes('restaurant') ||
-              types.includes('food') ||
-              types.includes('cafe') ||
-              types.includes('bakery') ||
-              types.includes('bar') ||
-              types.includes('meal_delivery') ||
-              types.includes('meal_takeaway')
-            )
-          })
-          .slice(0, 8)
-          .map((prediction) => {
-            const main = prediction.structured_formatting?.main_text ?? prediction.description ?? ''
-            const secondary = prediction.structured_formatting?.secondary_text ?? ''
-            const parts = secondary.split(',')
-            const city = parts.length > 1 ? parts[parts.length - 2].trim() : parts[0]?.trim() ?? ''
-            return {
-              placeId: prediction.place_id,
-              name: main,
-              address: secondary,
-              city,
-              rating: undefined,
-            } as GooglePlaceResult
-          })
-        return results
-      } catch {
-        return []
-      }
-    },
-    []
-  )
-
-  /* ------------------------------------------------------------------ */
   /*  Load filter options (covered cities + cuisine list)                */
   /* ------------------------------------------------------------------ */
 
@@ -351,6 +278,45 @@ function SearchContent() {
   }, [supabase])
 
   /* ------------------------------------------------------------------ */
+  /*  Neighborhood facet — distinct neighborhoods, scoped to the         */
+  /*  selected city/cities so the list stays relevant. Re-runs whenever  */
+  /*  the city selection changes. neighborhood lives on restaurants.     */
+  /* ------------------------------------------------------------------ */
+
+  // Serialize the city selection so the effect dep is a stable primitive
+  // (the cities array identity changes on every filter spread).
+  const cityKey = filters.cities.join('|')
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadNeighborhoods() {
+      const cities = cityKey ? cityKey.split('|').filter(Boolean) : []
+      let nq = supabase
+        .from('restaurants')
+        .select('neighborhood')
+        .not('neighborhood', 'is', null)
+        .limit(2000)
+      if (cities.length) {
+        nq = nq.or(cityIlikeClause(cities))
+      }
+      const { data } = await nq
+      if (cancelled) return
+      const names = [
+        ...new Set(
+          (data ?? [])
+            .map((r) => (r.neighborhood ?? '').trim())
+            .filter(Boolean)
+        ),
+      ].sort() as string[]
+      setAvailableNeighborhoods(names)
+    }
+    loadNeighborhoods()
+    return () => {
+      cancelled = true
+    }
+  }, [supabase, cityKey])
+
+  /* ------------------------------------------------------------------ */
   /*  Main search — applies query + every filter in `filters`             */
   /* ------------------------------------------------------------------ */
 
@@ -382,6 +348,11 @@ function SearchContent() {
             // just case-insensitive) to align with the dish post-filter
             // which lowercases both sides.
             rq = rq.or(cityIlikeClause(filters.cities))
+          }
+          if (filters.neighborhoods.length) {
+            // Same whole-value, case-insensitive match as city — neighborhood
+            // has the same casing drift on restaurants.neighborhood.
+            rq = rq.or(neighborhoodIlikeClause(filters.neighborhoods))
           }
           if (filters.cuisines.length) {
             rq = rq.in('cuisine', filters.cuisines)
@@ -439,6 +410,8 @@ function SearchContent() {
               )
             }
             if (filters.cities.length) bq = bq.or(cityIlikeClause(filters.cities))
+            if (filters.neighborhoods.length)
+              bq = bq.or(neighborhoodIlikeClause(filters.neighborhoods))
             if (filters.cuisines.length) bq = bq.in('cuisine', filters.cuisines)
             if (filters.googleMinRating > 0)
               bq = bq.gte('google_rating', filters.googleMinRating)
@@ -471,61 +444,116 @@ function SearchContent() {
         if (cancelled) return
         setRestaurants(restaurantData)
 
-        /* -------------------- Google Places -------------------- */
-        let googleResults: GooglePlaceResult[] = []
-        if (
-          wantRestaurants &&
-          searchQuery.trim() &&
-          googleApiReady &&
-          // Skip external API when facet filters are active — those results
-          // can't satisfy rating/accolade constraints the user asked for.
-          countActive(filters) === (filters.mode !== 'all' ? 1 : 0)
-        ) {
-          googleResults = await searchGooglePlaces(searchQuery)
-          const localNames = new Set(
-            restaurantData.map((r) => r.name.toLowerCase())
-          )
-          googleResults = googleResults.filter(
-            (g) => !localNames.has(g.name.toLowerCase())
-          )
-        }
-        if (cancelled) return
-        setGooglePlaces(googleResults)
-
         /* -------------------- dish query -------------------- */
+        // Primary source is restaurant_top_dishes (ranked, scored, with
+        // cross-source mention totals) — far cleaner than the noisier
+        // restaurant_highlighted_dishes, which we keep only as a no-hit
+        // fallback. We collapse to ONE row per restaurant (its strongest
+        // matching dish) so a single spot doesn't flood the list with every
+        // dish whose name happens to contain the term.
         let dishResults: DishHit[] = []
         if (wantDishes && (searchQuery.trim() || filters.mode === 'dishes')) {
           const sanitized = searchQuery.replace(/[%_\\]/g, '')
-          let dq = supabase
-            .from('restaurant_highlighted_dishes')
-            .select('dish_name, mention_count, restaurant:restaurants(*)')
-            .order('mention_count', { ascending: false })
-            .limit(40)
+
+          // ilike BEFORE limit so the cap selects from matching dishes, not a
+          // top-40 prefix that's then filtered down to nothing.
+          let tdq = supabase
+            .from('restaurant_top_dishes')
+            .select(
+              'dish_name, score, tier, total_mentions, restaurant:restaurants(*)'
+            )
+            .order('score', { ascending: false, nullsFirst: false })
+            .limit(60)
           if (sanitized.trim()) {
-            dq = dq.ilike('dish_name', `%${sanitized}%`)
+            tdq = tdq.ilike('dish_name', `%${sanitized}%`)
           }
-          const { data: dishRows, error: dishErr } = await dq
-          if (!dishErr && dishRows) {
-            const raw = (dishRows as unknown as Array<{
+          const { data: topRows, error: topErr } = await tdq
+
+          const collapse = (
+            rows: Array<{
               dish_name: string
-              mention_count: number | null
+              mention_count: number
+              tier: string | null
+              isTopDish: boolean
+              restaurant: Restaurant
+            }>
+          ): DishHit[] => {
+            // First matching row per restaurant wins. Rows arrive score-desc
+            // (top_dishes) / mention-desc (fallback), so the first kept row is
+            // the restaurant's strongest matching dish.
+            const seen = new Set<string>()
+            const out: DishHit[] = []
+            for (const d of rows) {
+              if (!matchesFilters(d.restaurant, filters)) continue
+              if (seen.has(d.restaurant.id)) continue
+              seen.add(d.restaurant.id)
+              out.push(d)
+            }
+            return out
+          }
+
+          if (!topErr && topRows && topRows.length > 0) {
+            const raw = (topRows as unknown as Array<{
+              dish_name: string
+              score: number | null
+              tier: string | null
+              total_mentions: number | null
               restaurant: Restaurant | null
             }>)
               .filter(
-                (d): d is {
+                (
+                  d
+                ): d is {
                   dish_name: string
-                  mention_count: number | null
+                  score: number | null
+                  tier: string | null
+                  total_mentions: number | null
                   restaurant: Restaurant
                 } => !!d.restaurant
               )
               .map((d) => ({
                 dish_name: d.dish_name,
-                mention_count: d.mention_count ?? 0,
+                mention_count: d.total_mentions ?? 0,
+                tier: d.tier,
+                isTopDish: true,
                 restaurant: d.restaurant,
               }))
-
-            // Post-filter dishes using the restaurant's accolades/ratings.
-            dishResults = raw.filter((d) => matchesFilters(d.restaurant, filters))
+            dishResults = collapse(raw).slice(0, 12)
+          } else {
+            // Fallback: highlighted_dishes (no tier/score, mention-ranked).
+            let dq = supabase
+              .from('restaurant_highlighted_dishes')
+              .select('dish_name, mention_count, restaurant:restaurants(*)')
+              .order('mention_count', { ascending: false })
+              .limit(60)
+            if (sanitized.trim()) {
+              dq = dq.ilike('dish_name', `%${sanitized}%`)
+            }
+            const { data: dishRows, error: dishErr } = await dq
+            if (!dishErr && dishRows) {
+              const raw = (dishRows as unknown as Array<{
+                dish_name: string
+                mention_count: number | null
+                restaurant: Restaurant | null
+              }>)
+                .filter(
+                  (
+                    d
+                  ): d is {
+                    dish_name: string
+                    mention_count: number | null
+                    restaurant: Restaurant
+                  } => !!d.restaurant
+                )
+                .map((d) => ({
+                  dish_name: d.dish_name,
+                  mention_count: d.mention_count ?? 0,
+                  tier: null,
+                  isTopDish: false,
+                  restaurant: d.restaurant,
+                }))
+              dishResults = collapse(raw).slice(0, 12)
+            }
           }
         }
         if (cancelled) return
@@ -540,7 +568,7 @@ function SearchContent() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchQuery, filters, sort, supabase, googleApiReady, searchGooglePlaces])
+  }, [searchQuery, filters, sort, supabase])
 
   /* ------------------------------------------------------------------ */
   /*  Handlers                                                           */
@@ -564,10 +592,8 @@ function SearchContent() {
 
   // Single canonical result total, used by both the header summary and the
   // mobile "Show N results" button so they can never disagree. Counts every
-  // surfaced row consistently: covered restaurants + dishes + the
-  // informational Google matches.
-  const totalRestaurants = restaurants.length + googlePlaces.length
-  const totalResults = totalRestaurants + dishes.length
+  // surfaced row consistently: covered restaurants + matching dishes.
+  const totalResults = restaurants.length + dishes.length
   const hasAnyResults = totalResults > 0
   const activeFilterCount = useMemo(() => countActive(filters), [filters])
 
@@ -585,9 +611,37 @@ function SearchContent() {
     if (filters.eater38) return 'Eater 38'
     if (filters.bibGourmand) return 'Bib Gourmand'
     if (filters.cuisines.length) return `cuisine (${filters.cuisines[0]})`
+    if (filters.neighborhoods.length)
+      return `neighborhood (${filters.neighborhoods[0]})`
     if (filters.cities.length) return `city (${filters.cities[0]})`
     return null
   }, [filters])
+
+  // Neighborhood header: render an "Restaurants in {Neighborhood}" banner
+  // when the user is clearly browsing one neighborhood — either a single
+  // nbhd facet is selected, or the free-text query exactly matches a known
+  // neighborhood name (case-insensitive). We trust the in-neighborhood
+  // results the query/filter already produced.
+  const activeNeighborhood = useMemo(() => {
+    if (filters.neighborhoods.length === 1) return filters.neighborhoods[0]
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      const match = availableNeighborhoods.find((n) => n.toLowerCase() === q)
+      if (match) return match
+    }
+    return null
+  }, [filters.neighborhoods, searchQuery, availableNeighborhoods])
+
+  const clearNeighborhood = () => {
+    // Drop neighborhood facets; if the header came from a query match, also
+    // clear the query so the banner doesn't immediately reappear.
+    const q = searchQuery.trim().toLowerCase()
+    const fromQuery =
+      filters.neighborhoods.length === 0 &&
+      availableNeighborhoods.some((n) => n.toLowerCase() === q)
+    setFilters({ ...filters, neighborhoods: [] })
+    if (fromQuery) setSearchQuery('')
+  }
 
   // Results are server-capped at RESULT_CAP rows. We render the full
   // fetched set (no client pagination) and, when the cap is hit, tell the
@@ -607,7 +661,8 @@ function SearchContent() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Search</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Find restaurants by name, cuisine, or city — or search dishes directly.
+            Find restaurants by name, cuisine, city, or neighborhood — or
+            search dishes directly to see which spots do them best.
           </p>
         </div>
 
@@ -619,6 +674,7 @@ function SearchContent() {
               onChange={setFilters}
               onReset={handleResetAll}
               availableCities={availableCities}
+              availableNeighborhoods={availableNeighborhoods}
               availableCuisines={availableCuisines}
             />
           </div>
@@ -652,6 +708,78 @@ function SearchContent() {
                 )}
               </button>
             </div>
+
+            {/* Scope toggle — surfaces the search mode as a visible pill row
+                attached to the input, instead of burying it in the sidebar.
+                Drives the same filters.mode the sidebar reads. */}
+            <div className="flex items-center gap-1.5" role="tablist" aria-label="Search scope">
+              {(
+                [
+                  { key: 'all', label: 'All' },
+                  { key: 'restaurants', label: 'Restaurants' },
+                  { key: 'dishes', label: 'Dishes' },
+                ] as { key: SearchFilters['mode']; label: string }[]
+              ).map(({ key, label }) => {
+                const active = filters.mode === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFilters({ ...filters, mode: key })}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
+                      active
+                        ? 'border-transparent text-white'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    style={
+                      active
+                        ? { backgroundColor: 'var(--color-primary)' }
+                        : undefined
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+              <span className="text-[11px] text-gray-400 ml-1 hidden sm:inline">
+                {filters.mode === 'dishes'
+                  ? 'Searching dishes — ranked by how often they’re raved about.'
+                  : filters.mode === 'restaurants'
+                  ? 'Searching restaurants only.'
+                  : 'Searching restaurants and dishes.'}
+              </span>
+            </div>
+
+            {/* Neighborhood context header — when the user is clearly
+                browsing one neighborhood, name it and offer a clear chip. */}
+            {activeNeighborhood && (
+              <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin
+                    size={15}
+                    style={{ color: 'var(--color-primary)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-semibold text-gray-900 truncate">
+                    Restaurants in {activeNeighborhood}
+                  </span>
+                  <span className="text-xs text-gray-500 flex-shrink-0">
+                    {restaurants.length}
+                    {resultsCapped ? '+' : ''}{' '}
+                    {restaurants.length === 1 ? 'spot' : 'spots'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearNeighborhood}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
+                >
+                  <X size={12} /> Clear
+                </button>
+              </div>
+            )}
 
             {/* Active filter summary (also visible on desktop for quick reset) */}
             {activeFilterCount > 0 && (
@@ -774,18 +902,27 @@ function SearchContent() {
                             <Utensils size={18} className="text-amber-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {d.dish_name}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {d.dish_name}
+                              </p>
+                              {d.isTopDish && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                                  Top dish
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-500 truncate">
                               at {d.restaurant.name}
                               {d.restaurant.city ? ` · ${d.restaurant.city}` : ''}
                             </p>
                           </div>
-                          <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                            {d.mention_count}{' '}
-                            {d.mention_count === 1 ? 'mention' : 'mentions'}
-                          </span>
+                          {d.mention_count > 0 && (
+                            <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                              {d.mention_count}{' '}
+                              {d.mention_count === 1 ? 'mention' : 'mentions'}
+                            </span>
+                          )}
                         </div>
                       </Link>
                     ))}
@@ -822,59 +959,6 @@ function SearchContent() {
                 {restaurants.map((r) => (
                   <RestaurantCard key={r.id} restaurant={r} />
                 ))}
-
-                {googlePlaces.length > 0 && (
-                  <>
-                    {restaurants.length > 0 && (
-                      <div className="pt-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-px bg-gray-200 flex-1" />
-                          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                            <MapPin size={12} aria-hidden="true" /> From Google
-                          </span>
-                          <div className="h-px bg-gray-200 flex-1" />
-                        </div>
-                        {/* Informational only. The "tap to add a review /
-                            put it on the map" CTA was removed: user reviews
-                            and user-created restaurants no longer exist, so
-                            /review/new is dead. We still surface Google
-                            matches so users know the place exists even though
-                            it isn't covered yet — but the rows are no longer
-                            interactive (no link target to send them to). */}
-                        <p className="text-[11px] text-gray-400 text-center mt-1.5">
-                          Not in Gastronome yet — not covered, shown for reference.
-                        </p>
-                      </div>
-                    )}
-                    {googlePlaces.map((place) => (
-                      <div
-                        key={place.placeId}
-                        className="block bg-white rounded-lg border border-gray-100 p-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                            <MapPin size={18} className="text-blue-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {place.name}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {place.city}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {place.rating && (
-                              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                                {place.rating.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
               </div>
             )}
           </div>
@@ -912,6 +996,7 @@ function SearchContent() {
                 onChange={setFilters}
                 onReset={handleResetAll}
                 availableCities={availableCities}
+                availableNeighborhoods={availableNeighborhoods}
                 availableCuisines={availableCuisines}
               />
             </div>

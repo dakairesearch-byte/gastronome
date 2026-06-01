@@ -27,6 +27,7 @@ export type SearchMode = 'all' | 'restaurants' | 'dishes'
 export interface SearchFilters {
   mode: SearchMode
   cities: string[]
+  neighborhoods: string[]
   cuisines: string[]
   googleMinRating: number
   googleMinReviews: number
@@ -43,6 +44,7 @@ export interface SearchFilters {
 export const DEFAULT_FILTERS: SearchFilters = {
   mode: 'all',
   cities: [],
+  neighborhoods: [],
   cuisines: [],
   googleMinRating: 0,
   googleMinReviews: 0,
@@ -69,6 +71,7 @@ interface Props {
   onChange: (next: SearchFilters) => void
   onReset: () => void
   availableCities: string[]
+  availableNeighborhoods: string[]
   availableCuisines: string[]
 }
 
@@ -77,6 +80,7 @@ export default function SearchFiltersSidebar({
   onChange,
   onReset,
   availableCities,
+  availableNeighborhoods,
   availableCuisines,
 }: Props) {
   const set = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) =>
@@ -159,6 +163,27 @@ export default function SearchFiltersSidebar({
         emptyLabel="All covered cities"
         searchable
       />
+
+      {/* Neighborhood multiselect — scoped to the selected city/cities by
+          the parent facet load. Hidden when we have no neighborhood data to
+          offer (e.g. no city selected and the unscoped list came back empty). */}
+      {availableNeighborhoods.length > 0 && (
+        <MultiSelect
+          title="Neighborhood"
+          options={availableNeighborhoods}
+          selected={filters.neighborhoods}
+          onToggle={(v) =>
+            set(
+              'neighborhoods',
+              filters.neighborhoods.includes(v)
+                ? filters.neighborhoods.filter((n) => n !== v)
+                : [...filters.neighborhoods, v]
+            )
+          }
+          emptyLabel="Any neighborhood"
+          searchable
+        />
+      )}
 
       {/* Cuisine multiselect */}
       {availableCuisines.length > 0 && (
@@ -617,6 +642,7 @@ export function countActive(f: SearchFilters): number {
   let n = 0
   if (f.mode !== 'all') n++
   if (f.cities.length) n++
+  if (f.neighborhoods.length) n++
   if (f.cuisines.length) n++
   if (f.googleMinRating > 0) n++
   if (f.googleMinReviews > 0) n++

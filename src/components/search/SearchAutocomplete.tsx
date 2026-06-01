@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, MapPin, Loader2 } from 'lucide-react'
+import { Search, MapPin, Utensils, Store, Loader2 } from 'lucide-react'
 import type { Restaurant } from '@/types/database'
 import { recordSearch } from '@/components/home/RecentSearches'
 
@@ -24,6 +24,35 @@ type Suggestion = Pick<
   Restaurant,
   'id' | 'name' | 'cuisine' | 'city' | 'neighborhood'
 >
+
+interface NeighborhoodHit {
+  neighborhood: string
+  city: string
+  count: number
+}
+
+interface DishHit {
+  dish_name: string
+  restaurant_id: string
+  restaurant_name: string
+}
+
+/** Shape returned by /api/restaurants/search (Doer A). `local` is a
+ *  back-compat alias for `restaurants`. */
+interface SearchResponse {
+  restaurants?: Suggestion[]
+  local?: Suggestion[]
+  neighborhoods?: NeighborhoodHit[]
+  dishes?: DishHit[]
+}
+
+// A single keyboard-navigable row, flattened across all three groups so
+// ArrowUp/Down/Enter traverse the whole dropdown uniformly. `run` performs
+// the row's navigation.
+type FlatItem =
+  | { kind: 'restaurant'; key: string; data: Suggestion; run: () => void }
+  | { kind: 'neighborhood'; key: string; data: NeighborhoodHit; run: () => void }
+  | { kind: 'dish'; key: string; data: DishHit; run: () => void }
 
 const DEBOUNCE_MS = 200
 const MIN_CHARS = 2
@@ -54,6 +83,8 @@ export default function SearchAutocomplete({
 
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [neighborhoods, setNeighborhoods] = useState<NeighborhoodHit[]>([])
+  const [dishes, setDishes] = useState<DishHit[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -68,6 +99,8 @@ export default function SearchAutocomplete({
 
     if (trimmed.length < MIN_CHARS) {
       setSuggestions([])
+      setNeighborhoods([])
+      setDishes([])
       setLoading(false)
       return
     }
@@ -82,10 +115,20 @@ export default function SearchAutocomplete({
           signal: controller.signal,
         })
         if (!res.ok) throw new Error(`search ${res.status}`)
-        const body = (await res.json()) as { local?: Suggestion[] }
+        const body = (await res.json()) as SearchResponse
         if (latestQueryRef.current !== trimmed) return
-        const rows = Array.isArray(body.local) ? body.local : []
+        // Prefer the canonical `restaurants` key; fall back to the legacy
+        // `local` alias for back-compat with older API responses.
+        const rows = Array.isArray(body.restaurants)
+          ? body.restaurants
+          : Array.isArray(body.local)
+            ? body.local
+            : []
         setSuggestions(rows.slice(0, MAX_SUGGESTIONS))
+        setNeighborhoods(
+          Array.isArray(body.neighborhoods) ? body.neighborhoods : []
+        )
+        setDishes(Array.isArray(body.dishes) ? body.dishes : [])
         setActiveIndex(-1)
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
@@ -136,23 +179,76 @@ export default function SearchAutocomplete({
     router.push(`/restaurants/${s.id}`)
   }
 
+  const goNeighborhood = (n: NeighborhoodHit) => {
+    recordSearch(n.neighborhood)
+    setOpen(false)
+    setQuery('')
+    // Canonical neighborhood filter param is `nbhd` (filterState round-trips it
+    // + the /search page shows a "Restaurants in {Neighborhood}" header for a
+    // single-nbhd facet). Must match — `?neighborhood=` is NOT read.
+    router.push(`/search?nbhd=${encodeURIComponent(n.neighborhood)}`)
+  }
+
+  const goDish = (d: DishHit) => {
+    recordSearch(d.dish_name)
+    setOpen(false)
+    setQuery('')
+    router.push(
+      `/search?q=${encodeURIComponent(d.dish_name)}&mode=dishes`
+    )
+  }
+
+  // Flatten every group into one ordered list so keyboard traversal and
+  // the Enter fallback treat the dropdown as a single column. Order matches
+  // the visual render order: restaurants, neighborhoods, dishes.
+  const flatItems = useMemo<FlatItem[]>(() => {
+    const items: FlatItem[] = []
+    for (const s of suggestions) {
+      items.push({
+        kind: 'restaurant',
+        key: `r:${s.id}`,
+        data: s,
+        run: () => go(s),
+      })
+    }
+    for (const n of neighborhoods) {
+      items.push({
+        kind: 'neighborhood',
+        key: `n:${n.neighborhood}:${n.city}`,
+        data: n,
+        run: () => goNeighborhood(n),
+      })
+    }
+    for (const d of dishes) {
+      items.push({
+        kind: 'dish',
+        key: `d:${d.dish_name}:${d.restaurant_id}`,
+        data: d,
+        run: () => goDish(d),
+      })
+    }
+    return items
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions, neighborhoods, dishes])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (activeIndex >= 0 && suggestions[activeIndex]) {
-      go(suggestions[activeIndex])
+    const active = activeIndex >= 0 ? flatItems[activeIndex] : undefined
+    if (active) {
+      active.run()
       return
     }
     submit(query)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open || suggestions.length === 0) return
+    if (!open || flatItems.length === 0) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIndex((i) => (i + 1) % suggestions.length)
+      setActiveIndex((i) => (i + 1) % flatItems.length)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1))
+      setActiveIndex((i) => (i <= 0 ? flatItems.length - 1 : i - 1))
     }
   }
 
@@ -261,7 +357,7 @@ export default function SearchAutocomplete({
             borderColor: 'var(--color-border)',
           }}
         >
-          {suggestions.length === 0 && loading ? (
+          {flatItems.length === 0 && loading ? (
             <div
               className="px-5 py-4 text-sm text-left"
               style={{
@@ -271,7 +367,7 @@ export default function SearchAutocomplete({
             >
               Searching…
             </div>
-          ) : suggestions.length === 0 ? (
+          ) : flatItems.length === 0 ? (
             <div
               className="px-5 py-4 text-sm text-left"
               style={{
@@ -279,63 +375,213 @@ export default function SearchAutocomplete({
                 fontFamily: 'var(--font-body)',
               }}
             >
-              No matching restaurants.
+              No matches yet.
             </div>
           ) : (
-            <ul className="max-h-80 overflow-y-auto">
-              {suggestions.map((s, i) => {
+            <ul className="max-h-96 overflow-y-auto">
+              {flatItems.map((item, i) => {
                 const active = i === activeIndex
-                const location = [s.neighborhood, s.city].filter(Boolean).join(' · ')
+                // Section header: render above the first row of each group.
+                const showHeader =
+                  i === 0 || flatItems[i - 1].kind !== item.kind
+                const header =
+                  item.kind === 'restaurant'
+                    ? 'Restaurants'
+                    : item.kind === 'neighborhood'
+                      ? 'Neighborhoods'
+                      : 'Dishes'
+
+                const rowBg = active
+                  ? 'var(--color-background)'
+                  : 'transparent'
+
                 return (
-                  <li key={s.id} role="option" aria-selected={active}>
-                    <Link
-                      href={`/restaurants/${s.id}`}
-                      onMouseEnter={() => setActiveIndex(i)}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        go(s)
-                      }}
-                      className="flex items-center gap-3 px-5 py-3 text-left transition-colors"
-                      style={{
-                        backgroundColor: active
-                          ? 'var(--color-background)'
-                          : 'transparent',
-                      }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="truncate"
-                          style={{
-                            color: 'var(--color-text)',
-                            fontFamily: 'var(--font-heading)',
-                            fontSize: '15px',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {s.name}
-                        </p>
-                        <div
-                          className="flex items-center gap-1.5 mt-0.5 text-xs truncate"
-                          style={{
-                            color: 'var(--color-text-secondary)',
-                            fontFamily: 'var(--font-body)',
-                          }}
-                        >
-                          {s.cuisine && s.cuisine !== 'Restaurant' && (
-                            <>
-                              <span>{s.cuisine}</span>
-                              {location && <span>·</span>}
-                            </>
-                          )}
-                          {location && (
-                            <>
-                              <MapPin size={11} className="flex-shrink-0" />
-                              <span className="truncate">{location}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
+                  <li key={item.key} role="presentation">
+                    {showHeader && (
+                      <p
+                        className="px-5 pt-3 pb-1 text-[11px] uppercase tracking-wider"
+                        style={{
+                          color: 'var(--color-text-secondary)',
+                          fontFamily: 'var(--font-body)',
+                          letterSpacing: '0.12em',
+                          borderTop:
+                            i === 0
+                              ? 'none'
+                              : '1px solid var(--color-border)',
+                        }}
+                      >
+                        {header}
+                      </p>
+                    )}
+
+                    {item.kind === 'restaurant' ? (
+                      (() => {
+                        const s = item.data
+                        const location = [s.neighborhood, s.city]
+                          .filter(Boolean)
+                          .join(' · ')
+                        return (
+                          <Link
+                            href={`/restaurants/${s.id}`}
+                            role="option"
+                            aria-selected={active}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              item.run()
+                            }}
+                            className="flex items-center gap-3 px-5 py-2.5 text-left transition-colors"
+                            style={{ backgroundColor: rowBg }}
+                          >
+                            <Store
+                              size={15}
+                              className="flex-shrink-0"
+                              style={{ color: 'var(--color-accent)' }}
+                              aria-hidden
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="truncate"
+                                style={{
+                                  color: 'var(--color-text)',
+                                  fontFamily: 'var(--font-heading)',
+                                  fontSize: '15px',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {s.name}
+                              </p>
+                              <div
+                                className="flex items-center gap-1.5 mt-0.5 text-xs truncate"
+                                style={{
+                                  color: 'var(--color-text-secondary)',
+                                  fontFamily: 'var(--font-body)',
+                                }}
+                              >
+                                {s.cuisine && s.cuisine !== 'Restaurant' && (
+                                  <>
+                                    <span>{s.cuisine}</span>
+                                    {location && <span>·</span>}
+                                  </>
+                                )}
+                                {location && (
+                                  <>
+                                    <MapPin size={11} className="flex-shrink-0" />
+                                    <span className="truncate">{location}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        )
+                      })()
+                    ) : item.kind === 'neighborhood' ? (
+                      (() => {
+                        const n = item.data
+                        return (
+                          <Link
+                            href={`/search?nbhd=${encodeURIComponent(
+                              n.neighborhood
+                            )}`}
+                            role="option"
+                            aria-selected={active}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              item.run()
+                            }}
+                            className="flex items-center gap-3 px-5 py-2.5 text-left transition-colors"
+                            style={{ backgroundColor: rowBg }}
+                          >
+                            <MapPin
+                              size={15}
+                              className="flex-shrink-0"
+                              style={{ color: 'var(--color-accent)' }}
+                              aria-hidden
+                            />
+                            <p
+                              className="flex-1 min-w-0 truncate"
+                              style={{
+                                color: 'var(--color-text)',
+                                fontFamily: 'var(--font-body)',
+                                fontSize: '14px',
+                              }}
+                            >
+                              {n.neighborhood}
+                              {n.city && (
+                                <span
+                                  style={{
+                                    color: 'var(--color-text-secondary)',
+                                  }}
+                                >
+                                  {' · '}
+                                  {n.city}
+                                </span>
+                              )}
+                              {n.count > 0 && (
+                                <span
+                                  style={{
+                                    color: 'var(--color-text-secondary)',
+                                  }}
+                                >
+                                  {' '}
+                                  ({n.count})
+                                </span>
+                              )}
+                            </p>
+                          </Link>
+                        )
+                      })()
+                    ) : (
+                      (() => {
+                        const d = item.data
+                        return (
+                          <Link
+                            href={`/search?q=${encodeURIComponent(
+                              d.dish_name
+                            )}&mode=dishes`}
+                            role="option"
+                            aria-selected={active}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              item.run()
+                            }}
+                            className="flex items-center gap-3 px-5 py-2.5 text-left transition-colors"
+                            style={{ backgroundColor: rowBg }}
+                          >
+                            <Utensils
+                              size={15}
+                              className="flex-shrink-0"
+                              style={{ color: 'var(--color-accent)' }}
+                              aria-hidden
+                            />
+                            <p
+                              className="flex-1 min-w-0 truncate"
+                              style={{
+                                color: 'var(--color-text)',
+                                fontFamily: 'var(--font-body)',
+                                fontSize: '14px',
+                              }}
+                            >
+                              <span style={{ fontWeight: 500 }}>
+                                {d.dish_name}
+                              </span>
+                              {d.restaurant_name && (
+                                <span
+                                  style={{
+                                    color: 'var(--color-text-secondary)',
+                                  }}
+                                >
+                                  {' — at '}
+                                  {d.restaurant_name}
+                                </span>
+                              )}
+                            </p>
+                          </Link>
+                        )
+                      })()
+                    )}
                   </li>
                 )
               })}

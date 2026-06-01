@@ -47,6 +47,7 @@ export function filtersFromURL(params: URLSearchParams): SearchFilters {
   return {
     mode: mode === 'restaurants' || mode === 'dishes' ? mode : 'all',
     cities: parseCSV(params.get('city')),
+    neighborhoods: parseCSV(params.get('nbhd')),
     cuisines: parseCSV(params.get('cuisine')),
     googleMinRating: parseFloatSafe(params.get('googleMin'), 0, 0, 5),
     googleMinReviews: parseFloatSafe(params.get('googleReviews'), 0, 0, 100000),
@@ -81,6 +82,7 @@ export function filtersToURL(
   for (const key of [
     'mode',
     'city',
+    'nbhd',
     'cuisine',
     'googleMin',
     'googleReviews',
@@ -95,6 +97,8 @@ export function filtersToURL(
   }
   if (filters.mode !== 'all') next.set('mode', filters.mode)
   if (filters.cities.length) next.set('city', filters.cities.join(','))
+  if (filters.neighborhoods.length)
+    next.set('nbhd', filters.neighborhoods.join(','))
   if (filters.cuisines.length) next.set('cuisine', filters.cuisines.join(','))
   if (filters.googleMinRating > 0)
     next.set('googleMin', String(filters.googleMinRating))
@@ -116,6 +120,7 @@ export function isDefaultFilters(f: SearchFilters): boolean {
   return (
     f.mode === DEFAULT_FILTERS.mode &&
     f.cities.length === 0 &&
+    f.neighborhoods.length === 0 &&
     f.cuisines.length === 0 &&
     f.googleMinRating === 0 &&
     f.googleMinReviews === 0 &&
@@ -139,6 +144,9 @@ export function readStoredFilters(): SearchFilters | null {
       ...parsed,
       // Defensive array coercion — old schemas can't sneak in bad values.
       cities: Array.isArray(parsed.cities) ? parsed.cities : [],
+      neighborhoods: Array.isArray(parsed.neighborhoods)
+        ? parsed.neighborhoods
+        : [],
       cuisines: Array.isArray(parsed.cuisines) ? parsed.cuisines : [],
       michelinStars: Array.isArray(parsed.michelinStars)
         ? parsed.michelinStars.filter((n): n is number => typeof n === 'number')

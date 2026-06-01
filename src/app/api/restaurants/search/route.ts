@@ -36,37 +36,106 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
 
-    // Run name-match and cuisine-match as separate queries so PostgREST
-    // operator strings never see raw user input.
+    // Run every sub-query with parameter-bound `.ilike()` so PostgREST
+    // operator strings never see raw user input. The `%` and `,` chars
+    // are escaped by the binding, not concatenated into a `.or()` DSL.
     const pattern = `%${q}%`
-    const [nameRes, cuisineRes] = await Promise.all([
+    const cityPattern = city ? `%${city}%` : null
+
+    const [nameRes, cuisineRes, neighborhoodRes, dishRes] = await Promise.all([
+      // 1. Restaurants by name.
       (() => {
         let q1 = supabase.from('restaurants').select('*').ilike('name', pattern).limit(25)
-        if (city) q1 = q1.ilike('city', `%${city}%`)
+        if (cityPattern) q1 = q1.ilike('city', cityPattern)
         return q1
       })(),
+      // 2. Restaurants by cuisine.
       (() => {
         let q2 = supabase.from('restaurants').select('*').ilike('cuisine', pattern).limit(25)
-        if (city) q2 = q2.ilike('city', `%${city}%`)
+        if (cityPattern) q2 = q2.ilike('city', cityPattern)
         return q2
       })(),
+      // 3. Neighborhoods (D4) — distinct neighborhood + city, deduped in JS.
+      (() => {
+        let q3 = supabase
+          .from('restaurants')
+          .select('neighborhood, city')
+          .ilike('neighborhood', pattern)
+          .not('neighborhood', 'is', null)
+          .limit(200)
+        if (cityPattern) q3 = q3.ilike('city', cityPattern)
+        return q3
+      })(),
+      // 4. Dishes (D5) — ranked top dishes by dish_name.
+      supabase
+        .from('restaurant_top_dishes')
+        .select('dish_name, restaurant_id, score')
+        .ilike('dish_name', pattern)
+        .order('score', { ascending: false, nullsFirst: false })
+        .limit(6),
     ])
 
-    if (nameRes.error || cuisineRes.error) {
-      console.error('restaurants/search db error:', nameRes.error ?? cuisineRes.error)
-      return NextResponse.json(
-        { error: 'Database search failed' },
-        { status: 500 }
-      )
-    }
+    // Per-query error guards: log and treat a failed sub-query as empty
+    // rather than 500-ing the whole route.
+    if (nameRes.error) console.error('search: name query error:', nameRes.error)
+    if (cuisineRes.error) console.error('search: cuisine query error:', cuisineRes.error)
+    if (neighborhoodRes.error) console.error('search: neighborhood query error:', neighborhoodRes.error)
+    if (dishRes.error) console.error('search: dish query error:', dishRes.error)
 
-    // De-dupe by id, name matches first.
+    // De-dupe restaurants by id, name matches first.
     const localMap = new Map<string, Restaurant>()
     for (const row of (nameRes.data ?? []) as Restaurant[]) localMap.set(row.id, row)
     for (const row of (cuisineRes.data ?? []) as Restaurant[]) {
       if (!localMap.has(row.id)) localMap.set(row.id, row)
     }
     const localResults = Array.from(localMap.values())
+
+    // Collapse neighborhood rows to distinct neighborhood (+city) with a count.
+    const neighborhoodMap = new Map<
+      string,
+      { neighborhood: string; city: string; count: number }
+    >()
+    for (const row of (neighborhoodRes.data ?? []) as Array<{
+      neighborhood: string | null
+      city: string | null
+    }>) {
+      if (!row.neighborhood) continue
+      const cityVal = row.city ?? ''
+      const key = `${row.neighborhood.toLowerCase()}|${cityVal.toLowerCase()}`
+      const existing = neighborhoodMap.get(key)
+      if (existing) existing.count += 1
+      else neighborhoodMap.set(key, { neighborhood: row.neighborhood, city: cityVal, count: 1 })
+    }
+    const neighborhoods = Array.from(neighborhoodMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+
+    // Resolve restaurant names for the dish hits (top_dishes has no FK
+    // embed relationship in the generated types, so look names up by id).
+    const dishRows = (dishRes.data ?? []) as Array<{
+      dish_name: string
+      restaurant_id: string
+    }>
+    let dishes: { dish_name: string; restaurant_id: string; restaurant_name: string }[] = []
+    if (dishRows.length > 0) {
+      const dishRestaurantIds = Array.from(new Set(dishRows.map((d) => d.restaurant_id)))
+      const nameLookupRes = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .in('id', dishRestaurantIds)
+      if (nameLookupRes.error) {
+        console.error('search: dish restaurant-name lookup error:', nameLookupRes.error)
+      }
+      const idToName = new Map<string, string>()
+      for (const r of (nameLookupRes.data ?? []) as Array<{ id: string; name: string }>) {
+        idToName.set(r.id, r.name)
+      }
+      dishes = dishRows.map((d) => ({
+        dish_name: d.dish_name,
+        restaurant_id: d.restaurant_id,
+        restaurant_name: idToName.get(d.restaurant_id) ?? '',
+      }))
+    }
 
     // Google Places is billed per call, so only authenticated users get
     // the external search. Everyone else sees the local catalog.
@@ -85,7 +154,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
+        // `restaurants` is the canonical key; `local` kept as an alias for
+        // back-compat with the current client.
+        restaurants: localResults,
         local: localResults,
+        neighborhoods,
+        dishes,
         google: googleResults,
       },
       {

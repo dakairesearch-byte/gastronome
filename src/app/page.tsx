@@ -192,6 +192,46 @@ export default async function HomePage() {
               placeholder="Search restaurants, cuisines, neighborhoods, or dishes…"
             />
           </div>
+          {/* Scent chips — advertise that dish + neighborhood search exist.
+              The hero box accepts free text, but nothing told users they
+              could search by a specific dish or a neighborhood. "By dish"
+              flips /search into dishes mode; the example chips prefill a
+              query that resolves against dish names and neighborhoods. All
+              route into the existing /search (mode + q params it already
+              reads). Tokenized — the /search page is off-brand gray; we
+              do not propagate that here. */}
+          <div className="max-w-2xl mt-4 flex flex-wrap items-center gap-2">
+            <Link
+              href="/search?mode=dishes"
+              className="inline-flex items-center text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-surface)',
+                backgroundColor: 'var(--color-secondary)',
+              }}
+            >
+              Search by dish
+            </Link>
+            {[
+              { label: 'Omakase', q: 'Omakase' },
+              { label: 'Birria tacos', q: 'Birria tacos' },
+              { label: 'West Village', q: 'West Village' },
+            ].map((chip) => (
+              <Link
+                key={chip.label}
+                href={`/search?q=${encodeURIComponent(chip.q)}`}
+                className="inline-flex items-center text-xs px-3 py-1.5 rounded-full transition-colors hover:shadow-sm"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                {chip.label}
+              </Link>
+            ))}
+          </div>
         </section>
 
         {/* Suggestions section — header names the city so users never
