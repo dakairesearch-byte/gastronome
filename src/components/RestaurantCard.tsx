@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import SourceRatingsBar from './SourceRatingsBar'
+import ConsensusMeter from './ConsensusMeter'
 import AccoladesBadges from './AccoladesBadges'
 import BookmarkButton from './BookmarkButton'
 import { ScorePill } from '@/components/GastronomeScoreBadge'
@@ -17,7 +17,7 @@ interface RestaurantCardProps {
   restaurant: Restaurant
   /**
    * `compact` (default): the original lightweight card used across the
-   * app — no photo, full SourceRatingsBar with all sources stacked.
+   * app — no photo, ConsensusMeter encoding the Gastronome Score.
    * `hero`: photo-led card used on category landing pages (Michelin,
    * Bib, Eater 38, …) where eye-catchiness matters more than density.
    * Renders a top photo, a tighter rating cluster (Google + Yelp brand
@@ -264,9 +264,12 @@ export default function RestaurantCard({
             </div>
           )}
 
-          <div className="pointer-events-auto w-fit">
-            <SourceRatingsBar restaurant={restaurant} />
-          </div>
+          {/* Consensus Meter — the namesake Gastronome Score plus how much
+              to trust it (source agreement, coverage, review volume). This
+              replaces the prominent raw SourceRatingsBar; raw per-source
+              numbers are now available on the detail page. Static (no
+              links), so it lives below the overlay without pointer events. */}
+          <ConsensusMeter restaurant={restaurant} />
         </div>
       </div>
 
@@ -312,7 +315,7 @@ function HeroVariant({
     restaurant.cuisine !== 'Fine Dining'
   // Gastronome Score — the product's namesake unified rating, rendered as
   // the primary metric (overlay on the photo). Raw source ratings are
-  // demoted to the secondary SourceRatingsBar in the body below.
+  // also surfaced via the ConsensusMeter in the card body below.
   const score = gastronomeScore(restaurant)?.score ?? null
   const hasAccolades =
     (restaurant.michelin_stars && restaurant.michelin_stars > 0) ||
@@ -470,12 +473,13 @@ function HeroVariant({
             </div>
           )}
 
-          {/* Secondary: the same full source set as the compact variant
-              (Google, Yelp, Infatuation, Beli) — CD5. The Gastronome Score
-              is the primary metric (photo overlay); these raw source
-              ratings are demoted to the card footer for context. */}
-          <div className="mt-auto pt-1 pointer-events-auto w-fit">
-            <SourceRatingsBar restaurant={restaurant} />
+          {/* Consensus Meter — pinned to the card footer. The Gastronome
+              Score (also overlaid on the photo as a ScorePill) is the
+              primary metric; the meter adds the trust dimension (source
+              agreement spread, coverage dots, review-volume glyph) that the
+              raw SourceRatingsBar used to occupy here. */}
+          <div className="mt-auto pt-1">
+            <ConsensusMeter restaurant={restaurant} />
           </div>
         </div>
       </div>

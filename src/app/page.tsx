@@ -61,7 +61,7 @@ const EDITORIAL_PICKS = [
     tagline: 'Romantic French rooms for the occasion',
     image:
       'https://images.unsplash.com/photo-1722938687772-62a0dbfacc25?w=600&q=80',
-    href: '/explore?cuisine=French',
+    href: '/discover?cuisine=French',
   },
   {
     id: 'quick-lunch',
@@ -71,7 +71,7 @@ const EDITORIAL_PICKS = [
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
     // Data uses the plural cuisine value "Sandwiches"; the old singular
     // "Sandwich" matched 0 rows and the tile dead-ended on an empty page.
-    href: '/explore?cuisine=Sandwiches',
+    href: '/discover?cuisine=Sandwiches',
   },
   {
     // Renamed Special Occasions -> Michelin Stars so the collection has
@@ -82,7 +82,7 @@ const EDITORIAL_PICKS = [
       michelin?.description ?? 'Every starred table in this city, one tap away.',
     image:
       'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=600&q=80',
-    href: '/explore?accolade=michelin_star',
+    href: '/discover?accolade=michelin_star',
   },
   {
     id: 'hidden-gems',
@@ -90,7 +90,7 @@ const EDITORIAL_PICKS = [
     tagline: 'Under-the-radar high scorers, not yet crowded',
     image:
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
-    href: '/explore?accolade=hidden_gems',
+    href: '/discover?accolade=hidden_gems',
   },
   {
     id: 'eater-38',
@@ -99,7 +99,7 @@ const EDITORIAL_PICKS = [
       eater?.description ?? "Eater's essential list of must-try restaurants.",
     image:
       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80',
-    href: '/explore?accolade=eater_38',
+    href: '/discover?accolade=eater_38',
   },
 ]
 
@@ -181,7 +181,7 @@ export default async function HomePage() {
         // Append the resolved city so the destination matches what the
         // home page is showing.
         url.searchParams.set('city', city)
-        const href = `/explore${url.search}`
+        const href = `/discover${url.search}`
 
         return { ...pick, href, count: count ?? 0 }
       }),
@@ -234,14 +234,13 @@ export default async function HomePage() {
           {/* Scent chips — advertise that dish + neighborhood search exist.
               The hero box accepts free text, but nothing told users they
               could search by a specific dish or a neighborhood. "By dish"
-              flips /search into dishes mode; the example chips prefill a
+              flips /discover into dishes mode; the example chips prefill a
               query that resolves against dish names and neighborhoods. All
-              route into the existing /search (mode + q params it already
-              reads). Tokenized — the /search page is off-brand gray; we
-              do not propagate that here. */}
+              route into the unified /discover surface (mode + q params it
+              reads). */}
           <div className="max-w-2xl mt-4 flex flex-wrap items-center gap-2">
             <Link
-              href="/search?mode=dishes"
+              href="/discover?mode=dishes"
               className="inline-flex items-center text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
               style={{
                 fontFamily: 'var(--font-body)',
@@ -258,7 +257,7 @@ export default async function HomePage() {
             ].map((chip) => (
               <Link
                 key={chip.label}
-                href={`/search?q=${encodeURIComponent(chip.q)}`}
+                href={`/discover?q=${encodeURIComponent(chip.q)}`}
                 className="inline-flex items-center text-xs px-3 py-1.5 rounded-full transition-colors hover:shadow-sm"
                 style={{
                   fontFamily: 'var(--font-body)',
@@ -391,11 +390,11 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-          {/* Bridge into the full Explore taxonomy so the home rail does
+          {/* Bridge into the full Discover taxonomy so the home rail does
               not read as a separate, competing set of collections. */}
           <div className="mt-6">
             <Link
-              href="/explore"
+              href="/discover"
               className="inline-flex items-center gap-1 text-sm hover:underline underline-offset-2"
               style={{
                 color: 'var(--color-action)',

@@ -13,9 +13,9 @@ import { createClient } from '@/lib/supabase/client'
  *   3. `DEFAULT_CITY` ("New York")
  *
  * The setter persists to localStorage and navigates to the canonical
- * city-filtered browse surface (`/explore?city=<name>`) so every surface
+ * city-filtered browse surface (`/discover?city=<name>`) so every surface
  * stays in sync off the URL. We intentionally key off the URL first: a
- * shared `/explore?city=Chicago` link should win over a stale local
+ * shared `/discover?city=Chicago` link should win over a stale local
  * preference.
  */
 export const CITY_STORAGE_KEY = 'gastro_city'
@@ -99,10 +99,10 @@ export function useCity(initialCities?: string[]): UseCity {
       }
       setStored(trimmed)
       // Optimistically reflect the selection so the resolved `city` updates
-      // immediately even when navigating within /explore (pathname stays
+      // immediately even when navigating within /discover (pathname stays
       // the same, so the URL-reading effect above wouldn't otherwise refire).
       setUrlCity(trimmed)
-      router.push(`/explore?city=${encodeURIComponent(trimmed)}`)
+      router.push(`/discover?city=${encodeURIComponent(trimmed)}`)
     },
     [router]
   )

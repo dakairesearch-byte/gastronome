@@ -27,15 +27,22 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Old leaderboard routes now live on /explore (hub) and /recent (feed).
-      // The nav, footer, and inline links were all updated, but we keep
-      // these so external links and bookmarks don't 404.
-      { source: '/restaurants', destination: '/explore', permanent: true },
-      { source: '/cities', destination: '/explore', permanent: true },
-      { source: '/cities/:slug', destination: '/explore', permanent: true },
+      // Reformulation Wave 2: Explore + Search merged into ONE /discover
+      // surface (List/Map/Grid over a single filtered result set). Both old
+      // paths permanently redirect there; Next preserves the query string, so
+      // ?city= / ?q= / ?accolade= / ?cuisine= all carry over and seed the
+      // unified filter state. (/discover used to redirect to /explore — that
+      // line is gone now that /discover is the real destination.)
+      { source: '/explore', destination: '/discover', permanent: true },
+      { source: '/search', destination: '/discover', permanent: true },
+      // Old leaderboard / browse routes now resolve through /discover (hub)
+      // and /recent (feed). The nav, footer, and inline links were all
+      // updated, but we keep these so external links and bookmarks don't 404.
+      { source: '/restaurants', destination: '/discover', permanent: true },
+      { source: '/cities', destination: '/discover', permanent: true },
+      { source: '/cities/:slug', destination: '/discover', permanent: true },
       { source: '/feed', destination: '/recent', permanent: true },
-      { source: '/top-rated', destination: '/explore', permanent: true },
-      { source: '/discover', destination: '/explore', permanent: true },
+      { source: '/top-rated', destination: '/discover', permanent: true },
       { source: '/profile/edit', destination: '/profile', permanent: true },
     ]
   },

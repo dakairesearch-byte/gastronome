@@ -388,16 +388,16 @@ export default async function RestaurantPage({
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8 pt-4 pb-8">
           <div className="flex items-center justify-between gap-3 mb-4">
             {/* Breadcrumb replaces the bare "Back" label so deep-linked
-                users see where they are (Explore › City › Restaurant)
-                and can jump up a level. City links into Explore's
+                users see where they are (Discover › City › Restaurant)
+                and can jump up a level. City links into Discover's
                 case-insensitive ?city= filter. */}
             <Breadcrumb
               light
               crumbs={[
-                { label: 'Explore', href: '/explore' },
+                { label: 'Discover', href: '/discover' },
                 {
                   label: restaurant.city,
-                  href: `/explore?city=${encodeURIComponent(restaurant.city)}`,
+                  href: `/discover?city=${encodeURIComponent(restaurant.city)}`,
                 },
                 { label: restaurant.name },
               ]}
