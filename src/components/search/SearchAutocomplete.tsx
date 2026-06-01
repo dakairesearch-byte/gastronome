@@ -65,7 +65,7 @@ const MAX_SUGGESTIONS = 8
  * types (starting at 2 chars) and renders the top matches directly
  * under the input. Arrow keys move through results, Enter picks the
  * highlighted one or — when nothing is highlighted — falls back to the
- * existing `/search?q=` route so long-tail queries still resolve.
+ * `/discover?q=` route so long-tail queries still resolve.
  *
  * Because the dropdown is positioned absolutely, callers can drop this
  * anywhere without worrying about layout shift.
@@ -165,11 +165,11 @@ export default function SearchAutocomplete({
   const submit = (q: string) => {
     const trimmed = q.trim()
     if (!trimmed) {
-      router.push('/explore')
+      router.push('/discover')
       return
     }
     recordSearch(trimmed)
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
+    router.push(`/discover?q=${encodeURIComponent(trimmed)}`)
   }
 
   const go = (s: Suggestion) => {
@@ -184,9 +184,9 @@ export default function SearchAutocomplete({
     setOpen(false)
     setQuery('')
     // Canonical neighborhood filter param is `nbhd` (filterState round-trips it
-    // + the /search page shows a "Restaurants in {Neighborhood}" header for a
+    // + the /discover page shows a "Restaurants in {Neighborhood}" header for a
     // single-nbhd facet). Must match — `?neighborhood=` is NOT read.
-    router.push(`/search?nbhd=${encodeURIComponent(n.neighborhood)}`)
+    router.push(`/discover?nbhd=${encodeURIComponent(n.neighborhood)}`)
   }
 
   const goDish = (d: DishHit) => {
@@ -194,7 +194,7 @@ export default function SearchAutocomplete({
     setOpen(false)
     setQuery('')
     router.push(
-      `/search?q=${encodeURIComponent(d.dish_name)}&mode=dishes`
+      `/discover?q=${encodeURIComponent(d.dish_name)}&mode=dishes`
     )
   }
 
@@ -480,7 +480,7 @@ export default function SearchAutocomplete({
                         const n = item.data
                         return (
                           <Link
-                            href={`/search?nbhd=${encodeURIComponent(
+                            href={`/discover?nbhd=${encodeURIComponent(
                               n.neighborhood
                             )}`}
                             role="option"
@@ -537,7 +537,7 @@ export default function SearchAutocomplete({
                         const d = item.data
                         return (
                           <Link
-                            href={`/search?q=${encodeURIComponent(
+                            href={`/discover?q=${encodeURIComponent(
                               d.dish_name
                             )}&mode=dishes`}
                             role="option"
@@ -590,7 +590,7 @@ export default function SearchAutocomplete({
 
           {/* Persistent full-search escape hatch. Always present (even with
               zero suggestions) so long-tail queries that match no restaurant
-              still have a one-click path to /search?q=. Mirrors the Enter
+              still have a one-click path to /discover?q=. Mirrors the Enter
               fallback in handleSubmit. Uses onMouseDown so it fires before
               the input's blur closes the dropdown. */}
           <button

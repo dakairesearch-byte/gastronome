@@ -33,6 +33,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY        # scripts only — never ship to client
 GOOGLE_PLACES_API_KEY            # server-side Google Places (New) calls
 NEXT_PUBLIC_GOOGLE_PLACES_API_KEY  # client-side autocomplete
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY    # interactive Discover map — Maps JavaScript API must be enabled (separate product from Places); falls back to the Places key + StaticMapTile if unset
 ```
 
 ---

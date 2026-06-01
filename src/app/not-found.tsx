@@ -34,7 +34,7 @@ export default function NotFound() {
             Go Home
           </Link>
           <Link
-            href="/explore"
+            href="/discover"
             className="px-5 py-2 rounded-lg border transition-colors text-sm font-medium"
             style={{
               borderColor: 'var(--color-border)',

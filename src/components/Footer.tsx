@@ -51,7 +51,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/explore"
+                  href="/discover"
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
@@ -60,7 +60,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/search"
+                  href="/discover"
                   className="text-sm hover:text-white transition-colors"
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >

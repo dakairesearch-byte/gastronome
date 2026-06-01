@@ -110,7 +110,7 @@ export default function RecentSearches() {
           }}
         >
           <Link
-            href={`/search?q=${encodeURIComponent(s.query)}`}
+            href={`/discover?q=${encodeURIComponent(s.query)}`}
             className="block pr-8"
           >
             <p

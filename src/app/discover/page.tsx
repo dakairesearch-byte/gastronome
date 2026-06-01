@@ -15,11 +15,14 @@
  * URL is the source of truth (shareable): filters round-trip via
  * filtersToURL/fromURL, with `q` (query) and `sort` carried alongside.
  *
- * Map view in this wave is STATIC (a Google Static Maps tile centered on the
- * result set) — Wave 3 swaps in the interactive Google Maps JS API split-pane.
+ * Map view (Wave 3) is an interactive Google Maps JS API split-pane:
+ * <RestaurantMap> plots the filtered set beside a compact result list, with
+ * row↔pin pairing (hovering/selecting a row lifts its pin; clicking a pin
+ * selects + scrolls its row). It degrades gracefully to the Static Maps tile
+ * when the Maps JS key is unset, so the panel never blanks.
  */
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -33,7 +36,7 @@ import {
 import RestaurantCard from '@/components/RestaurantCard'
 import DiscoverFilters from '@/components/discover/DiscoverFilters'
 import CollectionHeader from '@/components/explore/CollectionHeader'
-import StaticMapTile from '@/components/StaticMapTile'
+import RestaurantMap from '@/components/discover/RestaurantMap'
 import SearchBar from '@/components/SearchBar'
 import EmptyState from '@/components/EmptyState'
 import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
@@ -264,15 +267,33 @@ function DiscoverContent() {
   const hasAnyResults = total > 0
   const activeCity = filters.cities[0]
 
-  // Map center — first result with coordinates. Static tile in this wave.
-  const mapCenter = useMemo(
-    () =>
-      restaurants.find(
-        (r) =>
-          typeof r.latitude === 'number' && typeof r.longitude === 'number'
-      ),
-    [restaurants]
-  )
+  /* ----------------------------------------------------------------- */
+  /*  Map split-pane: row↔pin pairing + bounds refinement              */
+  /* ----------------------------------------------------------------- */
+
+  // The currently highlighted restaurant — lifts its pin on the map and tints
+  // its row in the list. Set by hovering/selecting a row OR clicking a pin.
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Per-row element refs so a pin click can scroll its paired list row into
+  // view (the map↔list pairing in the split-pane).
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Clicking a pin → select + scroll the paired row into view.
+  const handleMapSelect = useCallback((id: string) => {
+    setSelectedId(id)
+    rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [])
+
+  // "Search this area" → refine the result set to the map's current bounds.
+  // useDiscoverResults has no bounds predicate, so we keep this a no-op for
+  // now (the visible set is already the filtered set); wiring a bounds facet
+  // into the engine is a separate, engine-owned change.
+  const handleSearchArea = useCallback(() => {
+    // no-op: bounds-based refinement (north/south/east/west) belongs to the
+    // data engine, which has no bounds predicate yet. The button still fires
+    // through the contract; wiring a bounds facet is an engine-owned change.
+  }, [])
 
   /* ----------------------------------------------------------------- */
   /*  Render                                                            */
@@ -551,41 +572,49 @@ function DiscoverContent() {
             )}
 
             {restaurants.length > 0 && view === 'map' && (
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-5">
-                {/* Static map tile (interactive map ships in W3) */}
-                <div
-                  className="relative rounded-2xl border overflow-hidden h-64 lg:h-[calc(100vh-12rem)] lg:sticky lg:top-24"
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-5">
+                {/* Interactive map (degrades to StaticMapTile when no JS key).
+                    Map above the list on mobile (full-bleed), beside it on
+                    desktop where it sticks while the list scrolls. */}
+                <div className="relative rounded-2xl border overflow-hidden h-72 lg:h-[calc(100vh-12rem)] lg:sticky lg:top-24"
                   style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-secondary)' }}
                 >
-                  {mapCenter ? (
-                    <StaticMapTile
-                      lat={mapCenter.latitude}
-                      lng={mapCenter.longitude}
-                      label={mapCenter.name}
-                      zoom={12}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-center px-6">
-                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                        No mapped locations in this result set.
-                      </p>
-                    </div>
-                  )}
-                  <div
-                    className="absolute bottom-2 left-2 right-2 text-[10px] text-center rounded-md px-2 py-1"
-                    style={{
-                      backgroundColor: 'color-mix(in srgb, var(--color-surface) 88%, transparent)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    Static preview · interactive map coming soon
-                  </div>
+                  <RestaurantMap
+                    restaurants={restaurants}
+                    selectedId={selectedId}
+                    onSelect={handleMapSelect}
+                    onSearchArea={handleSearchArea}
+                    className="absolute inset-0"
+                  />
                 </div>
-                {/* Result list beside the map */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {restaurants.map((r) => (
-                    <RestaurantCard key={r.id} restaurant={r} variant="compact" />
-                  ))}
+                {/* Result list beside the map — each row pairs with a pin:
+                    hover/focus highlights its pin; clicking a pin scrolls and
+                    tints the row here. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 content-start">
+                  {restaurants.map((r) => {
+                    const active = selectedId === r.id
+                    return (
+                      <div
+                        key={r.id}
+                        ref={(el) => {
+                          rowRefs.current[r.id] = el
+                        }}
+                        onMouseEnter={() => setSelectedId(r.id)}
+                        onFocusCapture={() => setSelectedId(r.id)}
+                        className="rounded-2xl transition-shadow"
+                        style={
+                          active
+                            ? {
+                                outline: '2px solid var(--color-action)',
+                                outlineOffset: '2px',
+                              }
+                            : undefined
+                        }
+                      >
+                        <RestaurantCard restaurant={r} variant="compact" />
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
