@@ -56,7 +56,13 @@ export function filtersFromURL(params: URLSearchParams): SearchFilters {
       [1, 2, 3].includes(n)
     ),
     bibGourmand: params.get('bib') === '1',
-    jamesBeard: jb === 'winner' || jb === 'nominee' ? jb : 'any',
+    // `jb=nominee` is coerced to 'any'. The `james_beard_nominated` column
+    // was dropped and the backend silently mapped "nominee" → winners-only,
+    // so a `nominee` URL param would lie about its results. Nominee/finalist
+    // data now lives in `restaurant_jbf_history`; until that's joined into
+    // the filter, only 'winner' is a truthful value. Old shared links with
+    // `jb=nominee` degrade to no JBF filter rather than a misleading one.
+    jamesBeard: jb === 'winner' ? 'winner' : 'any',
     eater38: params.get('eater38') === '1',
   }
 }

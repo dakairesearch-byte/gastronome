@@ -226,11 +226,22 @@ export default async function ExplorePage({
         const url = new URL(c.href, 'https://placeholder.invalid')
         const accolade = url.searchParams.get('accolade')
         const cuisine = url.searchParams.get('cuisine')
-        // Consensus Picks is algorithm-backed, not a column predicate —
-        // the ranker always caps at 20, so short-circuit here rather
-        // than spinning up the social-platforms join just to count.
+        // Consensus Picks is algorithm-backed, not a column predicate.
+        // The ranker caps at 20 but frequently returns FEWER (or zero) in
+        // a city that lacks cross-platform social coverage — the old
+        // hardcoded `count: 20` advertised picks that didn't exist and let
+        // the tile survive the >0 gate even when the destination was empty.
+        // Run the actual ranker so the count is real and the gate can hide
+        // the tile when there are no consensus picks in the active city.
         if (accolade === 'consensus_picks') {
-          return { ...c, count: 20 }
+          const { topConsensusPicks } = await import(
+            '@/lib/ranking/consensusPicks'
+          )
+          const picks = await topConsensusPicks(supabase, {
+            city: activeCity,
+            limit: 20,
+          })
+          return { ...c, count: picks.length }
         }
         let q = supabase
           .from('restaurants')

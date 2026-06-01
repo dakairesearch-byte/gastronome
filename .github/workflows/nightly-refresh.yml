@@ -1,0 +1,64 @@
+name: Nightly Data Refresh
+
+# Scheduled production data-refresh pipeline ("scheduled data refresh" fix
+# for the stale-pipeline P0). Runs the canonical refresh scripts in order:
+#   1. enrichWithGooglePlaces.ts      — photos/ratings/coords from Google Places
+#   2. computeTopDishesFromChips.ts   — canonical chip-indexed top-dishes scorer
+#   3. healthCheck.ts                 — fails LOUDLY if a step silently broke
+#
+# Secrets come from repo/Org secrets (Settings -> Secrets and variables ->
+# Actions): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+# GOOGLE_PLACES_API_KEY. The service-role key is server-only and is injected
+# as a job env var — never echoed.
+#
+# NOTE ON RUNTIME / SHARDING: the Google Places enrich step is rate-limited
+# (~100ms/req) and the heavy scrape/menu jobs run at ~5 restaurants/min, so a
+# full-catalog refresh can exceed GitHub Actions' job time limit (6h hosted /
+# 72h job max). If this job starts timing out, split it: shard enrich by city
+# (matrix over a CITY input), move the heavy scrape to its own scheduled job,
+# and keep this workflow to the lighter enrich + top-dishes + healthcheck. The
+# top-dishes scorer does NOT re-scrape Google (reads existing chip rows), so it
+# is cheap and safe to run nightly.
+
+on:
+  schedule:
+    # 08:00 UTC daily (~midnight–1am US Pacific/Eastern off-peak).
+    - cron: '0 8 * * *'
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+concurrency:
+  # Never overlap refresh runs — a second run while one is writing would
+  # double-write and skew aggregates.
+  group: nightly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # Generous ceiling for the rate-limited enrich pass; bump or shard if hit.
+    timeout-minutes: 330
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Enrich with Google Places
+        run: npx tsx scripts/enrichWithGooglePlaces.ts
+
+      - name: Compute top dishes from chips
+        # --write persists; without it the scorer is a dry-run.
+        run: npx tsx scripts/computeTopDishesFromChips.ts --write
+
+      - name: Health check
+        # Exits non-zero if any pipeline assertion fails, failing the run.
+        run: npx tsx scripts/healthCheck.ts

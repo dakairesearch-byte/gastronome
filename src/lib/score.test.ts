@@ -44,6 +44,30 @@ describe('gastronomeScore', () => {
     expect(result!.sourceCount).toBe(4)
   })
 
+  it('rejects NaN and Infinity inputs (treated as absent)', () => {
+    // NaN / ±Infinity must not produce a NaN score or a fabricated source.
+    expect(gastronomeScore({ google_rating: NaN })).toBeNull()
+    expect(gastronomeScore({ yelp_rating: Infinity })).toBeNull()
+    expect(gastronomeScore({ infatuation_rating: -Infinity })).toBeNull()
+    expect(gastronomeScore({ beli_score: NaN })).toBeNull()
+
+    // A bad source must not contaminate a good one: NaN Google is dropped,
+    // Yelp 4.0→8.0 stands alone (weight renormalizes to 1).
+    const mixed = gastronomeScore({ google_rating: NaN, yelp_rating: 4.0 })
+    expect(mixed).not.toBeNull()
+    expect(mixed!.sourceCount).toBe(1)
+    expect(mixed!.score).toBe(8.0)
+    expect(Number.isFinite(mixed!.score)).toBe(true)
+  })
+
+  it('accepts a zero rating as a real (finite) source', () => {
+    // 0 is a legitimate value, not "missing" — it should count.
+    const result = gastronomeScore({ google_rating: 0 })
+    expect(result).not.toBeNull()
+    expect(result!.sourceCount).toBe(1)
+    expect(result!.score).toBe(0)
+  })
+
   it('clamps out-of-range inputs into 0–10', () => {
     // A bad 6.0 Google rating would normalize to 12; clamp to 10.
     const result = gastronomeScore({ google_rating: 6.0 })

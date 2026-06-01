@@ -62,6 +62,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<TabKey>('collections')
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/onboarding')
+    router.refresh()
+  }
+
   useEffect(() => {
     let active = true
     ;(async () => {
@@ -75,14 +81,20 @@ export default function ProfilePage() {
         }
         return
       }
+      // Explicit columns (not '*') — the API role's SELECT on profiles.email
+      // is revoked (PII; email lives in auth.users / the session), so '*'
+      // would 403 on the email column. Own email comes from session.user.
       const { data } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, display_name, bio, avatar_url, is_critic, created_at, updated_at, creative_mode_enabled, home_city, onboarding_completed, favorite_cities, favorite_cuisines')
         .eq('id', session.user.id)
         .single()
       if (!active) return
       setUser(session.user)
-      if (data) setProfile(data)
+      // `data` omits `email` (revoked from the API role); email is never read
+      // off the profile row (own email comes from session.user), so the cast
+      // is safe.
+      if (data) setProfile(data as Profile)
       setLoading(false)
     })()
     return () => {
@@ -131,29 +143,46 @@ export default function ProfilePage() {
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <header className="mb-8">
-          <p
-            className="text-xs uppercase mb-2"
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <p
+              className="text-xs uppercase mb-2"
+              style={{
+                color: 'var(--color-accent)',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.16em',
+                fontWeight: 500,
+              }}
+            >
+              Your profile
+            </p>
+            <h1
+              className="text-4xl"
+              style={{
+                color: 'var(--color-text)',
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 400,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {profile?.display_name || profile?.username || 'Welcome back'}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs uppercase rounded-sm transition-colors hover:bg-gray-50 flex-shrink-0"
             style={{
-              color: 'var(--color-accent)',
               fontFamily: 'var(--font-body)',
-              letterSpacing: '0.16em',
+              letterSpacing: '0.14em',
               fontWeight: 500,
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)',
             }}
           >
-            Your profile
-          </p>
-          <h1
-            className="text-4xl"
-            style={{
-              color: 'var(--color-text)',
-              fontFamily: 'var(--font-heading)',
-              fontWeight: 400,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {profile?.display_name || profile?.username || 'Welcome back'}
-          </h1>
+            <LogOut size={14} />
+            Sign out
+          </button>
         </header>
 
         <nav
@@ -180,11 +209,7 @@ export default function ProfilePage() {
             user={user}
             profile={profile}
             onProfileChange={setProfile}
-            onSignOut={async () => {
-              await supabase.auth.signOut()
-              router.push('/onboarding')
-              router.refresh()
-            }}
+            onSignOut={handleSignOut}
           />
         )}
       </div>
@@ -345,9 +370,12 @@ function CollectionsPanel() {
             fontWeight: 500,
           }}
         >
-          {favorites.length + collections.length === 1
-            ? '1 list'
-            : `${favorites.length > 0 ? 1 : 0} + ${collections.length} lists`}
+          {(() => {
+            // One "list" per named collection, plus the implicit Favorites
+            // list when it has any saves. Single pluralized count.
+            const listCount = collections.length + (favorites.length > 0 ? 1 : 0)
+            return `${listCount} ${listCount === 1 ? 'list' : 'lists'}`
+          })()}
         </p>
 
         {adding ? (
@@ -460,6 +488,9 @@ function CollectionSection({
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
+  // Inline two-step delete confirm (replaces window.confirm so the flow
+  // stays in-app and styled with our design tokens).
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const items = restaurantIds
     .map((rid) => restaurantsById[rid])
@@ -512,7 +543,7 @@ function CollectionSection({
           </p>
         </div>
 
-        {id && !pinned && !editing && (
+        {id && !pinned && !editing && !confirmingDelete && (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -528,14 +559,53 @@ function CollectionSection({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (confirm(`Delete collection "${title}"?`)) deleteCollection(id)
-              }}
+              onClick={() => setConfirmingDelete(true)}
               aria-label={`Delete ${title}`}
               className="p-1.5 rounded-sm transition-colors hover:bg-gray-50"
               style={{ color: '#9c2a2a' }}
             >
               <Trash2 size={14} />
+            </button>
+          </div>
+        )}
+
+        {id && !pinned && confirmingDelete && (
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs"
+              style={{
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Delete this collection?
+            </span>
+            <button
+              type="button"
+              onClick={() => deleteCollection(id)}
+              className="text-xs uppercase px-3 py-1.5 rounded-sm text-white"
+              style={{
+                backgroundColor: '#9c2a2a',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.12em',
+                fontWeight: 500,
+              }}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              className="text-xs uppercase px-3 py-1.5 rounded-sm"
+              style={{
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.12em',
+                fontWeight: 500,
+              }}
+            >
+              Cancel
             </button>
           </div>
         )}

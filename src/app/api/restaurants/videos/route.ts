@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
+// restaurant_id is a UUID column. Validate the shape up front so malformed
+// input returns a 400 instead of a Postgres "invalid input syntax for type
+// uuid" error surfacing as a 500.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -10,6 +16,13 @@ export async function GET(request: NextRequest) {
     if (!restaurantId) {
       return NextResponse.json(
         { error: 'Query parameter "restaurantId" is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!UUID_RE.test(restaurantId)) {
+      return NextResponse.json(
+        { error: 'Query parameter "restaurantId" must be a valid UUID' },
         { status: 400 }
       )
     }

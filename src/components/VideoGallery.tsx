@@ -17,8 +17,16 @@ import { formatCount } from '@/lib/format'
  * TikTok has no equivalent unauthenticated image URL, so we still fall
  * back to the gradient + caption tile for missing TikTok thumbs.
  */
+// Instagram shortcodes are URL-path-safe tokens (alphanumerics plus `-`/`_`).
+// A malformed value (e.g. a full URL stored in the column) would produce a
+// broken /media/ URL; validate before deriving so we fall through to the
+// gradient tile rather than requesting garbage.
+function isValidShortcode(id: string | null | undefined): id is string {
+  return !!id && /^[A-Za-z0-9_-]+$/.test(id)
+}
+
 function derivePublicThumb(video: RestaurantVideo): string | null {
-  if (video.platform === 'instagram' && video.video_id) {
+  if (video.platform === 'instagram' && isValidShortcode(video.video_id)) {
     return `https://www.instagram.com/p/${video.video_id}/media/?size=l`
   }
   return null
@@ -160,9 +168,12 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
     .sort((a, b) => {
       switch (sortBy) {
         case 'most_liked':
-          return b.like_count - a.like_count
+          // Counts are nominally non-null in the schema, but scraped rows
+          // can arrive null; coalesce so the subtraction never yields NaN
+          // (which scrambles the sort order).
+          return (b.like_count ?? 0) - (a.like_count ?? 0)
         case 'most_viewed':
-          return b.view_count - a.view_count
+          return (b.view_count ?? 0) - (a.view_count ?? 0)
         case 'newest':
           return new Date(b.posted_at ?? b.created_at).getTime() - new Date(a.posted_at ?? a.created_at).getTime()
         default:

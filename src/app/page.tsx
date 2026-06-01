@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { Search } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import SectionHeader from '@/components/SectionHeader'
 import SuggestionCard from '@/components/cards/SuggestionCard'
 import RecentSearches from '@/components/home/RecentSearches'
 import FavoritesSection from '@/components/home/FavoritesSection'
+import EditorialPickImage from '@/components/home/EditorialPickImage'
+import SearchAutocomplete from '@/components/search/SearchAutocomplete'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
@@ -42,7 +43,9 @@ const EDITORIAL_PICKS = [
     type: 'Sandwiches · weekday',
     image:
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
-    href: '/explore?cuisine=Sandwich',
+    // Data uses the plural cuisine value "Sandwiches"; the old singular
+    // "Sandwich" matched 0 rows and the tile dead-ended on an empty page.
+    href: '/explore?cuisine=Sandwiches',
   },
   {
     id: 'special-occasions',
@@ -113,6 +116,39 @@ export default async function HomePage() {
     suggestions = (data ?? []) as Restaurant[]
   }
 
+  // Count-gate the Editorial Picks the same way Explore does so a curated
+  // tile never dead-ends on an empty results page. Each pick links to a
+  // real filter predicate (cuisine or accolade); we run a head:true count
+  // in the active city and drop tiles with zero matches. We also append
+  // the resolved &city= to every href so a Miami user lands on Miami
+  // results instead of the page's default city.
+  const editorialPicks = (
+    await Promise.all(
+      EDITORIAL_PICKS.map(async (pick) => {
+        const url = new URL(pick.href, 'https://placeholder.invalid')
+        const cuisine = url.searchParams.get('cuisine')
+        const accolade = url.searchParams.get('accolade')
+
+        let q = supabase
+          .from('restaurants')
+          .select('id', { count: 'exact', head: true })
+          .ilike('city', city)
+        if (cuisine) q = q.ilike('cuisine', cuisine)
+        if (accolade === 'michelin_star') q = q.gt('michelin_stars', 0)
+        if (accolade === 'hidden_gems')
+          q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
+        const { count } = await q
+
+        // Append the resolved city so the destination matches what the
+        // home page is showing.
+        url.searchParams.set('city', city)
+        const href = `/explore${url.search}`
+
+        return { ...pick, href, count: count ?? 0 }
+      }),
+    )
+  ).filter((pick) => pick.count > 0)
+
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
@@ -144,30 +180,18 @@ export default async function HomePage() {
             Infatuation, TikTok — in one place. Decide in one tab instead of
             six.
           </p>
-          <Link
-            href="/search"
-            className="group inline-flex items-center gap-3 max-w-2xl w-full px-4 py-3.5 rounded-xl border transition-all"
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              borderColor: 'var(--color-border)',
-            }}
-            aria-label="Search restaurants, cuisines, or dishes"
-          >
-            <Search
-              size={18}
-              aria-hidden="true"
-              style={{ color: 'var(--color-text-secondary)' }}
+          {/* Real autocomplete (hero variant) — the static <Link> here
+              looked like a search box but typing did nothing and no query
+              was ever recorded. SearchAutocomplete fires live suggestions,
+              records the search into RecentSearches, and scopes results to
+              the resolved city. */}
+          <div className="max-w-2xl">
+            <SearchAutocomplete
+              variant="hero"
+              city={city}
+              placeholder="Search restaurants, cuisines, neighborhoods, or dishes…"
             />
-            <span
-              className="text-sm"
-              style={{
-                color: 'var(--color-text-secondary)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              Search restaurants, cuisines, neighborhoods, or dishes…
-            </span>
-          </Link>
+          </div>
         </section>
 
         {/* Suggestions section — header names the city so users never
@@ -228,13 +252,14 @@ export default async function HomePage() {
             bookmark hover icon was removed (these aren't user saves).
             Eyebrow updated from internal "Editor's gateways" to user-facing
             "Curated for you" (sweep-2026-05-26-v3 microcopy QW). */}
+        {editorialPicks.length > 0 && (
         <section>
           <SectionHeader
             label="Curated for you"
             title="Editorial Picks"
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {EDITORIAL_PICKS.map((c) => (
+            {editorialPicks.map((c) => (
               <Link
                 key={c.id}
                 href={c.href}
@@ -243,12 +268,7 @@ export default async function HomePage() {
                 aria-label={`${c.name} — ${c.type}`}
               >
                 <div className="overflow-hidden relative rounded-sm aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.image}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700"
-                  />
+                  <EditorialPickImage src={c.image} />
                 </div>
                 <div className="p-4">
                   <h3
@@ -276,6 +296,7 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+        )}
       </div>
     </div>
   )

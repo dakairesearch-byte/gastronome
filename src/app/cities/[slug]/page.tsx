@@ -6,8 +6,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
 import EmptyState from '@/components/EmptyState'
 import CityRestaurantGrid, {
+  CityHeroImage,
   type CityGridRestaurant,
 } from '@/components/cities/CityRestaurantGrid'
+import { paginateSelect } from '@/lib/supabase/paginate'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
@@ -58,15 +60,18 @@ async function getCityData(slug: string) {
   // and goes stale with every ingestion).
   //
   // Totals (total, michelin, JB) come from `count: 'exact', head: true`
-  // queries — they must NOT be computed from the `.limit(500)` sample, or
-  // a city like NY with 600+ rows would undercount Michelins (QA pass 2).
-  // The 500-row pull is only used to derive cuisineCounts and to feed the
-  // main grid, which is already bounded by what we display.
+  // queries — they must NOT be computed from a bounded sample, or a city
+  // like NY with 600+ rows would undercount Michelins (QA pass 2).
+  //
+  // The restaurant pull is fully paginated via `paginateSelect` (PostgREST
+  // silently caps a single SELECT at 1000 rows). This makes `all` the
+  // complete set, so the grid is reachable in full and the cuisine chip
+  // counts derived from it are exact and agree with the header total.
   const [
     { count: totalCount },
     { count: michelinCountRaw },
     { count: jamesBeardCountRaw },
-    { data: allRestaurants },
+    allRestaurants,
     trending,
   ] = await Promise.all([
     supabase
@@ -83,22 +88,26 @@ async function getCityData(slug: string) {
       .select('id', { count: 'exact', head: true })
       .ilike('city', city.name)
       .eq('james_beard_winner', true),
-    supabase
-      .from('restaurants')
-      .select('*')
-      .ilike('city', city.name)
-      .order('name', { ascending: true })
-      .limit(500),
+    paginateSelect<Restaurant>((from, to) =>
+      supabase
+        .from('restaurants')
+        .select('*')
+        .ilike('city', city.name)
+        .order('name', { ascending: true })
+        .range(from, to)
+    ),
     topTrendingRestaurants(supabase, {
       window: '30d',
       city: city.name,
-      limit: 500,
     }),
   ])
 
-  const all = (allRestaurants ?? []) as Restaurant[]
+  const all = allRestaurants ?? []
   const michelinCount = michelinCountRaw ?? 0
   const jamesBeardCount = jamesBeardCountRaw ?? 0
+  // `all` is the complete (paginated) set, so these cuisine tallies are
+  // exact — the chip list/counts agree with the header total badge rather
+  // than reflecting a truncated sample.
   const cuisineCounts = new Map<string, number>()
   for (const r of all) {
     if (!r.cuisine || r.cuisine === 'Restaurant') continue
@@ -163,12 +172,7 @@ export default async function CityPage({
       {/* City Header */}
       <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 overflow-hidden">
         {city.photo_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={city.photo_url}
-            alt={city.name}
-            className="absolute inset-0 w-full h-full object-cover opacity-20"
-          />
+          <CityHeroImage src={city.photo_url} alt={city.name} />
         )}
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
           <div className="mb-4">
@@ -312,8 +316,11 @@ export default async function CityPage({
         {filtered.length === 0 ? (
           <EmptyState
             icon={MapPin}
+            tone="attention"
             title="No matches"
-            description="Clear a filter to see all restaurants in this city."
+            description="No restaurants match these filters. Clear them to see all restaurants in this city."
+            ctaText="Clear all filters"
+            ctaHref={`/cities/${city.slug}`}
           />
         ) : (
           <CityRestaurantGrid

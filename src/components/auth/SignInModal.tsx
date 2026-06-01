@@ -54,6 +54,7 @@ export default function SignInModal({
   const [mode, setMode] = useState<ViewMode>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [homeCity, setHomeCity] = useState('')
@@ -63,6 +64,8 @@ export default function SignInModal({
   const [error, setError] = useState('')
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [resendNote, setResendNote] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -71,9 +74,57 @@ export default function SignInModal({
     setError(initialError)
     setAwaitingConfirmation(false)
     setResetSent(false)
+    setResendCooldown(0)
+    setResendNote('')
     setLoading(false)
     setOauthLoading(false)
+    setConfirmPassword('')
   }, [open, initialMode, initialError])
+
+  // Tick the resend cooldown down once a second so the button re-enables.
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = window.setTimeout(() => setResendCooldown((c) => c - 1), 1000)
+    return () => window.clearTimeout(t)
+  }, [resendCooldown])
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || loading) return
+    setError('')
+    setResendNote('')
+    setLoading(true)
+    try {
+      const emailRedirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback?next=/onboarding`
+          : undefined
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo },
+      })
+      if (resendError) {
+        setError(friendlyError(resendError.message))
+        return
+      }
+      setResendNote('Sent — check your inbox (and spam) again.')
+      setResendCooldown(30)
+    } catch {
+      setError('Could not resend the email. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Return from the confirmation screen to the signup form so the user can
+  // correct a mistyped address. Clears the parked-confirmation state.
+  const handleUseDifferentEmail = () => {
+    setAwaitingConfirmation(false)
+    setResendNote('')
+    setResendCooldown(0)
+    setError('')
+    setMode('signup')
+  }
 
   useEffect(() => {
     if (!open || mode !== 'signup' || cities.length > 0) return
@@ -193,6 +244,7 @@ export default function SignInModal({
     if (username.trim().length < 3) return setError('Username must be at least 3 characters')
     if (!email.trim()) return setError('Email is required')
     if (password.length < 6) return setError('Password must be at least 6 characters')
+    if (password !== confirmPassword) return setError('Passwords don’t match')
 
     setLoading(true)
     try {
@@ -243,7 +295,7 @@ export default function SignInModal({
     try {
       const redirectUrl =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/callback?next=/profile`
+          ? `${window.location.origin}/auth/callback?next=/auth/reset-password`
           : undefined
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
@@ -454,6 +506,36 @@ export default function SignInModal({
                     <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>{email}</span>.
                     Click the link to activate your account, then come back here to sign in.
                   </p>
+
+                  {error && (
+                    <div
+                      role="alert"
+                      className="mt-4 p-3 text-sm rounded-sm border flex items-start gap-2 text-left"
+                      style={{
+                        backgroundColor: '#fdf2f2',
+                        borderColor: '#f5c2c2',
+                        color: '#9c2a2a',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                      <p>{error}</p>
+                    </div>
+                  )}
+                  {resendNote && !error && (
+                    <p
+                      className="mt-4 text-xs"
+                      role="status"
+                      style={{
+                        color: 'var(--color-primary)',
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {resendNote}
+                    </p>
+                  )}
+
                   <button
                     type="button"
                     onClick={onClose}
@@ -467,6 +549,39 @@ export default function SignInModal({
                   >
                     Got it
                   </button>
+
+                  <div className="mt-5 flex flex-col items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resendCooldown > 0 || loading}
+                      className="inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        color: 'var(--color-primary)',
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {loading ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : null}
+                      {resendCooldown > 0
+                        ? `Resend confirmation email (${resendCooldown}s)`
+                        : 'Resend confirmation email'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUseDifferentEmail}
+                      className="inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      <ArrowLeft size={13} />
+                      Use a different email
+                    </button>
+                  </div>
                 </div>
               ) : mode === 'forgot' && resetSent ? (
                 <div className="text-center">
@@ -670,6 +785,22 @@ export default function SignInModal({
                     )}
 
                     {mode === 'signup' && (
+                      <Field label="Confirm Password">
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          placeholder="Re-enter your password"
+                          autoComplete="new-password"
+                          style={inputStyle}
+                          className="w-full px-4 py-2.5 outline-none transition-colors"
+                        />
+                      </Field>
+                    )}
+
+                    {mode === 'signup' && (
                       <Field
                         label={
                           <>
@@ -722,6 +853,39 @@ export default function SignInModal({
                         : 'Send reset link'}
                     </button>
                   </form>
+
+                  {mode === 'signup' && (
+                    <p
+                      className="text-center text-xs mt-4"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      By creating an account you agree to our{' '}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+                        className="hover:opacity-80 transition-opacity"
+                      >
+                        Terms
+                      </a>{' '}
+                      and{' '}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+                        className="hover:opacity-80 transition-opacity"
+                      >
+                        Privacy Policy
+                      </a>
+                      .
+                    </p>
+                  )}
 
                   {mode === 'forgot' ? (
                     <button

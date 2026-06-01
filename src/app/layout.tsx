@@ -37,6 +37,12 @@ const spectral = Spectral({
 })
 
 export const metadata: Metadata = {
+  // metadataBase makes relative OG/Twitter image URLs resolve to absolute
+  // URLs (crawlers reject relative image paths). Falls back to localhost
+  // for local dev; production sets NEXT_PUBLIC_SITE_URL.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  ),
   title: 'Gastronome — Every Restaurant Rating in One Place',
   description:
     'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
@@ -56,7 +62,9 @@ export const metadata: Metadata = {
     locale: 'en_US',
     images: [
       {
-        url: '/Logo.jpg',
+        url: '/og.jpg',
+        width: 1200,
+        height: 630,
         alt: 'Gastronome',
       },
     ],
@@ -66,7 +74,7 @@ export const metadata: Metadata = {
     title: 'Gastronome — Every Restaurant Rating in One Place',
     description:
       'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
-    images: ['/Logo.jpg'],
+    images: ['/og.jpg'],
   },
 }
 

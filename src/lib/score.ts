@@ -65,39 +65,39 @@ const clamp10 = (n: number) => Math.max(0, Math.min(10, n))
 export function gastronomeScore(r: ScoreInput): GastronomeScore | null {
   const contributions: ScoreContribution[] = []
 
-  if (typeof r.google_rating === 'number') {
+  if (Number.isFinite(r.google_rating)) {
     contributions.push({
       source: 'Google',
-      native: r.google_rating,
+      native: r.google_rating!,
       nativeMax: 5,
-      normalized: clamp10(r.google_rating * 2),
+      normalized: clamp10(r.google_rating! * 2),
       weight: GASTRONOME_SCORE_WEIGHTS.google,
     })
   }
-  if (typeof r.yelp_rating === 'number') {
+  if (Number.isFinite(r.yelp_rating)) {
     contributions.push({
       source: 'Yelp',
-      native: r.yelp_rating,
+      native: r.yelp_rating!,
       nativeMax: 5,
-      normalized: clamp10(r.yelp_rating * 2),
+      normalized: clamp10(r.yelp_rating! * 2),
       weight: GASTRONOME_SCORE_WEIGHTS.yelp,
     })
   }
-  if (typeof r.infatuation_rating === 'number') {
+  if (Number.isFinite(r.infatuation_rating)) {
     contributions.push({
       source: 'The Infatuation',
-      native: r.infatuation_rating,
+      native: r.infatuation_rating!,
       nativeMax: 10,
-      normalized: clamp10(r.infatuation_rating),
+      normalized: clamp10(r.infatuation_rating!),
       weight: GASTRONOME_SCORE_WEIGHTS.infatuation,
     })
   }
-  if (typeof r.beli_score === 'number') {
+  if (Number.isFinite(r.beli_score)) {
     contributions.push({
       source: 'Beli',
-      native: r.beli_score,
+      native: r.beli_score!,
       nativeMax: 10,
-      normalized: clamp10(r.beli_score),
+      normalized: clamp10(r.beli_score!),
       weight: GASTRONOME_SCORE_WEIGHTS.beli,
     })
   }

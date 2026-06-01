@@ -76,13 +76,40 @@ type AnySupabase = SupabaseClient
 let _supabase: AnySupabase | null = null
 let _userId: string | null = null
 
-/** Fire-and-forget: never let a sync failure surface to the UI. */
-function bestEffort(p: PromiseLike<unknown> | undefined) {
-  try {
-    Promise.resolve(p).catch(() => {})
-  } catch {
-    /* ignore */
+/**
+ * Mirror a write to Supabase without ever blocking or breaking the UI,
+ * but — unlike a true fire-and-forget — surface failures to the console
+ * and retry once on transient errors so a flaky network doesn't silently
+ * drop a save. Returns a promise resolving to a status so callers that
+ * care (e.g. the migration path) can await it.
+ *
+ * `label` identifies the operation in logs.
+ */
+async function bestEffort(
+  fn: () => PromiseLike<{ error: unknown } | unknown> | undefined,
+  label = 'collections-sync'
+): Promise<{ ok: boolean; error?: unknown }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await Promise.resolve(fn())
+      const error =
+        res && typeof res === 'object' && 'error' in res
+          ? (res as { error: unknown }).error
+          : null
+      if (!error) return { ok: true }
+      // PostgREST returns an error object rather than throwing; log it and
+      // retry once (covers transient 5xx / network blips). Persistent
+      // failures (table missing, RLS, offline) fall through after retry.
+      if (attempt === 0) continue
+      console.warn(`[${label}] write failed:`, error)
+      return { ok: false, error }
+    } catch (err) {
+      if (attempt === 0) continue
+      console.warn(`[${label}] write threw:`, err)
+      return { ok: false, error: err }
+    }
   }
+  return { ok: false }
 }
 
 /**
@@ -132,44 +159,83 @@ export async function initCollectionsSync(
     const localFavorites = readFavorites()
     const localCollections = readCollections()
 
-    const serverEmpty =
-      serverFavorites.length === 0 && serverCollections.length === 0
-    const localHasData =
-      localFavorites.length > 0 || localCollections.length > 0
-
-    if (serverEmpty && localHasData) {
-      // First sign-in with pre-existing local data → migrate it up.
-      // Local stays as-is; we just push it to the server.
-      for (const rid of localFavorites) {
-        bestEffort(
+    // Push any local-only saves UP to the server BEFORE we overwrite the
+    // local cache with server state. Without this, a second device that
+    // had its own unsynced local saves would lose them the moment it
+    // signed in (the server snapshot would clobber the local cache). By
+    // unioning first, the server ends up holding the superset and the
+    // re-read below reflects everything. Upserts with ignoreDuplicates
+    // make this idempotent, so it's safe to run on every sign-in, not
+    // just the first.
+    const serverFavSet = new Set(serverFavorites)
+    const localOnlyFavorites = localFavorites.filter((rid) => !serverFavSet.has(rid))
+    for (const rid of localOnlyFavorites) {
+      void bestEffort(
+        () =>
           supabase.from('user_favorites').upsert(
             { user_id: userId, restaurant_id: rid },
             { onConflict: 'user_id,restaurant_id', ignoreDuplicates: true }
-          )
+          ),
+        'sync-favorite-up'
+      )
+    }
+
+    const serverColById = new Map(serverCollections.map((c) => [c.id, c]))
+    for (const col of localCollections) {
+      const serverCol = serverColById.get(col.id)
+      // Create the collection server-side if it only exists locally.
+      if (!serverCol) {
+        void bestEffort(
+          () =>
+            supabase.from('user_collections').upsert(
+              { id: col.id, user_id: userId, name: col.name },
+              { onConflict: 'id' }
+            ),
+          'sync-collection-up'
         )
       }
-      for (const col of localCollections) {
-        bestEffort(
-          supabase.from('user_collections').upsert(
-            { id: col.id, user_id: userId, name: col.name },
-            { onConflict: 'id' }
-          )
-        )
-        for (const rid of col.restaurantIds) {
-          bestEffort(
+      // Push any membership rows the server doesn't already have.
+      const serverItemSet = new Set(serverCol?.restaurantIds ?? [])
+      for (const rid of col.restaurantIds) {
+        if (serverItemSet.has(rid)) continue
+        void bestEffort(
+          () =>
             supabase.from('user_collection_items').upsert(
               { collection_id: col.id, restaurant_id: rid },
               { onConflict: 'collection_id,restaurant_id', ignoreDuplicates: true }
-            )
-          )
-        }
+            ),
+          'sync-collection-item-up'
+        )
       }
-      return
     }
 
-    // Otherwise the server is the source of truth — overwrite the cache.
-    writeFavorites(serverFavorites)
-    writeCollections(serverCollections)
+    // Build the unioned view locally so the cache reflects both sides
+    // immediately (the server upserts above are async/best-effort).
+    // localOnlyFavorites is already disjoint from serverFavorites; place
+    // them first so the most-recently-saved (local) entries stay near the
+    // front of the "Your Favorites" rail.
+    const unionedFavorites = [...localOnlyFavorites, ...serverFavorites]
+    const mergedCollections: Collection[] = serverCollections.map((c) => ({ ...c }))
+    const mergedById = new Map(mergedCollections.map((c) => [c.id, c]))
+    for (const col of localCollections) {
+      const existing = mergedById.get(col.id)
+      if (!existing) {
+        mergedCollections.push({ ...col })
+        mergedById.set(col.id, col)
+        continue
+      }
+      // Union membership, preserving server order then appending local-only ids.
+      const seen = new Set(existing.restaurantIds)
+      for (const rid of col.restaurantIds) {
+        if (!seen.has(rid)) {
+          existing.restaurantIds.push(rid)
+          seen.add(rid)
+        }
+      }
+    }
+
+    writeFavorites(unionedFavorites)
+    writeCollections(mergedCollections)
   } catch {
     // Network or unexpected error — stay in localStorage-only mode.
   }
@@ -269,12 +335,16 @@ export function toggleFavorite(restaurantId: string): boolean {
     favs.splice(idx, 1)
     writeFavorites(favs)
     if (_supabase && _userId) {
-      bestEffort(
-        _supabase
-          .from('user_favorites')
-          .delete()
-          .eq('user_id', _userId)
-          .eq('restaurant_id', restaurantId)
+      const sb = _supabase
+      const uid = _userId
+      void bestEffort(
+        () =>
+          sb
+            .from('user_favorites')
+            .delete()
+            .eq('user_id', uid)
+            .eq('restaurant_id', restaurantId),
+        'unfavorite'
       )
     }
     return false
@@ -282,11 +352,15 @@ export function toggleFavorite(restaurantId: string): boolean {
   favs.unshift(restaurantId)
   writeFavorites(favs)
   if (_supabase && _userId) {
-    bestEffort(
-      _supabase.from('user_favorites').upsert(
-        { user_id: _userId, restaurant_id: restaurantId },
-        { onConflict: 'user_id,restaurant_id', ignoreDuplicates: true }
-      )
+    const sb = _supabase
+    const uid = _userId
+    void bestEffort(
+      () =>
+        sb.from('user_favorites').upsert(
+          { user_id: uid, restaurant_id: restaurantId },
+          { onConflict: 'user_id,restaurant_id', ignoreDuplicates: true }
+        ),
+      'favorite'
     )
   }
   return true
@@ -315,12 +389,16 @@ export function createCollection(name: string): Collection {
   const next = [collection, ...readCollections()]
   writeCollections(next)
   if (_supabase && _userId) {
-    bestEffort(
-      _supabase.from('user_collections').insert({
-        id: collection.id,
-        user_id: _userId,
-        name: collection.name,
-      })
+    const sb = _supabase
+    const uid = _userId
+    void bestEffort(
+      () =>
+        sb.from('user_collections').insert({
+          id: collection.id,
+          user_id: uid,
+          name: collection.name,
+        }),
+      'create-collection'
     )
   }
   return collection
@@ -335,12 +413,16 @@ export function renameCollection(id: string, name: string): void {
   )
   writeCollections(next)
   if (_supabase && _userId) {
-    bestEffort(
-      _supabase
-        .from('user_collections')
-        .update({ name: trimmed.slice(0, 80), updated_at: now() })
-        .eq('id', id)
-        .eq('user_id', _userId)
+    const sb = _supabase
+    const uid = _userId
+    void bestEffort(
+      () =>
+        sb
+          .from('user_collections')
+          .update({ name: trimmed.slice(0, 80), updated_at: now() })
+          .eq('id', id)
+          .eq('user_id', uid),
+      'rename-collection'
     )
   }
 }
@@ -348,9 +430,12 @@ export function renameCollection(id: string, name: string): void {
 export function deleteCollection(id: string): void {
   writeCollections(readCollections().filter((c) => c.id !== id))
   if (_supabase && _userId) {
+    const sb = _supabase
+    const uid = _userId
     // ON DELETE CASCADE removes the membership rows server-side.
-    bestEffort(
-      _supabase.from('user_collections').delete().eq('id', id).eq('user_id', _userId)
+    void bestEffort(
+      () => sb.from('user_collections').delete().eq('id', id).eq('user_id', uid),
+      'delete-collection'
     )
   }
 }
@@ -368,11 +453,14 @@ export function addToCollection(collectionId: string, restaurantId: string): voi
   })
   writeCollections(next)
   if (_supabase && _userId) {
-    bestEffort(
-      _supabase.from('user_collection_items').upsert(
-        { collection_id: collectionId, restaurant_id: restaurantId },
-        { onConflict: 'collection_id,restaurant_id', ignoreDuplicates: true }
-      )
+    const sb = _supabase
+    void bestEffort(
+      () =>
+        sb.from('user_collection_items').upsert(
+          { collection_id: collectionId, restaurant_id: restaurantId },
+          { onConflict: 'collection_id,restaurant_id', ignoreDuplicates: true }
+        ),
+      'add-to-collection'
     )
   }
 }
@@ -390,12 +478,15 @@ export function removeFromCollection(collectionId: string, restaurantId: string)
   )
   writeCollections(next)
   if (_supabase && _userId) {
-    bestEffort(
-      _supabase
-        .from('user_collection_items')
-        .delete()
-        .eq('collection_id', collectionId)
-        .eq('restaurant_id', restaurantId)
+    const sb = _supabase
+    void bestEffort(
+      () =>
+        sb
+          .from('user_collection_items')
+          .delete()
+          .eq('collection_id', collectionId)
+          .eq('restaurant_id', restaurantId),
+      'remove-from-collection'
     )
   }
 }

@@ -7,9 +7,23 @@ interface VideoEmbedProps {
   onClose?: () => void
 }
 
+/**
+ * Instagram (and TikTok) shortcodes are URL-path-safe tokens:
+ * alphanumerics plus `-` and `_`. A malformed/empty `video_id` (e.g. a
+ * full URL accidentally stored in the column, or a null-ish scrape value)
+ * would otherwise produce a broken embed URL that renders Instagram's
+ * generic error page inside our modal. We validate before embedding and
+ * fall back to the canonical `video_url` link when the shortcode is bad.
+ */
+function isValidShortcode(id: string | null | undefined): id is string {
+  return !!id && /^[A-Za-z0-9_-]+$/.test(id)
+}
+
 export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
-  const embedUrl =
-    video.platform === 'tiktok'
+  const canEmbed = isValidShortcode(video.video_id)
+  const embedUrl = !canEmbed
+    ? null
+    : video.platform === 'tiktok'
       ? `https://www.tiktok.com/embed/v2/${video.video_id}`
       : `https://www.instagram.com/reel/${video.video_id}/embed/`
 
@@ -53,16 +67,40 @@ export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
       )}
 
       {/* Embed iframe — black bg behind it so any letterboxing matches the
-          dark TikTok/IG player chrome instead of flashing white. */}
-      <div className="relative w-full bg-black" style={{ paddingBottom: aspectPad }}>
-        <iframe
-          src={embedUrl}
-          className="absolute inset-0 w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          title={video.caption || `${video.platform} video`}
-        />
-      </div>
+          dark TikTok/IG player chrome instead of flashing white. When the
+          shortcode is invalid we can't build a safe embed URL, so we show a
+          tasteful "watch on platform" tile that deep-links to video_url
+          instead of rendering a broken embed. */}
+      {embedUrl ? (
+        <div className="relative w-full bg-black" style={{ paddingBottom: aspectPad }}>
+          <iframe
+            src={embedUrl}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={video.caption || `${video.platform} video`}
+          />
+        </div>
+      ) : (
+        <a
+          href={video.video_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative flex w-full items-center justify-center bg-black text-white"
+          style={{ paddingBottom: aspectPad }}
+        >
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+            <ExternalLink size={28} className="opacity-90" />
+            <span className="text-sm font-medium">
+              Watch this {video.platform === 'tiktok' ? 'TikTok' : 'Instagram'}{' '}
+              video
+            </span>
+            <span className="text-xs text-white/60">
+              Opens in a new tab
+            </span>
+          </span>
+        </a>
+      )}
 
       {/* Info section */}
       <div className="px-4 py-3 space-y-2">

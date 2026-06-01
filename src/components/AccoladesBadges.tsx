@@ -39,7 +39,24 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
   // as equally current as a fresh one.
   const yearSuffix = (year: number | null | undefined) =>
     year ? ` '${String(year).slice(-2)}` : ''
-  const michelinYear = (restaurant as Restaurant & { michelin_year?: number | null }).michelin_year
+
+  // NOTE: `michelin_year`, `jbf_url`, `jbf_year`, `eater_url`, and
+  // `eater_year` are NOT columns on `restaurants` today — per-year history
+  // lives in the dedicated *_history tables. We read them defensively from
+  // the row so this component lights up automatically if/when those columns
+  // land, but until then every lookup resolves to null and:
+  //   - yearSuffix(null) → '' (no stale-looking year)
+  //   - BadgeLink(href=null) → renders a plain span (no dead link)
+  // i.e. the feature cleanly no-ops with no broken UI.
+  type AccoladeExtras = {
+    michelin_year?: number | null
+    jbf_url?: string | null
+    jbf_year?: number | null
+    eater_url?: string | null
+    eater_year?: number | null
+  }
+  const extras = restaurant as Restaurant & AccoladeExtras
+  const michelinYear = extras.michelin_year ?? null
 
   // Michelin stars (most prominent)
   if (restaurant.michelin_stars > 0) {
@@ -90,9 +107,8 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     // Wrapped in BadgeLink to match the Michelin/Eater pattern even when
     // there's no URL (it falls back to a plain span). When a `jbf_url`
     // column lands on `restaurants`, this will become clickable for free.
-    const jbfHref =
-      (restaurant as Restaurant & { jbf_url?: string | null }).jbf_url ?? null
-    const jbfYear = (restaurant as Restaurant & { jbf_year?: number | null }).jbf_year
+    const jbfHref = extras.jbf_url ?? null
+    const jbfYear = extras.jbf_year ?? null
     badges.push(
       <BadgeLink key="james-beard" href={jbfHref}>
         <span
@@ -110,12 +126,10 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
   // Eater list when we have an eater_url. BadgeLink falls back to a plain
   // span when href is null, matching the Michelin/JBF pattern above.
   if (restaurant.eater_38) {
-    const eaterHref =
-      (restaurant as Restaurant & { eater_url?: string | null }).eater_url ?? null
+    const eaterHref = extras.eater_url ?? null
     // Append the listing year when known ("Eater 38 '25") so stale
     // listings don't look equally authoritative as a current pick.
-    const eaterYear =
-      (restaurant as Restaurant & { eater_year?: number | null }).eater_year
+    const eaterYear = extras.eater_year ?? null
     badges.push(
       <BadgeLink key="eater-38" href={eaterHref}>
         <span

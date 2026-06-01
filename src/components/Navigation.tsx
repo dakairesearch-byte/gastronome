@@ -9,6 +9,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthUser } from '@/lib/hooks/useAuthUser'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
 
+// `/profile` is intentionally NOT in this shared list: it requires auth
+// and bounces anonymous users to /onboarding. It's appended below only
+// when a user is signed in, mirroring the mobile BottomNav gating.
 const navItems = [
   { path: '/', label: 'Home' },
   { path: '/explore', label: 'Explore' },
@@ -17,7 +20,6 @@ const navItems = [
   // content pillar that users couldn't reach in one click.
   { path: '/cities', label: 'Cities' },
   { path: '/community', label: 'Community' },
-  { path: '/profile', label: 'Profile' },
 ]
 
 /**
@@ -127,6 +129,39 @@ export default function Navigation() {
                   </Link>
                 )
               })}
+              {/* Profile is auth-gated: only signed-in users see it in the
+                  primary cluster, mirroring the mobile BottomNav. Anonymous
+                  users use the Sign in affordance on the right instead. */}
+              {user && (() => {
+                const active = isActivePath(pathname, '/profile')
+                return (
+                  <Link
+                    href="/profile"
+                    aria-current={active ? 'page' : undefined}
+                    className="relative group py-2"
+                    style={{
+                      color: active ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <span
+                      className="text-xs uppercase"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.12em',
+                        fontWeight: active ? 500 : 400,
+                      }}
+                    >
+                      Profile
+                    </span>
+                    {active && (
+                      <div
+                        className="absolute -bottom-1 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: 'var(--color-accent)' }}
+                      />
+                    )}
+                  </Link>
+                )
+              })()}
             </nav>
 
             {/* Minimal profile/sign-in affordance — the Figma design

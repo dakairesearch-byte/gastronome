@@ -22,6 +22,7 @@ export default function ExploreSearchBar({
   const [menuOpen, setMenuOpen] = useState(false)
   const [customActive, setCustomActive] = useState(false)
   const [customValue, setCustomValue] = useState('')
+  const [customError, setCustomError] = useState('')
   const wrapRef = useRef<HTMLDivElement>(null)
   const customInputRef = useRef<HTMLInputElement>(null)
 
@@ -50,6 +51,7 @@ export default function ExploreSearchBar({
     setMenuOpen(false)
     setCustomActive(false)
     setCustomValue('')
+    setCustomError('')
     // Push the city into the URL so the server re-renders Top 10 Trending
     // and the map for the new city. Using push (not replace) keeps browser
     // back/forward working as users expect.
@@ -58,16 +60,33 @@ export default function ExploreSearchBar({
 
   const handleCustomTrigger = () => {
     setCustomActive(true)
+    setCustomError('')
     setTimeout(() => customInputRef.current?.focus(), 50)
+  }
+
+  // Free-text city entry used to route blindly to /explore?city=<freeform>,
+  // which lands on an empty page for any city we don't actually cover.
+  // Validate against the known-cities list (case-insensitively) and route
+  // to the canonical label; otherwise surface a "not covered yet" hint
+  // instead of navigating to a dead page.
+  const submitCustomCity = () => {
+    const v = customValue.trim()
+    if (!v) return
+    const match = cities.find((c) => c.toLowerCase() === v.toLowerCase())
+    if (match) {
+      pickCity(match)
+    } else {
+      setCustomError(`We don't cover ${v} yet — try one of the cities above.`)
+    }
   }
 
   const handleCustomKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      const v = customValue.trim()
-      if (v) pickCity(v)
+      submitCustomCity()
     } else if (e.key === 'Escape') {
       setCustomActive(false)
       setCustomValue('')
+      setCustomError('')
     }
   }
 
@@ -208,28 +227,45 @@ export default function ExploreSearchBar({
                       ref={customInputRef}
                       type="text"
                       value={customValue}
-                      onChange={(e) => setCustomValue(e.target.value)}
+                      onChange={(e) => {
+                        setCustomValue(e.target.value)
+                        if (customError) setCustomError('')
+                      }}
                       onKeyDown={handleCustomKeyDown}
                       placeholder="Enter a city..."
                       autoComplete="off"
+                      aria-invalid={customError ? true : undefined}
                       className="w-full px-3 py-2.5 border text-sm outline-none transition-colors focus:border-[var(--color-accent)]"
                       style={{
                         fontFamily: 'var(--font-body)',
                         color: 'var(--color-text)',
-                        borderColor: 'var(--color-border)',
+                        borderColor: customError ? '#c0392b' : 'var(--color-border)',
                         borderRadius: '6px',
                         fontSize: '16px',
                       }}
                     />
-                    <p
-                      className="mt-2 px-0.5 text-[11px]"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      Press Enter to apply · Esc to cancel
-                    </p>
+                    {customError ? (
+                      <p
+                        className="mt-2 px-0.5 text-[11px]"
+                        role="alert"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: '#c0392b',
+                        }}
+                      >
+                        {customError}
+                      </p>
+                    ) : (
+                      <p
+                        className="mt-2 px-0.5 text-[11px]"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        Press Enter to apply · Esc to cancel
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

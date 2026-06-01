@@ -65,28 +65,41 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
   }, [supabase])
 
   useEffect(() => {
+    // Only fetch cities we don't already have a preview for. Previously this
+    // fired one unindexed query PER selected city (up to MAX_CITIES round
+    // trips). Batch the missing ones into a single `.in('city', [...])`
+    // request and bucket the results back out per city on the client.
+    const missing = selCities.filter((name) => !previews[name])
+    if (missing.length === 0) return
+
     let active = true
-    for (const name of selCities) {
-      if (previews[name]) continue
-      // Bug: was `.eq('city', name)` — case-sensitive exact match. If the
-      // cities table label drifts from the value stored on `restaurants.city`
-      // (e.g. "Bay Area" vs "San Francisco"), the previews silently empty
-      // and the block renders no photos at all.
-      // Also gate to rows that *have* a usable photo so we never render the
-      // empty image placeholder, and add `photo_urls` (the new array column
-      // populated by enrichPlacesAndPhotos.ts) as another fallback source.
-      supabase
-        .from('restaurants')
-        .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
-        .ilike('city', name)
-        .or('photo_url.not.is.null,google_photo_url.not.is.null')
-        .order('google_rating', { ascending: false, nullsFirst: false })
-        .limit(2)
-        .then(({ data }) => {
-          if (!active) return
-          setPreviews((p) => ({ ...p, [name]: (data ?? []) as Restaurant[] }))
-        })
-    }
+    // Note: `.in` is exact-match (case-sensitive), unlike the prior per-city
+    // `.ilike`. The city labels here come straight from the `cities` table,
+    // and `restaurants.city` is populated from the same canonical list, so an
+    // exact match is correct and lets a single indexed query serve all cities.
+    // Still gate to rows that *have* a usable photo so we never render the
+    // empty image placeholder, and keep `photo_urls` (the array column
+    // populated by enrichPlacesAndPhotos.ts) as a fallback source.
+    supabase
+      .from('restaurants')
+      .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
+      .in('city', missing)
+      .or('photo_url.not.is.null,google_photo_url.not.is.null')
+      .order('google_rating', { ascending: false, nullsFirst: false })
+      .then(({ data }) => {
+        if (!active) return
+        const rows = (data ?? []) as Restaurant[]
+        // Bucket per city, capping at 2 rows each (the previous per-query
+        // `.limit(2)`). Rows arrive rating-sorted, so taking the first two
+        // per bucket preserves the "top rated" preview.
+        const byCity: Record<string, Restaurant[]> = {}
+        for (const name of missing) byCity[name] = []
+        for (const r of rows) {
+          const bucket = byCity[r.city]
+          if (bucket && bucket.length < 2) bucket.push(r)
+        }
+        setPreviews((p) => ({ ...p, ...byCity }))
+      })
     return () => {
       active = false
     }
@@ -117,15 +130,27 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setError('Session expired'); setSubmitting(false); return }
+      // UPSERT (not UPDATE): if the DB trigger hasn't created the profile
+      // row yet, a bare `.update()` no-ops and onboarding_completed never
+      // sticks, looping the user back through the gate. Supply the NOT-NULL
+      // columns from the auth user's metadata to satisfy the insert path.
+      const meta = user.user_metadata ?? {}
       const { error: e } = await supabase
         .from('profiles')
-        .update({
-          onboarding_completed: true,
-          favorite_cities: selCities,
-          favorite_cuisines: selCuisines,
-          ...(selCities.length > 0 ? { home_city: selCities[0] } : {}),
-        })
-        .eq('id', user.id)
+        .upsert(
+          {
+            id: user.id,
+            email: user.email ?? '',
+            username: (meta.username as string) ?? user.id,
+            display_name:
+              (meta.display_name as string) || (meta.username as string) || 'Guest',
+            onboarding_completed: true,
+            favorite_cities: selCities,
+            favorite_cuisines: selCuisines,
+            ...(selCities.length > 0 ? { home_city: selCities[0] } : {}),
+          },
+          { onConflict: 'id' }
+        )
       if (e) { setError(e.message); setSubmitting(false); return }
       onComplete()
     } catch (err) {

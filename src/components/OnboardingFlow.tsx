@@ -65,6 +65,7 @@ export default function OnboardingFlow() {
   // Sign-up form state (pane 4, anon users)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -72,8 +73,54 @@ export default function OnboardingFlow() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [resendNote, setResendNote] = useState('')
 
   const step = STEPS[stepIndex]
+
+  // Tick the resend cooldown down once a second so the button re-enables.
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = window.setTimeout(() => setResendCooldown((c) => c - 1), 1000)
+    return () => window.clearTimeout(t)
+  }, [resendCooldown])
+
+  /** Resend the signup confirmation email, with a 30s cooldown. */
+  const handleResend = async () => {
+    if (resendCooldown > 0 || submitting) return
+    setError(null)
+    setResendNote('')
+    setSubmitting(true)
+    try {
+      const emailRedirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback?next=/`
+          : undefined
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo },
+      })
+      if (resendError) {
+        setError(friendlyAuthError(resendError.message))
+        return
+      }
+      setResendNote('Sent — check your inbox (and spam) again.')
+      setResendCooldown(30)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the email.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  /** Drop back to the signup form so the user can fix a mistyped address. */
+  const handleUseDifferentEmail = () => {
+    setAwaitingConfirmation(false)
+    setResendNote('')
+    setResendCooldown(0)
+    setError(null)
+  }
 
   // One-time auth probe — determines whether pane 4 is a sign-up form
   // or a "you're all set" confirmation.
@@ -151,14 +198,28 @@ export default function OnboardingFlow() {
     setError(null)
     setSubmitting(true)
     try {
+      // UPSERT (not UPDATE): a brand-new user's `profiles` row may not
+      // exist yet if the DB trigger hasn't fired. A bare `.update()`
+      // would no-op against a missing row, leaving onboarding_completed
+      // false forever and trapping the user in the gate. Supply the
+      // NOT-NULL columns from the auth user's metadata so the insert path
+      // satisfies the schema.
+      const meta = user.user_metadata ?? {}
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          onboarding_completed: true,
-          home_city: selectedCity || null,
-          favorite_cities: selectedCity ? [selectedCity] : [],
-        })
-        .eq('id', user.id)
+        .upsert(
+          {
+            id: user.id,
+            email: user.email ?? '',
+            username: (meta.username as string) ?? user.id,
+            display_name:
+              (meta.display_name as string) || (meta.username as string) || 'Guest',
+            onboarding_completed: true,
+            home_city: selectedCity || null,
+            favorite_cities: selectedCity ? [selectedCity] : [],
+          },
+          { onConflict: 'id' }
+        )
       if (updateError) {
         setError(updateError.message)
         setSubmitting(false)
@@ -193,6 +254,7 @@ export default function OnboardingFlow() {
       return setError('Username can only contain lowercase letters, numbers, and underscores')
     if (!em) return setError('Email is required')
     if (password.length < 6) return setError('Password must be at least 6 characters')
+    if (password !== confirmPassword) return setError('Passwords don’t match')
 
     setSubmitting(true)
     try {
@@ -238,14 +300,23 @@ export default function OnboardingFlow() {
       // update fails we keep the user on the onboarding page rather
       // than landing them on `/` where the middleware would bounce
       // them right back.
+      // UPSERT so the profile row is guaranteed to exist even if the DB
+      // trigger hasn't created it yet — otherwise onboarding_completed
+      // never sticks and the proxy loops the user back to /onboarding.
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          onboarding_completed: true,
-          home_city: selectedCity || null,
-          favorite_cities: selectedCity ? [selectedCity] : [],
-        })
-        .eq('id', data.user.id)
+        .upsert(
+          {
+            id: data.user.id,
+            email: em,
+            username: un,
+            display_name: dn,
+            onboarding_completed: true,
+            home_city: selectedCity || null,
+            favorite_cities: selectedCity ? [selectedCity] : [],
+          },
+          { onConflict: 'id' }
+        )
 
       if (updateError) {
         setError(updateError.message)
@@ -327,16 +398,25 @@ export default function OnboardingFlow() {
                 city={selectedCity}
               />
             ) : awaitingConfirmation ? (
-              <ConfirmEmailStep email={email} />
+              <ConfirmEmailStep
+                email={email}
+                onResend={handleResend}
+                onUseDifferentEmail={handleUseDifferentEmail}
+                resendCooldown={resendCooldown}
+                resendNote={resendNote}
+                submitting={submitting}
+              />
             ) : (
               <SignUpStep
                 email={email}
                 password={password}
+                confirmPassword={confirmPassword}
                 displayName={displayName}
                 username={username}
                 showPassword={showPassword}
                 setEmail={setEmail}
                 setPassword={setPassword}
+                setConfirmPassword={setConfirmPassword}
                 setDisplayName={setDisplayName}
                 setUsername={setUsername}
                 setShowPassword={setShowPassword}
@@ -773,11 +853,13 @@ function CityStep({
 function SignUpStep({
   email,
   password,
+  confirmPassword,
   displayName,
   username,
   showPassword,
   setEmail,
   setPassword,
+  setConfirmPassword,
   setDisplayName,
   setUsername,
   setShowPassword,
@@ -787,11 +869,13 @@ function SignUpStep({
 }: {
   email: string
   password: string
+  confirmPassword: string
   displayName: string
   username: string
   showPassword: boolean
   setEmail: (v: string) => void
   setPassword: (v: string) => void
+  setConfirmPassword: (v: string) => void
   setDisplayName: (v: string) => void
   setUsername: (v: string) => void
   setShowPassword: (v: boolean) => void
@@ -905,6 +989,20 @@ function SignUpStep({
           </div>
         </Field>
 
+        <Field label="Confirm password">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder="Re-enter your password"
+            style={inputStyle}
+            className="w-full px-4 py-2.5 outline-none"
+            autoComplete="new-password"
+          />
+        </Field>
+
         <button
           type="submit"
           disabled={submitting}
@@ -934,9 +1032,30 @@ function SignUpStep({
         style={{
           color: 'var(--color-text-secondary)',
           fontFamily: 'var(--font-body)',
+          lineHeight: 1.5,
         }}
       >
-        By signing up you agree to our Terms and Privacy Policy.
+        By signing up you agree to our{' '}
+        <Link
+          href="/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+          className="hover:opacity-80 transition-opacity"
+        >
+          Terms
+        </Link>{' '}
+        and{' '}
+        <Link
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--color-primary)', fontWeight: 500 }}
+          className="hover:opacity-80 transition-opacity"
+        >
+          Privacy Policy
+        </Link>
+        .
       </p>
     </div>
   )
@@ -983,7 +1102,21 @@ function AuthedReadyStep({
   )
 }
 
-function ConfirmEmailStep({ email }: { email: string }) {
+function ConfirmEmailStep({
+  email,
+  onResend,
+  onUseDifferentEmail,
+  resendCooldown,
+  resendNote,
+  submitting,
+}: {
+  email: string
+  onResend: () => void
+  onUseDifferentEmail: () => void
+  resendCooldown: number
+  resendNote: string
+  submitting: boolean
+}) {
   return (
     <div className="text-center py-4">
       <div
@@ -1014,6 +1147,51 @@ function ConfirmEmailStep({ email }: { email: string }) {
         <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>{email}</span>.
         Click the link to activate your account, then come right back.
       </p>
+
+      {resendNote && (
+        <p
+          className="text-xs mt-4"
+          role="status"
+          style={{
+            color: 'var(--color-primary)',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 500,
+          }}
+        >
+          {resendNote}
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-col items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onResend}
+          disabled={resendCooldown > 0 || submitting}
+          className="inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            color: 'var(--color-primary)',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 500,
+          }}
+        >
+          {submitting ? <Loader2 size={13} className="animate-spin" /> : null}
+          {resendCooldown > 0
+            ? `Resend confirmation email (${resendCooldown}s)`
+            : 'Resend confirmation email'}
+        </button>
+        <button
+          type="button"
+          onClick={onUseDifferentEmail}
+          className="inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80"
+          style={{
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          <ArrowLeft size={13} />
+          Use a different email
+        </button>
+      </div>
     </div>
   )
 }

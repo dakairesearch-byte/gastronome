@@ -15,6 +15,27 @@ import type { Restaurant } from '@/types/database'
  */
 export type CityGridRestaurant = Restaurant & { trendingRank?: number | null }
 
+/**
+ * City hero background image with an onError fallback. The city detail page
+ * is a server component, so it can't attach `onError` directly — a stale or
+ * 404/403 `city.photo_url` would render as a broken image over the hero
+ * gradient. This thin client wrapper hides the <img> on error (guarded so it
+ * fires once), revealing the gradient already painted behind it.
+ */
+export function CityHeroImage({ src, alt }: { src: string; alt: string }) {
+  const [hidden, setHidden] = useState(false)
+  if (hidden) return null
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      className="absolute inset-0 w-full h-full object-cover opacity-20"
+      onError={() => setHidden(true)}
+    />
+  )
+}
+
 const PAGE_SIZE = 24
 
 /**

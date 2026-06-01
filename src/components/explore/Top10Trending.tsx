@@ -573,30 +573,51 @@ export default function Top10Trending({ city, restaurants }: Top10TrendingProps)
               aria-hidden
             />
           ) : (
-            // Fallback: subtle grid lines, evoke a streetmap without
-            // being one (used when we have no bbox or no Maps key).
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ opacity: 0.45 }}
-              aria-hidden
-            >
-              <defs>
-                <pattern
-                  id="top10-grid"
-                  width="64"
-                  height="64"
-                  patternUnits="userSpaceOnUse"
+            // Intentional static fallback (used when there's no Maps Embed
+            // key configured or we couldn't derive a bbox). Previously this
+            // was a bare grid pattern with no context, so it read as a
+            // dead/broken map. We keep the subtle streetmap-evoking grid but
+            // add a centered caption so it's clearly a deliberate stand-in,
+            // and the numbered pins below still convey relative position.
+            <>
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ opacity: 0.45 }}
+                aria-hidden
+              >
+                <defs>
+                  <pattern
+                    id="top10-grid"
+                    width="64"
+                    height="64"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M 64 0 L 0 0 0 64"
+                      fill="none"
+                      stroke="var(--color-border, rgba(0,0,0,0.08))"
+                      strokeWidth="1"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#top10-grid)" />
+              </svg>
+              <div
+                className="absolute inset-x-0 top-6 flex justify-center pointer-events-none px-6"
+                aria-hidden
+              >
+                <span
+                  className="text-xs uppercase text-center"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    fontFamily: 'var(--font-body)',
+                    letterSpacing: '0.14em',
+                  }}
                 >
-                  <path
-                    d="M 64 0 L 0 0 0 64"
-                    fill="none"
-                    stroke="var(--color-border, rgba(0,0,0,0.08))"
-                    strokeWidth="1"
-                  />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#top10-grid)" />
-            </svg>
+                  Map preview unavailable
+                </span>
+              </div>
+            </>
           )}
 
           {items.map((r, i) => {

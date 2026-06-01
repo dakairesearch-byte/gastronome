@@ -13,8 +13,10 @@ import {
   Utensils,
   Sliders,
   X,
+  ChevronDown,
 } from 'lucide-react'
 import { Restaurant } from '@/types/database'
+import { gastronomeScore } from '@/lib/score'
 import Link from 'next/link'
 import SearchFiltersSidebar, {
   DEFAULT_FILTERS,
@@ -43,6 +45,100 @@ interface DishHit {
   restaurant: Restaurant
 }
 
+/* ------------------------------------------------------------------ */
+/*  Sort + result-cap config                                            */
+/* ------------------------------------------------------------------ */
+
+type SortKey = 'gastronome' | 'google' | 'count' | 'name'
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'gastronome', label: 'Gastronome Score' },
+  { key: 'google', label: 'Google rating' },
+  { key: 'count', label: 'Review count' },
+  { key: 'name', label: 'Name (A–Z)' },
+]
+
+function parseSortKey(v: string | null | undefined): SortKey {
+  return v === 'google' || v === 'count' || v === 'name' ? v : 'gastronome'
+}
+
+// Hard server-side cap on restaurant rows per query. Results beyond this are
+// not fetched; the UI says so plainly instead of faking "M+" / infinite
+// scroll. Raising this is a query-cost decision, not a UI tweak.
+const RESULT_CAP = 40
+
+/**
+ * Build a case-insensitive PostgREST `.or()` clause matching `city` against
+ * any of the selected city names (whole-value `ilike`, no wildcards). Used
+ * so restaurants.city values with casing/typo drift ('new york') still
+ * match a 'New York' facet selection.
+ */
+function cityIlikeClause(cities: string[]): string {
+  return cities
+    .map((c) => `city.ilike.${c.replace(/[%_\\]/g, '')}`)
+    .join(',')
+}
+
+/**
+ * Minimal structural type for the PostgREST builder methods we need to apply
+ * a server-side order. Avoids importing the full generic builder type.
+ */
+interface OrderableQuery<T> {
+  order(
+    column: string,
+    options: { ascending: boolean; nullsFirst: boolean }
+  ): T
+  limit(count: number): T
+}
+
+/**
+ * Apply server-side ordering for the column-backed sort keys. The
+ * 'gastronome' default has no stored column, so it falls back to a
+ * quality-biased fetch (google_rating desc) — the final score-based order is
+ * applied client-side in sortRestaurants once the full slice is in hand.
+ */
+function applyServerSort<T extends OrderableQuery<T>>(query: T, sort: SortKey): T {
+  if (sort === 'name') {
+    return query.order('name', { ascending: true, nullsFirst: false })
+  }
+  if (sort === 'count') {
+    return query
+      .order('google_review_count', { ascending: false, nullsFirst: false })
+      .order('google_rating', { ascending: false, nullsFirst: false })
+  }
+  // 'google' and 'gastronome' both seed from google_rating; 'gastronome' is
+  // then re-sorted by computed score client-side.
+  return query
+    .order('google_rating', { ascending: false, nullsFirst: false })
+    .order('google_review_count', { ascending: false, nullsFirst: false })
+}
+
+/**
+ * Authoritative client-side sort over the fetched restaurant slice. Required
+ * for 'gastronome' (computed score) and to re-order the bib-union merge for
+ * the other keys. Returns a new array; does not mutate the input.
+ */
+function sortRestaurants(rows: Restaurant[], sort: SortKey): Restaurant[] {
+  const sorted = rows.slice()
+  if (sort === 'name') {
+    sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+  } else if (sort === 'count') {
+    sorted.sort(
+      (a, b) => (b.google_review_count ?? 0) - (a.google_review_count ?? 0)
+    )
+  } else if (sort === 'google') {
+    sorted.sort((a, b) => (b.google_rating ?? 0) - (a.google_rating ?? 0))
+  } else {
+    // gastronome: rows with no rating source (null score) sink to the bottom.
+    sorted.sort((a, b) => {
+      const sa = gastronomeScore(a)?.score ?? -1
+      const sb = gastronomeScore(b)?.score ?? -1
+      return sb - sa
+    })
+  }
+  return sorted
+}
+
 function SearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -55,6 +151,14 @@ function SearchContent() {
 
   const urlQuery = searchParams.get('q') || ''
   const [searchQuery, setSearchQuery] = useState(urlQuery)
+
+  // Sort is URL-driven (shareable) and independent of the filter object so
+  // it doesn't pollute filterState's serialization. Default is the
+  // Gastronome Score — the product's headline ranking — applied client-side
+  // via lib/score.ts since the score isn't a stored column we can .order()
+  // on. The other three keys map to real DB columns and are pushed to the
+  // server query for correct ordering across the full result set.
+  const [sort, setSort] = useState<SortKey>(() => parseSortKey(searchParams.get('sort')))
 
   // Filters: read URL → fall back to localStorage → fall back to defaults.
   // Storing the initial resolution in a ref lets the URL-restore effect
@@ -108,13 +212,17 @@ function SearchContent() {
     // Preserve q= separately so filter tweaks don't clobber the query.
     if (searchQuery.trim()) next.set('q', searchQuery.trim())
     else next.delete('q')
+    // Sort lives outside the filter object; default ('gastronome') stays
+    // out of the URL to keep it clean.
+    if (sort !== 'gastronome') next.set('sort', sort)
+    else next.delete('sort')
     const str = next.toString()
     const target = str ? `${pathname}?${str}` : pathname
     if (target !== `${pathname}${window.location.search}`) {
       router.replace(target, { scroll: false })
     }
     writeStoredFilters(filters)
-  }, [filters, searchQuery, pathname, router])
+  }, [filters, searchQuery, sort, pathname, router])
 
   /* ------------------------------------------------------------------ */
   /*  Google Places autocomplete                                         */
@@ -262,14 +370,18 @@ function SearchContent() {
           if (searchQuery.trim()) {
             const sanitized = searchQuery.replace(/[%_\\]/g, '')
             rq = rq.or(
-              `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
+              `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%,neighborhood.ilike.%${sanitized}%`
             )
           }
           if (filters.cities.length) {
-            // Build an `.in()` on city — match values are exact (case-insensitive
-            // handled by Supabase? not always). Use a case-insensitive OR list
-            // so 'New York' and 'new york' both match.
-            rq = rq.in('city', filters.cities)
+            // Case-insensitive city match. `.in('city', …)` is an exact,
+            // case-SENSITIVE equality check, so a restaurant stored as
+            // 'new york' (typo/casing drift in restaurants.city) silently
+            // dropped out when the facet value was 'New York'. Use an OR of
+            // per-city `ilike` clauses (no % wildcards = whole-value match,
+            // just case-insensitive) to align with the dish post-filter
+            // which lowercases both sides.
+            rq = rq.or(cityIlikeClause(filters.cities))
           }
           if (filters.cuisines.length) {
             rq = rq.in('cuisine', filters.cuisines)
@@ -296,23 +408,21 @@ function SearchContent() {
           if (filters.bibGourmand && !filters.michelinStars.length) {
             rq = rq.eq('michelin_designation', 'bib_gourmand')
           }
-          if (filters.jamesBeard === 'winner' || filters.jamesBeard === 'nominee') {
-            // `james_beard_nominated` was dropped; nominee filter degrades
-            // gracefully to winners-only until JBF history is wired in.
+          if (filters.jamesBeard === 'winner') {
+            // Only 'winner' is a real value now — filterState coerces the
+            // legacy 'nominee' value to 'any', so there's no nominee branch
+            // to silently map onto winners.
             rq = rq.eq('james_beard_winner', true)
           }
           if (filters.eater38) {
             rq = rq.eq('eater_38', true)
           }
 
-          // Sort by quality signal — Google rating then review count —
-          // rather than alphabetical. Alphabetical defeated the entire
-          // ranking value prop (e.g. a 3.2-rated "A Restaurant" outranked
-          // a 4.7-rated "Z Restaurant"). Sweep v2 search P1.
-          const { data } = await rq
-            .order('google_rating', { ascending: false, nullsFirst: false })
-            .order('google_review_count', { ascending: false, nullsFirst: false })
-            .limit(40)
+          // Server-side ordering for the column-backed sort keys. The
+          // 'gastronome' default has no stored column to .order() on, so we
+          // fetch by google_rating (the highest-weight present proxy) to pull
+          // a quality-biased slice, then re-sort by the computed score below.
+          const { data } = await applyServerSort(rq, sort).limit(RESULT_CAP)
           restaurantData = (data ?? []) as Restaurant[]
 
           // Union of Michelin stars + bib gourmand requires a follow-up
@@ -328,7 +438,7 @@ function SearchContent() {
                 `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
               )
             }
-            if (filters.cities.length) bq = bq.in('city', filters.cities)
+            if (filters.cities.length) bq = bq.or(cityIlikeClause(filters.cities))
             if (filters.cuisines.length) bq = bq.in('cuisine', filters.cuisines)
             if (filters.googleMinRating > 0)
               bq = bq.gte('google_rating', filters.googleMinRating)
@@ -340,14 +450,8 @@ function SearchContent() {
               bq = bq.gte('yelp_review_count', filters.yelpMinReviews)
             if (filters.jamesBeard === 'winner')
               bq = bq.eq('james_beard_winner', true)
-            else if (filters.jamesBeard === 'nominee')
-              // `james_beard_nominated` was dropped — winners only.
-              bq = bq.eq('james_beard_winner', true)
             if (filters.eater38) bq = bq.eq('eater_38', true)
-            const { data: bibRows } = await bq
-              .order('google_rating', { ascending: false, nullsFirst: false })
-              .order('google_review_count', { ascending: false, nullsFirst: false })
-              .limit(40)
+            const { data: bibRows } = await applyServerSort(bq, sort).limit(RESULT_CAP)
             const seen = new Set(restaurantData.map((r) => r.id))
             for (const row of (bibRows ?? []) as Restaurant[]) {
               if (!seen.has(row.id)) {
@@ -357,6 +461,12 @@ function SearchContent() {
             }
           }
         }
+
+        // Final client-side sort. For 'gastronome' this is the authoritative
+        // ordering (the score is computed, not stored). For the other keys it
+        // re-establishes order across the bib-union merge (which appends rows
+        // out of order). Stable and idempotent for the no-union case.
+        restaurantData = sortRestaurants(restaurantData, sort)
 
         if (cancelled) return
         setRestaurants(restaurantData)
@@ -430,7 +540,7 @@ function SearchContent() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [searchQuery, filters, supabase, googleApiReady, searchGooglePlaces])
+  }, [searchQuery, filters, sort, supabase, googleApiReady, searchGooglePlaces])
 
   /* ------------------------------------------------------------------ */
   /*  Handlers                                                           */
@@ -452,8 +562,13 @@ function SearchContent() {
     router.replace(next, { scroll: false })
   }
 
+  // Single canonical result total, used by both the header summary and the
+  // mobile "Show N results" button so they can never disagree. Counts every
+  // surfaced row consistently: covered restaurants + dishes + the
+  // informational Google matches.
   const totalRestaurants = restaurants.length + googlePlaces.length
-  const hasAnyResults = totalRestaurants > 0 || dishes.length > 0
+  const totalResults = totalRestaurants + dishes.length
+  const hasAnyResults = totalResults > 0
   const activeFilterCount = useMemo(() => countActive(filters), [filters])
 
   // Identify the most restrictive active filter to name in the zero-
@@ -474,41 +589,16 @@ function SearchContent() {
     return null
   }, [filters])
 
-  // Client-side incremental rendering of the restaurant results so the
-  // DOM stays small on broad queries. The server still caps the query;
-  // this just controls how many of the fetched rows render at once and
-  // surfaces an honest "showing N of M" count. Sweep v2 search P1.
-  const RESULTS_PAGE = 12
-  const [visibleResults, setVisibleResults] = useState(RESULTS_PAGE)
-  // Reset the visible window whenever the result set changes.
-  const resultsKey = `${restaurants.length}:${searchQuery}:${activeFilterCount}`
-  const [trackedResultsKey, setTrackedResultsKey] = useState(resultsKey)
-  if (trackedResultsKey !== resultsKey) {
-    setTrackedResultsKey(resultsKey)
-    setVisibleResults(RESULTS_PAGE)
-  }
-  const shownRestaurants = restaurants.slice(0, visibleResults)
-  const hasMoreResults = visibleResults < restaurants.length
-
-  // Auto-load the next page of results as the sentinel scrolls into
-  // view (smooth infinite scroll, no "Load more" button). Pre-loads
-  // ~600px early so rows are present before the user reaches them.
-  const resultsSentinelRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!hasMoreResults) return
-    const node = resultsSentinelRef.current
-    if (!node) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleResults((v) => Math.min(v + RESULTS_PAGE, restaurants.length))
-        }
-      },
-      { rootMargin: '600px 0px' }
-    )
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [hasMoreResults, restaurants.length])
+  // Results are server-capped at RESULT_CAP rows. We render the full
+  // fetched set (no client pagination) and, when the cap is hit, tell the
+  // user plainly that results are capped — rather than the old deceptive
+  // "N of M+" with a fake infinite-scroll sentinel that never fetched
+  // beyond the cap. Real .range() pagination isn't viable here because the
+  // default 'gastronome' sort is computed client-side over the whole set
+  // (and the bib-union follow-up query appends rows), so a per-page server
+  // window can't be ordered correctly. If deeper results are needed later,
+  // narrowing the query (city/cuisine/rating filters) is the intended path.
+  const resultsCapped = restaurants.length >= RESULT_CAP
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -582,6 +672,37 @@ function SearchContent() {
                 >
                   Reset all
                 </button>
+              </div>
+            )}
+
+            {/* Sort control — URL-driven. Hidden when there are no
+                restaurant rows to order (dishes have their own ordering). */}
+            {!loading && restaurants.length > 0 && (
+              <div className="flex items-center justify-end gap-2">
+                <label
+                  htmlFor="search-sort"
+                  className="text-xs font-medium text-gray-500"
+                >
+                  Sort by
+                </label>
+                <div className="relative">
+                  <select
+                    id="search-sort"
+                    value={sort}
+                    onChange={(e) => setSort(parseSortKey(e.target.value))}
+                    className="appearance-none text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 cursor-pointer hover:bg-gray-50 focus:outline-none focus:border-emerald-400"
+                  >
+                    {SORT_OPTIONS.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={13}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  />
+                </div>
               </div>
             )}
 
@@ -684,26 +805,23 @@ function SearchContent() {
                   <p className="text-xs text-gray-500 pt-1">
                     Showing{' '}
                     <span className="font-semibold text-gray-700">
-                      {Math.min(visibleResults, restaurants.length)}
+                      {restaurants.length}
                     </span>{' '}
-                    of {restaurants.length}
-                    {restaurants.length >= 40 ? '+' : ''}{' '}
                     {restaurants.length === 1 ? 'restaurant' : 'restaurants'}
+                    {/* Honest cap notice — no fake "+" implying more are a
+                        scroll away. Results are limited to RESULT_CAP. */}
+                    {resultsCapped && (
+                      <span className="text-gray-400">
+                        {' '}· showing the top {RESULT_CAP} — narrow with
+                        filters to see more
+                      </span>
+                    )}
                   </p>
                 )}
 
-                {shownRestaurants.map((r) => (
+                {restaurants.map((r) => (
                   <RestaurantCard key={r.id} restaurant={r} />
                 ))}
-
-                {/* Auto-load sentinel + skeletons (no Load-more button). */}
-                {hasMoreResults && (
-                  <div ref={resultsSentinelRef} aria-hidden="true" className="space-y-4 pt-2">
-                    {[0, 1].map((i) => (
-                      <RestaurantCardSkeleton key={i} />
-                    ))}
-                  </div>
-                )}
 
                 {googlePlaces.length > 0 && (
                   <>
@@ -716,19 +834,22 @@ function SearchContent() {
                           </span>
                           <div className="h-px bg-gray-200 flex-1" />
                         </div>
-                        {/* Explain what these rows are — they aren't in
-                            Gastronome yet; tapping adds them. Sweep v2
-                            search QW. */}
+                        {/* Informational only. The "tap to add a review /
+                            put it on the map" CTA was removed: user reviews
+                            and user-created restaurants no longer exist, so
+                            /review/new is dead. We still surface Google
+                            matches so users know the place exists even though
+                            it isn't covered yet — but the rows are no longer
+                            interactive (no link target to send them to). */}
                         <p className="text-[11px] text-gray-400 text-center mt-1.5">
-                          Not in Gastronome yet — tap to add a review and put it on the map.
+                          Not in Gastronome yet — not covered, shown for reference.
                         </p>
                       </div>
                     )}
                     {googlePlaces.map((place) => (
-                      <Link
+                      <div
                         key={place.placeId}
-                        href={`/review/new?name=${encodeURIComponent(place.name)}&city=${encodeURIComponent(place.city)}&address=${encodeURIComponent(place.address)}`}
-                        className="block bg-white rounded-lg border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                        className="block bg-white rounded-lg border border-gray-100 p-4"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -750,7 +871,7 @@ function SearchContent() {
                             )}
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </>
                 )}
@@ -804,9 +925,9 @@ function SearchContent() {
                     sheet and discover zero results. Sweep v2 P1. */}
                 {loading
                   ? 'Searching…'
-                  : totalRestaurants + dishes.length === 0
+                  : totalResults === 0
                     ? 'No matches — adjust filters'
-                    : `Show ${totalRestaurants + dishes.length} ${totalRestaurants + dishes.length === 1 ? 'result' : 'results'}`}
+                    : `Show ${totalResults} ${totalResults === 1 ? 'result' : 'results'}`}
               </button>
             </div>
           </div>
@@ -843,13 +964,9 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
   if (f.michelinStars.length || f.bibGourmand) {
     if (!starsOk && !bibOk) return false
   }
-  // `james_beard_nominated` was dropped; both filter values use the
-  // winner column until JBF history is wired in.
-  if (
-    (f.jamesBeard === 'winner' || f.jamesBeard === 'nominee') &&
-    !r.james_beard_winner
-  )
-    return false
+  // Only 'winner' filters on JBF; 'nominee' is coerced to 'any' upstream
+  // in filterState, so it never reaches here.
+  if (f.jamesBeard === 'winner' && !r.james_beard_winner) return false
   if (f.eater38 && !r.eater_38) return false
   return true
 }

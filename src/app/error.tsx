@@ -11,6 +11,14 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error)
+    // Report to Sentry if configured. Defensive: no-op when the DSN is
+    // unset or @sentry/nextjs isn't installed, and never throws.
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      const moduleName = '@sentry/nextjs'
+      import(/* webpackIgnore: true */ moduleName)
+        .then((Sentry) => Sentry.captureException(error))
+        .catch(() => {})
+    }
   }, [error])
 
   return (

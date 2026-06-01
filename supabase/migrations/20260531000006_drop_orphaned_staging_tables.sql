@@ -1,0 +1,53 @@
+-- 20260531000006_drop_orphaned_staging_tables.sql
+--
+-- CONSERVATIVE TEMPLATE — intentionally drops NOTHING by default.
+--
+-- Goal: remove orphaned staging/backup tables that linger after migrations
+-- and ad-hoc data loads. This migration ships as a documented, COMMENTED
+-- template because no table could be confidently identified as
+-- safe-to-drop from the repo alone. The main agent should fill in the
+-- guarded DROP block below only after verifying against LIVE state.
+--
+-- WHY NOTHING IS DROPPED HERE:
+-- A repo scan of app + script `.from('<table>')` usage shows every
+-- candidate is still referenced. Notably `accolades_staging` (and
+-- `accolades_matches`) ARE referenced by the app and by
+-- scripts/insertFromAccoladesStaging.ts — despite the "staging" name they
+-- are LIVE dependencies. Do NOT drop them.
+--
+-- HOW TO IDENTIFY A TRULY ORPHANED TABLE (do all three before dropping):
+--   1. List candidate tables in the public schema:
+--        SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+--        ORDER BY tablename;
+--      Look for suffixes like _backup, _bak, _old, _tmp, _temp, _copy,
+--      _staging, _v1, _dedup, or date-stamped clones (e.g. restaurants_20260101).
+--   2. Cross-check the codebase — the candidate must appear in NONE of:
+--        grep -rE "\.from\(['\"]<table>['\"]" src/ scripts/
+--        grep -rwn "<table>" src/types/database.ts supabase/migrations/
+--      (also check RPCs/views/triggers: pg_depend, information_schema.view_table_usage,
+--       and supabase/functions/ for raw SQL references.)
+--   3. Confirm it is genuinely stale (no recent writes / not a live FK target):
+--        SELECT n_live_tup, last_autoanalyze
+--          FROM pg_stat_user_tables WHERE relname = '<table>';
+--        SELECT conname FROM pg_constraint
+--          WHERE confrelid = '<table>'::regclass;  -- inbound FKs => keep
+--
+-- Only when ALL of the above clear, uncomment and adapt this guarded block.
+-- IF EXISTS makes it idempotent; do one table per statement so a mistake on
+-- one does not silently skip auditing of the others. RESTRICT (the default)
+-- is deliberate — it refuses to drop if dependent objects exist, surfacing
+-- anything missed in step 2. Use CASCADE only with explicit confirmation.
+--
+-- DO $$
+-- BEGIN
+--   -- Example shape ONLY — replace '<orphaned_table>' with a verified name.
+--   IF EXISTS (
+--     SELECT 1 FROM pg_tables
+--      WHERE schemaname = 'public' AND tablename = '<orphaned_table>'
+--   ) THEN
+--     EXECUTE 'DROP TABLE public.<orphaned_table>';  -- RESTRICT by default
+--     RAISE NOTICE 'Dropped orphaned table: %', '<orphaned_table>';
+--   END IF;
+-- END $$;
+--
+-- NET EFFECT OF THIS FILE AS COMMITTED: no-op (safe to apply).

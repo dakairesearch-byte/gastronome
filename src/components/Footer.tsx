@@ -12,7 +12,7 @@ export default function Footer() {
       }}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2.5 mb-3">
@@ -109,6 +109,41 @@ export default function Footer() {
                   style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
                 >
                   Recent
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h3
+              className="text-xs uppercase tracking-wider mb-3"
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.1em',
+                fontWeight: 500,
+              }}
+            >
+              Legal
+            </h3>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-sm hover:text-white transition-colors"
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  Privacy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-sm hover:text-white transition-colors"
+                  style={{ fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  Terms
                 </Link>
               </li>
             </ul>

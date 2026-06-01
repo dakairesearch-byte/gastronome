@@ -260,6 +260,19 @@ function buildScoreSources(
       url: restaurant.infatuation_url,
       badgeBg: '#FFEDD5',
     },
+    {
+      // Beli feeds the Gastronome Score (weight 0.2 in score.ts), so it
+      // belongs in the receipts row alongside the other contributing
+      // sources. Beli scores are already on a /10 scale.
+      key: 'beli',
+      label: 'Beli',
+      icon: 'B',
+      rating: restaurant.beli_score,
+      maxRating: 10,
+      reviewCount: null,
+      url: restaurant.beli_url,
+      badgeBg: '#E0E7FF',
+    },
   ]
   // Only surface sources that have a rating. An empty cell with a dash
   // looks like a data bug and makes the comparison row feel broken —
@@ -279,6 +292,10 @@ export default async function RestaurantPage({
 
   const { restaurant, relatedRestaurants, videoCount, dishes } = data
   const scoreSources = buildScoreSources(restaurant)
+  // Compute the Gastronome Score once — it was previously recomputed three
+  // times in the hero (gate + render + non-null assertion), each rebuilding
+  // the full breakdown array.
+  const score = gastronomeScore(restaurant)
   // `james_beard_nominated` was dropped — only the winner flag participates.
   const hasAccolades =
     restaurant.michelin_stars > 0 ||
@@ -384,9 +401,9 @@ export default async function RestaurantPage({
                 rating; the per-source breakdown still lives in the
                 "By the Numbers" dashboard below as receipts. Falls back
                 to nothing when no rating source exists. Sweep v2 P0 #2. */}
-            {gastronomeScore(restaurant) && (
+            {score && (
               <div className="mt-3">
-                <GastronomeScoreBadge score={gastronomeScore(restaurant)!} />
+                <GastronomeScoreBadge score={score} />
               </div>
             )}
 
@@ -892,17 +909,54 @@ export default async function RestaurantPage({
              * turn navigation, instead of the reviews page that
              * `google_url` points to.
              */}
-            {restaurant.latitude && restaurant.longitude && (() => {
+            {/* Map block gate: render whenever we have ANYTHING that lets us
+                point a user at the place — coordinates, a Google URL, a
+                place_id, or an address. Previously this required lat+lng, so
+                a restaurant with a perfectly good google_url/place_id but no
+                geocoded coordinates showed no map affordance and no
+                Directions/View-on-Maps links at all. The iframe still needs
+                coordinates or a place_id; the static fallback + deep links
+                work from any of these. */}
+            {(() => {
+              const hasCoords =
+                restaurant.latitude != null && restaurant.longitude != null
+              const hasMapTarget =
+                hasCoords ||
+                !!restaurant.google_url ||
+                !!restaurant.google_place_id ||
+                !!restaurant.address
+              if (!hasMapTarget) return null
+
               const embedKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY
               const lat = restaurant.latitude
               const lng = restaurant.longitude
-              const placeQuery = restaurant.google_place_id
+
+              // Build the destination component from the best available
+              // identifier: coordinates → place_id → address → name.
+              const coordQuery = hasCoords ? `${lat},${lng}` : ''
+              const addressQuery = encodeURIComponent(
+                restaurant.address
+                  ? `${restaurant.name}, ${restaurant.address}`
+                  : restaurant.name,
+              )
+
+              // Search ("View on Maps") uses query_place_id; directions use
+              // destination_place_id — they are different Maps URL params.
+              const searchPlaceParam = restaurant.google_place_id
                 ? `&query_place_id=${restaurant.google_place_id}`
                 : ''
+              const dirPlaceParam = restaurant.google_place_id
+                ? `&destination_place_id=${restaurant.google_place_id}`
+                : ''
+
               const viewUrl =
                 restaurant.google_url ||
-                `https://www.google.com/maps/search/?api=1&query=${lat},${lng}${placeQuery}`
-              const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}${placeQuery}`
+                `https://www.google.com/maps/search/?api=1&query=${
+                  coordQuery || addressQuery
+                }${searchPlaceParam}`
+              const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${
+                coordQuery || addressQuery
+              }${dirPlaceParam}`
 
               return (
                 <div
@@ -913,7 +967,11 @@ export default async function RestaurantPage({
                     backgroundColor: 'var(--color-surface)',
                   }}
                 >
-                  {embedKey ? (
+                  {/* The embed iframe needs a place_id or coordinates to
+                      render a real map; without either (address/url only)
+                      we skip straight to the static fallback so we never
+                      emit a `center=null,null` view embed. */}
+                  {embedKey && (restaurant.google_place_id || hasCoords) ? (
                     <div className="aspect-square bg-gray-100">
                       <iframe
                         title={`Map of ${restaurant.name}`}

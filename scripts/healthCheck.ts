@@ -86,14 +86,16 @@ async function main() {
   }
 
   // 5. A pipeline run logged recently (fetch_logs is the audit trail).
+  // The live schema uses started_at (NOT NULL) / completed_at (nullable);
+  // there is no created_at column. Order by started_at.
   const { data: latestLog } = await sb
     .from('fetch_logs')
-    .select('created_at')
-    .order('created_at', { ascending: false })
+    .select('started_at')
+    .order('started_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (latestLog?.created_at) {
-    const ageH = (Date.now() - new Date(latestLog.created_at).getTime()) / 3.6e6
+  if (latestLog?.started_at) {
+    const ageH = (Date.now() - new Date(latestLog.started_at).getTime()) / 3.6e6
     console.log(`  last fetch_log age: ${ageH.toFixed(1)}h`)
     if (ageH > STALE_HOURS) warnings.push(`no fetch_logs in ${ageH.toFixed(1)}h`)
   } else {

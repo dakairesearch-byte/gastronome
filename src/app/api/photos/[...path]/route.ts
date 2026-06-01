@@ -37,12 +37,73 @@ export const runtime = 'nodejs'
 const DEFAULT_MAX_WIDTH = 1200
 const ALLOWED_WIDTHS = new Set([200, 320, 400, 600, 800, 1200, 1600])
 
+// Google Places (New) photo names look like:
+//   places/<placeId>/photos/<photoRef>
+// where <placeId> and <photoRef> are opaque base64url-ish tokens. We accept
+// only that exact 4-segment shape with conservative per-segment charsets so
+// this proxy can't be coerced into hitting arbitrary upstream paths.
+const PLACE_ID_RE = /^[A-Za-z0-9_-]{1,256}$/
+const PHOTO_REF_RE = /^[A-Za-z0-9_-]{1,1024}$/
+
+// ---------------------------------------------------------------------------
+// Lightweight in-memory per-IP fixed-window rate limit (60 req/min).
+//
+// This is a *defense-in-depth* stopgap only: it is per-instance (each
+// serverless instance keeps its own map) and resets on cold start. It does
+// NOT replace the real controls, which are an OPS TASK:
+//   - a hard Google Cloud billing cap / budget alert on the Places API key
+//   - an edge / WAF rate limit (e.g. Vercel Firewall) in front of this route
+// Configure both before relying on this proxy in production.
+// ---------------------------------------------------------------------------
+const RATE_LIMIT = 60
+const WINDOW_MS = 60_000
+const ipHits = new Map<string, { count: number; resetAt: number }>()
+
+function clientIp(request: Request): string {
+  const xff = request.headers.get('x-forwarded-for')
+  if (xff) return xff.split(',')[0]!.trim()
+  return request.headers.get('x-real-ip')?.trim() || 'unknown'
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = ipHits.get(ip)
+  if (!entry || now >= entry.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + WINDOW_MS })
+    // Opportunistically evict expired buckets so the map can't grow unbounded.
+    if (ipHits.size > 10_000) {
+      for (const [k, v] of ipHits) if (now >= v.resetAt) ipHits.delete(k)
+    }
+    return false
+  }
+  entry.count += 1
+  return entry.count > RATE_LIMIT
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const ip = clientIp(request)
+  if (isRateLimited(ip)) {
+    return new NextResponse('Too many requests', {
+      status: 429,
+      headers: { 'Retry-After': '60' },
+    })
+  }
+
   const { path } = await params
-  if (!path || path.length < 2) {
+  // Strict shape check: exactly `places/<placeId>/photos/<photoRef>`. Anything
+  // else (extra segments, wrong literals, illegal chars) is rejected before we
+  // ever touch Google — each upstream call bills the account.
+  if (
+    !path ||
+    path.length !== 4 ||
+    path[0] !== 'places' ||
+    path[2] !== 'photos' ||
+    !PLACE_ID_RE.test(path[1]!) ||
+    !PHOTO_REF_RE.test(path[3]!)
+  ) {
     return new NextResponse('Bad photoName', { status: 400 })
   }
   // Reconstruct the Google photoName: `places/<placeId>/photos/<photoRef>`.
