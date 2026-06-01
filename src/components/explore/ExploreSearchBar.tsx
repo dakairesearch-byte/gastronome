@@ -1,9 +1,10 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ChevronDown, PlusCircle } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown, Sliders } from 'lucide-react'
 import SearchAutocomplete from '@/components/search/SearchAutocomplete'
+import { exploreFacetsToSearchURL } from '@/components/search/filterState'
 
 interface ExploreSearchBarProps {
   cities: string[]
@@ -16,15 +17,12 @@ export default function ExploreSearchBar({
   initialCity,
 }: ExploreSearchBarProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectedCity, setSelectedCity] = useState(
     initialCity || cities[0] || 'New York'
   )
   const [menuOpen, setMenuOpen] = useState(false)
-  const [customActive, setCustomActive] = useState(false)
-  const [customValue, setCustomValue] = useState('')
-  const [customError, setCustomError] = useState('')
   const wrapRef = useRef<HTMLDivElement>(null)
-  const customInputRef = useRef<HTMLInputElement>(null)
 
   // Keep the label in sync when the URL changes (e.g. browser back/forward).
   useEffect(() => {
@@ -39,7 +37,6 @@ export default function ExploreSearchBar({
     function handleClick(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setMenuOpen(false)
-        setCustomActive(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -49,45 +46,33 @@ export default function ExploreSearchBar({
   const pickCity = (city: string) => {
     setSelectedCity(city)
     setMenuOpen(false)
-    setCustomActive(false)
-    setCustomValue('')
-    setCustomError('')
     // Push the city into the URL so the server re-renders Top 10 Trending
-    // and the map for the new city. Using push (not replace) keeps browser
-    // back/forward working as users expect.
-    router.push(`/explore?city=${encodeURIComponent(city)}`)
+    // and the map for the new city. Preserve the other active explore facets
+    // (cuisine/accolade/stars/q) instead of dropping them. Using push (not
+    // replace) keeps browser back/forward working as users expect.
+    const next = new URLSearchParams(searchParams?.toString() ?? '')
+    next.set('city', city)
+    router.push(`/explore?${next.toString()}`)
   }
 
-  const handleCustomTrigger = () => {
-    setCustomActive(true)
-    setCustomError('')
-    setTimeout(() => customInputRef.current?.focus(), 50)
-  }
-
-  // Free-text city entry used to route blindly to /explore?city=<freeform>,
-  // which lands on an empty page for any city we don't actually cover.
-  // Validate against the known-cities list (case-insensitively) and route
-  // to the canonical label; otherwise surface a "not covered yet" hint
-  // instead of navigating to a dead page.
-  const submitCustomCity = () => {
-    const v = customValue.trim()
-    if (!v) return
-    const match = cities.find((c) => c.toLowerCase() === v.toLowerCase())
-    if (match) {
-      pickCity(match)
-    } else {
-      setCustomError(`We don't cover ${v} yet — try one of the cities above.`)
-    }
-  }
-
-  const handleCustomKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      submitCustomCity()
-    } else if (e.key === 'Escape') {
-      setCustomActive(false)
-      setCustomValue('')
-      setCustomError('')
-    }
+  // Compose the live explore facets in the URL into a faceted /search query
+  // and navigate there. consensus_picks is non-transferable; the helper
+  // returns an /explore URL in that case (handled inside filterState).
+  const runCustomSearch = () => {
+    const starsRaw = searchParams?.get('stars')
+    const starsNum = starsRaw ? Number(starsRaw) : undefined
+    router.push(
+      exploreFacetsToSearchURL({
+        city: searchParams?.get('city') ?? selectedCity,
+        cuisine: searchParams?.get('cuisine') ?? undefined,
+        accolade: searchParams?.get('accolade') ?? undefined,
+        stars:
+          starsNum !== undefined && Number.isFinite(starsNum)
+            ? starsNum
+            : undefined,
+        q: searchParams?.get('q') ?? undefined,
+      })
+    )
   }
 
   return (
@@ -113,6 +98,26 @@ export default function ExploreSearchBar({
             />
           </div>
 
+          <button
+            type="button"
+            onClick={runCustomSearch}
+            aria-label="Custom search"
+            className="inline-flex items-center gap-2 flex-shrink-0 mr-1 my-1 px-3 sm:px-4 py-2.5 rounded-full transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: 'var(--color-primary)',
+              color: 'var(--color-surface)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            <Sliders size={15} />
+            <span
+              className="hidden sm:inline text-[12px] uppercase font-medium"
+              style={{ letterSpacing: '0.06em' }}
+            >
+              Custom search
+            </span>
+          </button>
+
           <div
             className="w-px h-7 flex-shrink-0"
             style={{ backgroundColor: 'var(--color-border)' }}
@@ -121,10 +126,7 @@ export default function ExploreSearchBar({
           <div ref={wrapRef} className="relative flex items-center flex-shrink-0">
             <button
               type="button"
-              onClick={() => {
-                setMenuOpen(!menuOpen)
-                if (menuOpen) setCustomActive(false)
-              }}
+              onClick={() => setMenuOpen(!menuOpen)}
               aria-haspopup="listbox"
               aria-expanded={menuOpen}
               className="inline-flex items-center gap-2.5 px-5 py-3 rounded-r-full transition-colors hover:bg-white/60"
@@ -174,100 +176,34 @@ export default function ExploreSearchBar({
                   boxShadow: '0 12px 32px rgba(0,0,0,0.10)',
                 }}
               >
-                {!customActive && (
-                  <>
-                    <div
-                      className="px-3 pt-2.5 pb-2 text-[10px] uppercase font-medium"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        letterSpacing: '0.14em',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
-                      Browse by city
-                    </div>
-                    {cities.map((city) => (
-                      <button
-                        key={city}
-                        type="button"
-                        role="option"
-                        aria-selected={city === selectedCity}
-                        onClick={() => pickCity(city)}
-                        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: 'var(--color-text)',
-                          borderRadius: '6px',
-                          backgroundColor: city === selectedCity ? 'var(--color-surface)' : 'transparent',
-                        }}
-                      >
-                        <span>{city}</span>
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleCustomTrigger}
-                      className="w-full flex items-center gap-2 px-3 pt-3.5 pb-2.5 text-left text-sm font-medium border-t mt-1.5"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-accent)',
-                        borderColor: 'var(--color-border)',
-                        borderRadius: 0,
-                      }}
-                    >
-                      <PlusCircle size={14} />
-                      <span>Custom...</span>
-                    </button>
-                  </>
-                )}
-
-                {customActive && (
-                  <div className="p-1.5">
-                    <input
-                      ref={customInputRef}
-                      type="text"
-                      value={customValue}
-                      onChange={(e) => {
-                        setCustomValue(e.target.value)
-                        if (customError) setCustomError('')
-                      }}
-                      onKeyDown={handleCustomKeyDown}
-                      placeholder="Enter a city..."
-                      autoComplete="off"
-                      aria-invalid={customError ? true : undefined}
-                      className="w-full px-3 py-2.5 border text-sm outline-none transition-colors focus:border-[var(--color-accent)]"
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        color: 'var(--color-text)',
-                        borderColor: customError ? '#c0392b' : 'var(--color-border)',
-                        borderRadius: '6px',
-                        fontSize: '16px',
-                      }}
-                    />
-                    {customError ? (
-                      <p
-                        className="mt-2 px-0.5 text-[11px]"
-                        role="alert"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: '#c0392b',
-                        }}
-                      >
-                        {customError}
-                      </p>
-                    ) : (
-                      <p
-                        className="mt-2 px-0.5 text-[11px]"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          color: 'var(--color-text-secondary)',
-                        }}
-                      >
-                        Press Enter to apply · Esc to cancel
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div
+                  className="px-3 pt-2.5 pb-2 text-[10px] uppercase font-medium"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    letterSpacing: '0.14em',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  Browse by city
+                </div>
+                {cities.map((city) => (
+                  <button
+                    key={city}
+                    type="button"
+                    role="option"
+                    aria-selected={city === selectedCity}
+                    onClick={() => pickCity(city)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: 'var(--color-text)',
+                      borderRadius: '6px',
+                      backgroundColor: city === selectedCity ? 'var(--color-surface)' : 'transparent',
+                    }}
+                  >
+                    <span>{city}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>

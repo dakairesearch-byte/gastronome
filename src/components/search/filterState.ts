@@ -116,6 +116,77 @@ export function filtersToURL(
   return next
 }
 
+/**
+ * Bridge: turn the explore page's left-rail facets into a `/search` URL the
+ * faceted engine actually parses. Reuses {@link filtersToURL} so the emitted
+ * param keys (`city`, `cuisine`, `michelin`, `bib`, `jb`, `eater38`,
+ * `googleMin`, `mode`, `q`) stay in lock-step with the search page parser.
+ *
+ * Accolade mapping:
+ *   - `michelin_star` + stars=2 -> michelin=2 ; without stars -> michelin=1,2,3
+ *   - `bib_gourmand`  -> bib=1
+ *   - `james_beard`   -> jb=winner
+ *   - `eater_38`      -> eater38=1
+ *   - `hidden_gems`   -> googleMin=4.3 (lossy: explore's "hidden gems" is a
+ *                        richer heuristic than a flat Google rating floor)
+ *   - `consensus_picks` -> NON-TRANSFERABLE; there is no /search equivalent,
+ *                        so we bounce back to /explore preserving the facet.
+ *
+ * @example
+ * exploreFacetsToSearchURL({ city: 'New York', cuisine: 'Japanese' })
+ * //=> "/search?city=New+York&cuisine=Japanese"
+ * @example
+ * exploreFacetsToSearchURL({ accolade: 'michelin_star', stars: 2 })
+ * //=> "/search?michelin=2"
+ * @example
+ * exploreFacetsToSearchURL({ accolade: 'consensus_picks' })
+ * //=> "/explore?accolade=consensus_picks"
+ */
+export function exploreFacetsToSearchURL(facets: {
+  city?: string
+  cuisine?: string
+  accolade?: string
+  stars?: number
+  q?: string
+}): string {
+  // Non-transferable accolade: no faithful /search facet exists, so stay on
+  // /explore rather than silently dropping the user's intent.
+  if (facets.accolade === 'consensus_picks') {
+    return '/explore?accolade=consensus_picks'
+  }
+
+  const filters: SearchFilters = { ...DEFAULT_FILTERS }
+  if (facets.city) filters.cities = [facets.city]
+  if (facets.cuisine) filters.cuisines = [facets.cuisine]
+
+  switch (facets.accolade) {
+    case 'michelin_star':
+      filters.michelinStars =
+        facets.stars && [1, 2, 3].includes(facets.stars)
+          ? [facets.stars]
+          : [1, 2, 3]
+      break
+    case 'bib_gourmand':
+      filters.bibGourmand = true
+      break
+    case 'james_beard':
+      filters.jamesBeard = 'winner'
+      break
+    case 'eater_38':
+      filters.eater38 = true
+      break
+    case 'hidden_gems':
+      filters.googleMinRating = 4.3
+      break
+  }
+
+  // Carry the free-text query but never force a mode — dishes is opt-in.
+  const base = facets.q ? new URLSearchParams({ q: facets.q }) : undefined
+  const params = filtersToURL(filters, base)
+  const qs = params.toString()
+  return qs ? `/search?${qs}` : '/search'
+}
+
 export function isDefaultFilters(f: SearchFilters): boolean {
   return (
     f.mode === DEFAULT_FILTERS.mode &&

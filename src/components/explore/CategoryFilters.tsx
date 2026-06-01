@@ -25,7 +25,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { ChevronDown, Star } from 'lucide-react'
+import { ChevronDown, Star, ArrowRight } from 'lucide-react'
+import { exploreFacetsToSearchURL } from '@/components/search/filterState'
 
 interface CategoryFiltersProps {
   cities: string[]
@@ -111,6 +112,24 @@ export default function CategoryFilters({
             navigateWith({ sort: v === 'A–Z' ? 'az' : null })
           }
         />
+
+        {/* Escalate the rail's current facets into the full faceted search
+            engine instead of dead-ending on this category page. */}
+        <a
+          href={exploreFacetsToSearchURL({
+            city: currentCity || undefined,
+            cuisine: currentCuisine ?? undefined,
+            accolade: currentAccolade ?? undefined,
+            stars: currentStars ?? undefined,
+          })}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-colors hover:opacity-90"
+          style={{
+            color: 'var(--color-primary)',
+          }}
+        >
+          Refine in search
+          <ArrowRight size={14} aria-hidden />
+        </a>
       </div>
     </div>
   )
@@ -139,8 +158,15 @@ function CityPicker({
         setOpen(false)
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handle)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [open])
 
   // City list might be missing the active city on first paint if the
@@ -276,6 +302,7 @@ function StarsPicker({
             type="button"
             role="radio"
             aria-checked={active}
+            aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
               active
@@ -312,8 +339,15 @@ function Dropdown({
         setOpen(false)
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handle)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [open])
 
   return (
