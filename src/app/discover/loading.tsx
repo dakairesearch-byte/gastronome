@@ -1,40 +1,26 @@
 /**
- * Discover route loading skeleton.
+ * Discover route loading skeleton (Reformulation v2).
  *
- * Mirrors the /discover first paint — a search input shimmer, a quick-chip
- * row of pills, a results bar, and a card grid — so cold loads and route
- * transitions show real structure instead of a blank screen. Neutral tokens
- * only; no colored hero.
+ * Mirrors the new /discover first paint — a title, the persistent global
+ * search input, the Browse|Map segmented toggle, and a card grid — so cold
+ * loads and route transitions show real structure instead of a blank screen.
+ * Neutral tokens only; no colored hero.
  */
 export default function DiscoverLoading() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-5">
         {/* Heading */}
-        <div className="mb-6">
+        <div>
           <div className="animate-shimmer h-9 w-48 rounded-lg mb-2" />
           <div className="animate-shimmer h-4 w-80 max-w-full rounded" />
         </div>
 
-        {/* Search input */}
-        <div className="animate-shimmer h-12 rounded-xl max-w-2xl mb-4" />
+        {/* Persistent search input */}
+        <div className="animate-shimmer h-12 rounded-xl max-w-2xl" />
 
-        {/* Quick-chip row */}
-        <div className="flex items-center gap-2 mb-5 overflow-hidden">
-          {[28, 20, 24, 22, 26].map((w, i) => (
-            <div
-              key={i}
-              className="animate-shimmer h-9 rounded-full flex-shrink-0"
-              style={{ width: `${w * 4}px` }}
-            />
-          ))}
-        </div>
-
-        {/* Results bar */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="animate-shimmer h-4 w-40 rounded" />
-          <div className="animate-shimmer h-8 w-32 rounded-lg" />
-        </div>
+        {/* Browse | Map segmented toggle */}
+        <div className="animate-shimmer h-9 w-44 rounded-lg" />
 
         {/* Card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

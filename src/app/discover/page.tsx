@@ -1,312 +1,124 @@
 'use client'
 
 /**
- * /discover — the unified discovery surface (Reformulation Wave 2).
+ * /discover — the unified discovery surface (Reformulation v2).
  *
- * This is the single merge of the old /explore and /search products, which
- * were "the same thing built twice." One filtered result set is rendered
- * three ways (List / Map / Grid), driven by ONE 3-tier filter system
- * (DiscoverFilters) and ONE data engine (useDiscoverResults). Editorial
- * collections arrive here as PRESETS: a `?preset=`, `?accolade=`, or
- * `?cuisine=` param seeds the filter state and renders a CollectionHeader
- * band above the results, so "collections" are just pre-filled Discover
- * views rather than a parallel surface.
+ * This is a THIN, legible shell. The old merged Discover put a List/Map/Grid
+ * toggle plus a 3-tier filter stack all on one screen, which was "super hard
+ * to follow." This rewrite splits Discover into TWO calm modes behind a single
+ * persistent search:
  *
- * URL is the source of truth (shareable): filters round-trip via
- * filtersToURL/fromURL, with `q` (query) and `sort` carried alongside.
+ *   - BROWSE (default) — the legible Top-10 Trending + editorial collections
+ *     surface (<DiscoverBrowse>).
+ *   - MAP — a full Beli-style interactive map (<DiscoverMapView>).
  *
- * Map view (Wave 3) is an interactive Google Maps JS API split-pane:
- * <RestaurantMap> plots the filtered set beside a compact result list, with
- * row↔pin pairing (hovering/selecting a row lifts its pin; clicking a pin
- * selects + scrolls its row). It degrades gracefully to the Static Maps tile
- * when the Maps JS key is unset, so the panel never blanks.
+ * A persistent global search input sits above both modes. The moment the user
+ * types a query, search RESULTS take over the body (<DiscoverSearchResults>),
+ * regardless of mode, so search is never buried behind a tab.
+ *
+ * URL is the source of truth (shareable):
+ *   ?city=   active city (default via useCity / DEFAULT_CITY)
+ *   ?q=      free-text search query (when present, search results win)
+ *   ?mode=   browse | map (default browse)
+ *   plus preset/accolade/cuisine params, preserved so Browse deep-links
+ *   (/discover?accolade=michelin_star) keep working.
+ *
+ * The shell owns ONLY URL state + chrome. Each mode component reads any
+ * further state it needs from the URL itself or self-fetches via
+ * useDiscoverResults — the shell passes only { city } / { query, city }.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import {
-  LayoutGrid,
-  List as ListIcon,
-  Map as MapIcon,
-  Search,
-  Utensils,
-  ChevronDown,
-} from 'lucide-react'
-import RestaurantCard from '@/components/RestaurantCard'
-import DiscoverFilters from '@/components/discover/DiscoverFilters'
-import CollectionHeader from '@/components/explore/CollectionHeader'
-import RestaurantMap from '@/components/discover/RestaurantMap'
-import SearchBar from '@/components/SearchBar'
-import EmptyState from '@/components/EmptyState'
-import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton'
-import useDiscoverResults, {
-  RESULT_CAP,
-  type SortKey,
-} from '@/lib/hooks/useDiscoverResults'
-import type { SearchFilters } from '@/components/search/SearchFiltersSidebar'
-import {
-  filtersFromURL,
-  filtersToURL,
-  isDefaultFilters,
-} from '@/components/search/filterState'
-import { EDITORIAL_COLLECTIONS } from '@/lib/collections/editorial'
+import { LayoutGrid, Map as MapIcon, Search, X } from 'lucide-react'
+import DiscoverBrowse from '@/components/discover/DiscoverBrowse'
+import DiscoverMapView from '@/components/discover/DiscoverMapView'
+import DiscoverSearchResults from '@/components/discover/DiscoverSearchResults'
+import { DEFAULT_CITY } from '@/lib/hooks/useCity'
 
 /* ------------------------------------------------------------------ */
-/*  View + sort config                                                 */
+/*  Mode config                                                        */
 /* ------------------------------------------------------------------ */
 
-type ViewMode = 'list' | 'map' | 'grid'
+type Mode = 'browse' | 'map'
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'gastronome', label: 'Gastronome Score' },
-  { key: 'google', label: 'Google rating' },
-  { key: 'count', label: 'Review count' },
-  { key: 'name', label: 'Name (A–Z)' },
-]
-
-function parseSortKey(v: string | null | undefined): SortKey {
-  return v === 'google' || v === 'count' || v === 'name' ? v : 'gastronome'
-}
-
-function parseViewMode(v: string | null | undefined): ViewMode {
-  return v === 'map' || v === 'grid' ? v : 'list'
+function parseMode(v: string | null | undefined): Mode {
+  return v === 'map' ? 'map' : 'browse'
 }
 
 /* ------------------------------------------------------------------ */
-/*  Preset → filters + collection-header derivation                    */
+/*  Shell                                                              */
 /* ------------------------------------------------------------------ */
 
-/**
- * Resolve the active editorial collection (if any) from the URL preset
- * params. Accepts `?preset=<slug>` (canonical), or the legacy explore
- * params `?accolade=` / `?cuisine=` which map onto the same collections.
- * Returns null when none match — Discover then renders the plain surface.
- */
-function resolvePreset(params: URLSearchParams) {
-  const preset = params.get('preset')?.trim()
-  const accolade = params.get('accolade')?.trim()
-  const cuisine = params.get('cuisine')?.trim()
-
-  if (preset) {
-    return EDITORIAL_COLLECTIONS.find((c) => c.slug === preset) ?? null
-  }
-  if (accolade) {
-    return (
-      EDITORIAL_COLLECTIONS.find(
-        (c) =>
-          (c.filter.kind === 'accolade' && c.filter.value === accolade) ||
-          (c.filter.kind === 'algorithm' && c.filter.name === accolade)
-      ) ?? null
-    )
-  }
-  // A bare ?cuisine= without an editorial collection is still a valid filter,
-  // but only surfaces a header when it matches a curated cuisine collection
-  // (e.g. Brunch). Otherwise it's an ordinary cuisine facet, no band.
-  if (cuisine) {
-    return (
-      EDITORIAL_COLLECTIONS.find(
-        (c) =>
-          c.filter.kind === 'cuisine' &&
-          c.filter.value.toLowerCase() === cuisine.toLowerCase()
-      ) ?? null
-    )
-  }
-  return null
-}
-
-/**
- * Translate an editorial collection's filter into concrete SearchFilters
- * mutations, layered on top of a base (which already carries any city/query
- * facets). Mirrors exploreFacetsToSearchURL's accolade mapping so a preset
- * lands on the same engine predicates the old /search faceting used.
- *
- * `consensus_picks` is algorithm-backed and has no SearchFilters predicate;
- * we approximate it with a high quality floor so the preset still narrows the
- * set rather than 500ing. (Wave 4 rebuilds the true consensus surface.)
- */
-function applyPresetToFilters(
-  base: SearchFilters,
-  collectionFilter: (typeof EDITORIAL_COLLECTIONS)[number]['filter']
-): SearchFilters {
-  const next: SearchFilters = { ...base }
-  if (collectionFilter.kind === 'cuisine') {
-    if (!next.cuisines.includes(collectionFilter.value))
-      next.cuisines = [...next.cuisines, collectionFilter.value]
-    return next
-  }
-  if (collectionFilter.kind === 'algorithm') {
-    // consensus_picks — no exact predicate; approximate with a quality floor.
-    next.googleMinRating = Math.max(next.googleMinRating, 4.3)
-    return next
-  }
-  // accolade
-  switch (collectionFilter.value) {
-    case 'michelin_star':
-      next.michelinStars = [1, 2, 3]
-      break
-    case 'bib_gourmand':
-      next.bibGourmand = true
-      break
-    case 'james_beard':
-      next.jamesBeard = 'winner'
-      break
-    case 'eater_38':
-      next.eater38 = true
-      break
-    case 'hidden_gems':
-      next.googleMinRating = Math.max(next.googleMinRating, 4.3)
-      break
-  }
-  return next
-}
-
-/* ------------------------------------------------------------------ */
-/*  Discover surface                                                   */
-/* ------------------------------------------------------------------ */
-
-function DiscoverContent() {
+function DiscoverShellContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  // `useSearchParams()` forces this component to render client-side (it sits
-  // inside the page's Suspense boundary), so the lazy useState initializers
-  // below run on the client with the real, live URL params — no separate
-  // hydration effect is needed. didHydrate guards the URL-sync effect from
-  // firing on the very first commit (which would just rewrite the same URL).
-  const didHydrate = useRef(false)
+  // Resolved active city: ?city= wins; falls back to DEFAULT_CITY. (We read it
+  // straight off the URL rather than useCity() so the shell stays a pure
+  // URL→render function; the global Navigation switcher still drives ?city=.)
+  const city = searchParams.get('city')?.trim() || DEFAULT_CITY
 
-  // Query + sort + view live outside the filter object so they don't pollute
-  // filterState's serialization.
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
-  const [sort, setSort] = useState<SortKey>(() =>
-    parseSortKey(searchParams.get('sort'))
-  )
-  const [view, setView] = useState<ViewMode>(() =>
-    parseViewMode(searchParams.get('view'))
-  )
+  const query = searchParams.get('q') ?? ''
+  const mode = parseMode(searchParams.get('mode'))
 
-  // Initial filters: seed from the URL filter params, then layer any preset
-  // mapping (accolade/cuisine/preset) on top so a deep-link like
-  // /discover?accolade=michelin_star arrives pre-filtered.
-  const [filters, setFilters] = useState<SearchFilters>(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    const base = filtersFromURL(params)
-    const preset = resolvePreset(params)
-    return preset ? applyPresetToFilters(base, preset.filter) : base
-  })
+  // Local, controlled mirror of the query so typing is instant; the URL is
+  // updated (debounced) so the result body and shareable link stay in sync.
+  const [draft, setDraft] = useState(query)
 
-  // The preset/collection resolved from the URL at mount — drives the header
-  // band. Held in state (not re-derived) because the URL-sync effect stops
-  // re-emitting the preset params once they've seeded the filters. The band
-  // is dismissed at RENDER time (derived `showPresetBand` below) when the user
-  // clears every facet, so no setState-in-effect is needed.
-  const [activePreset] = useState(() =>
-    resolvePreset(new URLSearchParams(searchParams.toString()))
-  )
-
-  /* ----------------------------------------------------------------- */
-  /*  URL sync on every filter / query / sort / view change             */
-  /* ----------------------------------------------------------------- */
+  // Keep the input in sync when the URL changes from outside (back/forward,
+  // a city switch, a deep-link). Only overwrite when they actually diverge so
+  // we don't clobber mid-typing.
   useEffect(() => {
-    if (!didHydrate.current) {
-      didHydrate.current = true
-      return
-    }
-    // Rebuild the URL from filters. We DON'T re-emit the preset params
-    // (accolade/cuisine/preset) — once a preset seeds the filters, the
-    // canonical state is the filter params themselves, so the band persists
-    // via activePreset state, not the URL. This keeps a single source of
-    // truth and lets the applied-facet chips clear the preset cleanly.
-    const next = filtersToURL(filters)
-    if (searchQuery.trim()) next.set('q', searchQuery.trim())
-    if (sort !== 'gastronome') next.set('sort', sort)
-    if (view !== 'list') next.set('view', view)
-    const str = next.toString()
-    const target = str ? `${pathname}?${str}` : pathname
-    if (target !== `${pathname}${window.location.search}`) {
-      router.replace(target, { scroll: false })
-    }
-  }, [filters, searchQuery, sort, view, pathname, router])
+    setDraft((prev) => (prev === query ? prev : query))
+  }, [query])
 
-  // Show the preset band only while the seeded facets are still active —
-  // once the user clears everything (Clear all), the band drops. Derived at
-  // render so there's no state-syncing effect.
-  const showPresetBand =
-    activePreset != null &&
-    !(isDefaultFilters(filters) && !searchQuery.trim())
-
-  /* ----------------------------------------------------------------- */
-  /*  Data engine                                                       */
-  /* ----------------------------------------------------------------- */
-  const { restaurants, dishes, neighborhoods, loading, total } =
-    useDiscoverResults({ filters, sort, query: searchQuery })
-
-  // Facet lists for DiscoverFilters. Cuisines + cities are loaded lazily;
-  // neighborhoods come from the engine (city-scoped). We derive cuisines and
-  // cities from the visible result set as a calm, dependency-free default —
-  // the full facet load lives in the engine's own neighborhood query, and
-  // building cuisine/city options from results keeps this page light.
-  const availableCuisines = useMemo(
-    () =>
-      Array.from(
-        new Set(restaurants.map((r) => r.cuisine).filter(Boolean) as string[])
-      ).sort(),
-    [restaurants]
-  )
-  const availableCities = useMemo(
-    () =>
-      Array.from(
-        new Set(restaurants.map((r) => r.city).filter(Boolean) as string[])
-      ).sort(),
-    [restaurants]
+  /**
+   * Write a partial set of params onto the current URL, preserving everything
+   * else (city, preset/accolade/cuisine deep-link params, mode). Passing a
+   * null/empty value deletes the key. Uses replace + scroll:false so search
+   * typing doesn't spam history or jump the page.
+   */
+  const patchParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString())
+      for (const [k, v] of Object.entries(patch)) {
+        if (v == null || v === '') next.delete(k)
+        else next.set(k, v)
+      }
+      const str = next.toString()
+      router.replace(str ? `${pathname}?${str}` : pathname, { scroll: false })
+    },
+    [searchParams, router, pathname]
   )
 
-  const resultsCapped = restaurants.length >= RESULT_CAP
-  const hasAnyResults = total > 0
-  const activeCity = filters.cities[0]
+  // Debounce the URL write for the query so each keystroke doesn't replace().
+  useEffect(() => {
+    const trimmed = draft.trim()
+    if (trimmed === query) return
+    const t = setTimeout(() => patchParams({ q: trimmed || null }), 250)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft])
 
-  /* ----------------------------------------------------------------- */
-  /*  Map split-pane: row↔pin pairing + bounds refinement              */
-  /* ----------------------------------------------------------------- */
+  const setMode = useCallback(
+    (next: Mode) => patchParams({ mode: next === 'browse' ? null : next }),
+    [patchParams]
+  )
 
-  // The currently highlighted restaurant — lifts its pin on the map and tints
-  // its row in the list. Set by hovering/selecting a row OR clicking a pin.
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const clearQuery = useCallback(() => {
+    setDraft('')
+    patchParams({ q: null })
+  }, [patchParams])
 
-  // Per-row element refs so a pin click can scroll its paired list row into
-  // view (the map↔list pairing in the split-pane).
-  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
-
-  // Clicking a pin → select + scroll the paired row into view.
-  const handleMapSelect = useCallback((id: string) => {
-    setSelectedId(id)
-    rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [])
-
-  // "Search this area" → refine the result set to the map's current bounds.
-  // useDiscoverResults has no bounds predicate, so we keep this a no-op for
-  // now (the visible set is already the filtered set); wiring a bounds facet
-  // into the engine is a separate, engine-owned change.
-  const handleSearchArea = useCallback(() => {
-    // no-op: bounds-based refinement (north/south/east/west) belongs to the
-    // data engine, which has no bounds predicate yet. The button still fires
-    // through the contract; wiring a bounds facet is an engine-owned change.
-  }, [])
-
-  /* ----------------------------------------------------------------- */
-  /*  Render                                                            */
-  /* ----------------------------------------------------------------- */
-
-  const headerCount = showPresetBand ? restaurants.length : total
+  const searching = query.trim().length > 0
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-5">
-        {/* Heading — only on the plain (non-preset) surface; the preset band
-            carries its own title. Keeps the surface calm and uncrowded. */}
-        {!showPresetBand && (
+        {/* Header: title + active city */}
+        <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
             <h1
               className="text-3xl sm:text-4xl"
@@ -320,304 +132,128 @@ function DiscoverContent() {
               Discover
             </h1>
             <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              Find the right restaurant — search, narrow it down, see it on the map.
+              Browse what&rsquo;s trending in{' '}
+              <span style={{ color: 'var(--color-text)', fontWeight: 600 }}>{city}</span>, or
+              search across everything.
             </p>
           </div>
-        )}
-
-        {/* ONE search input */}
-        <div className="max-w-2xl">
-          <SearchBar
-            placeholder={
-              filters.mode === 'dishes'
-                ? 'Search dishes — try "ramen" or "cacio e pepe"…'
-                : 'Search restaurants, cuisines, cities, or dishes…'
-            }
-            initialValue={searchQuery}
-            onSearch={setSearchQuery}
-          />
         </div>
 
-        {/* ONE 3-tier filter system */}
-        <DiscoverFilters
-          filters={filters}
-          onChange={setFilters}
-          available={{
-            cuisines: availableCuisines,
-            cities: availableCities,
-            neighborhoods,
+        {/* Persistent global search — always visible above the mode content */}
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            patchParams({ q: draft.trim() || null })
           }}
-          city={activeCity}
-        />
-
-        {/* Collection preset band (collections-as-presets) */}
-        {showPresetBand && activePreset && (
-          <CollectionHeader
-            eyebrow={activePreset.eyebrow}
-            title={activePreset.title}
-            description={activePreset.longDescription || activePreset.description}
-            count={headerCount}
-            rankBasis={activePreset.rankBasis}
-            clearHref="/discover"
-            brand={activePreset.brand}
-            locality={activeCity}
+          className="relative max-w-2xl"
+        >
+          <Search
+            size={18}
+            aria-hidden="true"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: 'var(--color-text-secondary)' }}
           />
-        )}
-
-        {/* ONE results bar: count + view switch + sort */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {loading ? (
-              'Searching…'
-            ) : (
-              <>
-                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                  {total}
-                </span>{' '}
-                {total === 1 ? 'result' : 'results'}
-                {resultsCapped && (
-                  <> · showing the top {RESULT_CAP} — narrow with filters to see more</>
-                )}
-              </>
-            )}
-          </p>
-
-          <div className="flex items-center gap-2">
-            {/* View switch */}
-            <div
-              className="inline-flex items-center gap-0.5 p-0.5 rounded-lg border"
-              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}
-              role="tablist"
-              aria-label="Result view"
+          <input
+            type="search"
+            inputMode="search"
+            enterKeyHint="search"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Search restaurants, dishes, neighborhoods…"
+            aria-label="Search restaurants, dishes, neighborhoods"
+            className="w-full pl-10 pr-10 py-3 rounded-xl transition focus:outline-none"
+            style={{
+              color: 'var(--color-text)',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              fontFamily: 'var(--font-body)',
+            }}
+          />
+          {draft && (
+            <button
+              type="button"
+              onClick={clearQuery}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-colors"
+              style={{ color: 'var(--color-text-secondary)' }}
             >
-              {(
-                [
-                  { key: 'list', label: 'List', Icon: ListIcon },
-                  { key: 'map', label: 'Map', Icon: MapIcon },
-                  { key: 'grid', label: 'Grid', Icon: LayoutGrid },
-                ] as { key: ViewMode; label: string; Icon: typeof ListIcon }[]
-              ).map(({ key, label, Icon }) => {
-                const active = view === key
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    aria-label={`${label} view`}
-                    onClick={() => setView(key)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors"
-                    style={
-                      active
-                        ? {
-                            backgroundColor: 'var(--color-action)',
-                            color: 'var(--color-on-action)',
-                          }
-                        : { color: 'var(--color-text-secondary)' }
-                    }
-                  >
-                    <Icon size={14} />
-                    <span className="hidden sm:inline">{label}</span>
-                  </button>
-                )
-              })}
-            </div>
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
+        </form>
 
-            {/* Sort */}
-            <div className="relative">
-              <select
-                aria-label="Sort results"
-                value={sort}
-                onChange={(e) => setSort(parseSortKey(e.target.value))}
-                className="appearance-none text-xs font-semibold border rounded-lg pl-3 pr-7 py-1.5 cursor-pointer focus:outline-none"
-                style={{
-                  color: 'var(--color-text)',
-                  backgroundColor: 'var(--color-surface)',
-                  borderColor: 'var(--color-border)',
-                }}
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={13}
-                className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: 'var(--color-text-secondary)' }}
-              />
-            </div>
+        {/* Browse | Map segmented toggle — always visible. Disabled-looking
+            (de-emphasized) while searching, since search results override the
+            mode body; clicking a tab clears the query and returns to it. */}
+        <div className="flex items-center gap-3">
+          <div
+            className="inline-flex items-center gap-0.5 p-0.5 rounded-lg border"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+            }}
+            role="tablist"
+            aria-label="Discover mode"
+          >
+            {(
+              [
+                { key: 'browse', label: 'Browse', Icon: LayoutGrid },
+                { key: 'map', label: 'Map', Icon: MapIcon },
+              ] as { key: Mode; label: string; Icon: typeof LayoutGrid }[]
+            ).map(({ key, label, Icon }) => {
+              const active = !searching && mode === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-label={`${label} mode`}
+                  onClick={() => {
+                    // Switching mode also exits search so the chosen mode shows.
+                    if (searching) clearQuery()
+                    setMode(key)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors"
+                  style={
+                    active
+                      ? {
+                          backgroundColor: 'var(--color-action)',
+                          color: 'var(--color-on-action)',
+                        }
+                      : { color: 'var(--color-text-secondary)' }
+                  }
+                >
+                  <Icon size={14} />
+                  <span>{label}</span>
+                </button>
+              )
+            })}
           </div>
+
+          {searching && (
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Showing search results ·{' '}
+              <button
+                type="button"
+                onClick={clearQuery}
+                className="font-semibold underline-offset-2 hover:underline"
+                style={{ color: 'var(--color-action)' }}
+              >
+                back to {mode === 'map' ? 'map' : 'browse'}
+              </button>
+            </span>
+          )}
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2, 3].map((i) => (
-              <RestaurantCardSkeleton key={i} />
-            ))}
-          </div>
-        )}
-
-        {/* Empty */}
-        {!loading && !hasAnyResults && (
-          <EmptyState
-            icon={Search}
-            tone={searchQuery || !isDefaultFilters(filters) ? 'attention' : 'neutral'}
-            title={
-              searchQuery || !isDefaultFilters(filters)
-                ? 'Nothing matches yet'
-                : 'Where to tonight?'
-            }
-            description={
-              searchQuery
-                ? `Nothing for “${searchQuery}”. Try a broader term or loosen a filter.`
-                : !isDefaultFilters(filters)
-                ? 'Your filters are too tight. Drop one and try again.'
-                : 'Start typing a restaurant, cuisine, or dish — or open a filter.'
-            }
-          />
-        )}
-
-        {/* Results */}
-        {!loading && hasAnyResults && (
-          <div className="space-y-4">
-            {/* Dishes (shown above restaurants in every view) */}
-            {dishes.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
-                  <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    <Utensils size={12} />
-                    {searchQuery ? <>Dishes matching “{searchQuery}”</> : 'Top dishes'}
-                  </span>
-                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--color-border)' }} />
-                </div>
-                {dishes.map((d, i) => (
-                  <Link
-                    key={`${d.restaurant.id}-${d.dish_name}-${i}`}
-                    href={`/restaurants/${d.restaurant.id}`}
-                    className="block rounded-lg border p-4 hover:shadow-md transition-shadow"
-                    style={{
-                      backgroundColor: 'var(--color-surface)',
-                      borderColor: 'var(--color-border)',
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: 'var(--color-secondary)' }}
-                      >
-                        <Utensils size={18} style={{ color: 'var(--color-action)' }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-                            {d.dish_name}
-                          </p>
-                          {d.isTopDish && (
-                            <span
-                              className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0"
-                              style={{
-                                color: 'var(--color-action)',
-                                backgroundColor:
-                                  'color-mix(in srgb, var(--color-action) 14%, var(--color-surface))',
-                              }}
-                            >
-                              Top dish
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                          at {d.restaurant.name}
-                          {d.restaurant.city ? ` · ${d.restaurant.city}` : ''}
-                        </p>
-                      </div>
-                      {d.mention_count > 0 && (
-                        <span
-                          className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-                          style={{
-                            color: 'var(--color-action)',
-                            backgroundColor:
-                              'color-mix(in srgb, var(--color-action) 10%, var(--color-surface))',
-                          }}
-                        >
-                          {d.mention_count}{' '}
-                          {d.mention_count === 1 ? 'mention' : 'mentions'}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* Restaurants — rendered per view */}
-            {restaurants.length > 0 && view === 'grid' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {restaurants.map((r) => (
-                  <RestaurantCard key={r.id} restaurant={r} variant="hero" />
-                ))}
-              </div>
-            )}
-
-            {restaurants.length > 0 && view === 'list' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {restaurants.map((r) => (
-                  <RestaurantCard key={r.id} restaurant={r} variant="compact" />
-                ))}
-              </div>
-            )}
-
-            {restaurants.length > 0 && view === 'map' && (
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-5">
-                {/* Interactive map (degrades to StaticMapTile when no JS key).
-                    Map above the list on mobile (full-bleed), beside it on
-                    desktop where it sticks while the list scrolls. */}
-                <div className="relative rounded-2xl border overflow-hidden h-72 lg:h-[calc(100vh-12rem)] lg:sticky lg:top-24"
-                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-secondary)' }}
-                >
-                  <RestaurantMap
-                    restaurants={restaurants}
-                    selectedId={selectedId}
-                    onSelect={handleMapSelect}
-                    onSearchArea={handleSearchArea}
-                    className="absolute inset-0"
-                  />
-                </div>
-                {/* Result list beside the map — each row pairs with a pin:
-                    hover/focus highlights its pin; clicking a pin scrolls and
-                    tints the row here. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 content-start">
-                  {restaurants.map((r) => {
-                    const active = selectedId === r.id
-                    return (
-                      <div
-                        key={r.id}
-                        ref={(el) => {
-                          rowRefs.current[r.id] = el
-                        }}
-                        onMouseEnter={() => setSelectedId(r.id)}
-                        onFocusCapture={() => setSelectedId(r.id)}
-                        className="rounded-2xl transition-shadow"
-                        style={
-                          active
-                            ? {
-                                outline: '2px solid var(--color-action)',
-                                outlineOffset: '2px',
-                              }
-                            : undefined
-                        }
-                      >
-                        <RestaurantCard restaurant={r} variant="compact" />
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Body — render priority: search query > map mode > browse (default) */}
+        {searching ? (
+          <DiscoverSearchResults query={query} city={city} />
+        ) : mode === 'map' ? (
+          <DiscoverMapView city={city} />
+        ) : (
+          <DiscoverBrowse city={city} />
         )}
       </div>
     </div>
@@ -625,29 +261,31 @@ function DiscoverContent() {
 }
 
 /**
- * Server shell before DiscoverContent hydrates — renders the heading and a
- * static input affordance so cold loads and crawlers get a real first paint
- * (mirrors loading.tsx structure, lighter).
+ * Server/prerender shell before DiscoverShellContent hydrates — renders the
+ * heading and a static input affordance so cold loads and crawlers get a real
+ * first paint (mirrors loading.tsx, lighter). Required because
+ * DiscoverShellContent calls useSearchParams (Next 16 CSR-bailout rule).
  */
-function DiscoverShell() {
+function DiscoverShellFallback() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <h1
-          className="text-3xl sm:text-4xl mb-2"
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 600,
-            letterSpacing: '-0.01em',
-            color: 'var(--color-text)',
-          }}
-        >
-          Discover
-        </h1>
-        <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-          Find the right restaurant — search, narrow it down, see it on the map.
-        </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-5">
+        <div>
+          <h1
+            className="text-3xl sm:text-4xl mb-2"
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+              color: 'var(--color-text)',
+            }}
+          >
+            Discover
+          </h1>
+          <div className="animate-shimmer h-4 w-80 max-w-full rounded" />
+        </div>
         <div className="animate-shimmer h-12 rounded-xl max-w-2xl" />
+        <div className="animate-shimmer h-9 w-44 rounded-lg" />
       </div>
     </div>
   )
@@ -655,8 +293,8 @@ function DiscoverShell() {
 
 export default function DiscoverPage() {
   return (
-    <Suspense fallback={<DiscoverShell />}>
-      <DiscoverContent />
+    <Suspense fallback={<DiscoverShellFallback />}>
+      <DiscoverShellContent />
     </Suspense>
   )
 }

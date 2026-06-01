@@ -8,12 +8,40 @@ import StaticMapTile from '@/components/StaticMapTile'
 import { gastronomeScore } from '@/lib/score'
 import { Restaurant } from '@/types/database'
 
+export interface MapBounds {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
 interface RestaurantMapProps {
   restaurants: Restaurant[]
   selectedId?: string | null
   onSelect?: (id: string) => void
-  onSearchArea?: (b: { north: number; south: number; east: number; west: number }) => void
+  onSearchArea?: (b: MapBounds) => void
   className?: string
+  /**
+   * Fires (debounced) whenever the user finishes panning/zooming the map.
+   * Used by DiscoverMapView to enable a "Search this area" affordance only
+   * after the viewport actually moves (Beli behavior). Optional — older
+   * callers (the W3 split-pane) don't pass it and keep working.
+   */
+  onBoundsChange?: (b: MapBounds) => void
+  /**
+   * When true, the built-in "Search this area" button is hidden so the host
+   * (DiscoverMapView) can render its own area-search affordance over the
+   * full-bleed map. Defaults to false to preserve the W3 split-pane look.
+   */
+  hideSearchAreaButton?: boolean
+  /**
+   * Optional render-prop for the in-map preview card shown when a pin is
+   * selected. Receives the selected restaurant and a close handler. When
+   * omitted, no preview overlay is rendered (the host owns the preview, e.g.
+   * in a bottom sheet). Lets the parent supply token-styled markup without
+   * RestaurantMap importing card components.
+   */
+  renderPreview?: (restaurant: Restaurant, close: () => void) => React.ReactNode
 }
 
 // The Maps JS key. Mirrors the autocomplete file but prefers a dedicated
@@ -52,11 +80,24 @@ export default function RestaurantMap({
   onSelect,
   onSearchArea,
   className = '',
+  onBoundsChange,
+  hideSearchAreaButton = false,
+  renderPreview,
 }: RestaurantMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
   const listenersRef = useRef<any[]>([])
+  const boundsListenerRef = useRef<any>(null)
+  const boundsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Keep the latest onBoundsChange in a ref so the idle listener (attached
+  // once when the map is created) always calls the current callback without
+  // re-attaching on every render. Synced in an effect (not during render) to
+  // satisfy react-hooks/refs.
+  const onBoundsChangeRef = useRef(onBoundsChange)
+  useEffect(() => {
+    onBoundsChangeRef.current = onBoundsChange
+  }, [onBoundsChange])
 
   const [sdkReady, setSdkReady] = useState(false)
   // MAPS_KEY is a module constant, so the "no key" failure is known at first
@@ -67,6 +108,12 @@ export default function RestaurantMap({
 
   // Restaurants that actually have coordinates.
   const located = useMemo(() => restaurants.filter(hasCoords), [restaurants])
+
+  // The currently-selected restaurant (for the in-map preview overlay).
+  const selectedRestaurant = useMemo(
+    () => (selectedId ? restaurants.find((r) => r.id === selectedId) ?? null : null),
+    [restaurants, selectedId]
+  )
 
   // Result-set center for the static fallback tile.
   const center = useMemo(() => {
@@ -147,8 +194,36 @@ export default function RestaurantMap({
       streetViewControl: false,
       fullscreenControl: false,
       clickableIcons: false,
+      gestureHandling: 'greedy', // one-finger pan on mobile (Beli-style full map)
+    })
+
+    // Emit a debounced bounds-change on idle (after pan/zoom settles). Attached
+    // once; reads the live callback via the ref so it survives prop churn.
+    boundsListenerRef.current = mapRef.current.addListener('idle', () => {
+      const cb = onBoundsChangeRef.current
+      if (!cb || !mapRef.current) return
+      const b = mapRef.current.getBounds()
+      if (!b) return
+      const ne = b.getNorthEast()
+      const sw = b.getSouthWest()
+      if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current)
+      boundsDebounceRef.current = setTimeout(() => {
+        cb({ north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng() })
+      }, 250)
     })
   }, [sdkReady, center.lat, center.lng])
+
+  // Tear down the idle listener + pending debounce on unmount.
+  useEffect(() => {
+    return () => {
+      const g = window.google as any
+      if (boundsListenerRef.current && g?.maps?.event) {
+        g.maps.event.removeListener(boundsListenerRef.current)
+        boundsListenerRef.current = null
+      }
+      if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current)
+    }
+  }, [])
 
   // Rebuild markers whenever the located set changes.
   useEffect(() => {
@@ -271,18 +346,30 @@ export default function RestaurantMap({
     <div className={`relative h-full w-full overflow-hidden ${className}`}>
       <div ref={mapContainerRef} className="h-full w-full" />
 
-      {/* Controls — garnet (var(--color-action)) */}
-      <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
-        <button
-          type="button"
-          onClick={handleSearchArea}
-          className="pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
-          style={{ backgroundColor: 'var(--color-action)' }}
-        >
-          <Search size={15} />
-          Search this area
-        </button>
-      </div>
+      {/* Controls — garnet (var(--color-action)). The host (DiscoverMapView)
+          can hide this and render its own area-search affordance. */}
+      {!hideSearchAreaButton && (
+        <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
+          <button
+            type="button"
+            onClick={handleSearchArea}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+            style={{ backgroundColor: 'var(--color-action)' }}
+          >
+            <Search size={15} />
+            Search this area
+          </button>
+        </div>
+      )}
+
+      {/* In-map preview card for the selected pin (host-supplied markup). */}
+      {renderPreview && selectedRestaurant && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-3">
+          <div className="pointer-events-auto w-full max-w-sm">
+            {renderPreview(selectedRestaurant, () => onSelect?.(''))}
+          </div>
+        </div>
+      )}
 
       <div className="absolute bottom-4 right-3">
         <button
