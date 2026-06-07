@@ -540,17 +540,19 @@ async function main() {
   console.log('[topDishesFromChips] loading menu items, reviews, videos, restaurants...')
   // Pull data scoped to restaurants-that-have-chips. This keeps memory
   // bounded as the chip table grows.
+  // NOTE: load full tables and filter in-memory. A .in(restaurant_id, [~1700 uuids])
+  // filter overflows PostgREST's URL length limit (414 / empty error) at full scale.
   const restaurants = await loadAll<Restaurant>('restaurants', 'id,name,cuisine',
-    (q) => q.in('id', uniqueRestIds))
+    (q) => q)
   const menuItems = await loadAll<MenuItem>('restaurant_menu_items',
     'id,restaurant_id,item_name',
-    (q) => q.in('restaurant_id', uniqueRestIds))
+    (q) => q)
   const reviews = await loadAll<ReviewRow>('external_reviews',
     'restaurant_id,text',
-    (q) => q.in('restaurant_id', uniqueRestIds).eq('source', 'google'))
+    (q) => q.eq('source', 'google'))
   const videos = await loadAll<VideoRow>('restaurant_videos',
     'restaurant_id,caption,platform,like_count',
-    (q) => q.in('restaurant_id', uniqueRestIds))
+    (q) => q)
   console.log(`  menu=${menuItems.length} reviews=${reviews.length} videos=${videos.length} restaurants=${restaurants.length}`)
 
   // Group by restaurant for per-restaurant scoring passes.
@@ -717,13 +719,15 @@ async function main() {
   // for restaurants with no chip data yet).
   console.log(`[topDishesFromChips] writing ${outputRows.length} top-dish rows...`)
   const restaurantIds = Array.from(new Set(outputRows.map((r) => r.restaurant_id)))
-  if (restaurantIds.length > 0) {
+  // Chunk the delete: .in() with ~1700 ids overflows PostgREST's URL limit,
+  // which silently fails the delete and makes every insert collide on
+  // uq_rtd_restaurant_displayname (the "wrote 0" bug).
+  for (let i = 0; i < restaurantIds.length; i += 100) {
+    const chunk = restaurantIds.slice(i, i + 100)
     const { error: delErr } = await sb.from('restaurant_top_dishes')
       .delete()
-      .in('restaurant_id', restaurantIds)
-    if (delErr) {
-      console.warn(`  delete err: ${delErr.message}`)
-    }
+      .in('restaurant_id', chunk)
+    if (delErr) console.warn(`  delete err [${i}]: ${delErr.message}`)
   }
 
   const insertRows = outputRows.map((r) => ({

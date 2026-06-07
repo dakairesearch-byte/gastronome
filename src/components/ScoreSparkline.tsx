@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+// Flip to true once `restaurant_rating_snapshots` exists and is populated in the
+// live DB (table + nightly snapshot job). Until then the query below always
+// errors, so we skip it to avoid a guaranteed-failing request + console noise on
+// every restaurant page load. Behavior is identical either way (renders nothing).
+const RATING_SNAPSHOTS_ENABLED = false
+
 /**
  * ScoreSparkline — tiny inline trend line of a restaurant's rating history.
  *
@@ -34,6 +40,11 @@ export default function ScoreSparkline({
 
     async function load() {
       try {
+        if (!RATING_SNAPSHOTS_ENABLED) {
+          // Table not built yet — skip the doomed query, render nothing.
+          setPoints(null)
+          return
+        }
         const supabase = createClient()
 
         // ~90 days back from today.

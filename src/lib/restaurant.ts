@@ -45,20 +45,37 @@ export function fallbackPhotoForCuisine(cuisine: string | null | undefined): str
 
 type PhotoFields = Pick<
   Restaurant,
-  'photo_url' | 'google_photo_url' | 'yelp_photo_url' | 'cuisine'
+  | 'photo_url'
+  | 'google_photo_url'
+  | 'yelp_photo_url'
+  | 'image_url'
+  | 'photo_urls'
+  | 'website_photo_url'
+  | 'cuisine'
 >
 
 /**
  * Resolve the best available photo for a restaurant, falling back through
- * uploaded photo → Google photo → Yelp photo → cuisine-keyed stock photo.
- * Always returns a usable URL; pair with onError for double-defense against
- * 404s/403s from upstream sources.
+ * uploaded photo → Google photo → Yelp photo → image_url → first
+ * photo_urls[] entry → website photo → cuisine-keyed stock photo.
+ *
+ * The image_url / photo_urls[] / website_photo_url tier was added because
+ * ~2,100 restaurants carry real photos in those columns that the UI never
+ * read at all. Keeping them AFTER the existing three sources preserves prior
+ * ordering for rows that already resolve, and makes these columns the
+ * effective fallback when a primary URL is absent or 404s (the photo_urls[]
+ * gallery and website shot are first-party and more durable than a stock
+ * shot). Always returns a usable URL; pair with onError for double-defense
+ * against 404s/403s from upstream sources.
  */
 export function getRestaurantPhotoUrl(restaurant: PhotoFields): string {
   return (
     restaurant.photo_url ||
     restaurant.google_photo_url ||
     restaurant.yelp_photo_url ||
+    restaurant.image_url ||
+    restaurant.photo_urls?.[0] ||
+    restaurant.website_photo_url ||
     fallbackPhotoForCuisine(restaurant.cuisine)
   )
 }

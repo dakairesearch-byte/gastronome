@@ -66,3 +66,7 @@ next-env.d.ts
 
 # session chat transcript dumps (large, local-only)
 /chat-transcript.md
+
+# remediation row-dump backups (reversal artifacts; keep local, not in git)
+reports/**/*-backup.json
+reports/**/*.bak

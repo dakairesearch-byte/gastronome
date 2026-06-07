@@ -42,7 +42,7 @@ fi
 HEARTBEAT="tmp/v101-heartbeat${SUFFIX}.json"
 LOGDIR="tmp/v101-watchdog-logs"
 mkdir -p "$LOGDIR"
-export TMPDIR=/sessions/amazing-compassionate-lovelace/tmp/pw-artifacts
+export TMPDIR="$(pwd)/tmp/pw-artifacts"
 mkdir -p "$TMPDIR"
 
 RUN_ID=$(date +%Y%m%d-%H%M%S)
