@@ -51,6 +51,10 @@ next-env.d.ts
 # one-off scrape/debug scratch scripts (sandbox-only, not production)
 /scripts/debug*.ts
 /scripts/testScrapeChips.ts
+/scripts/exploreChips.ts
+/scripts/testApifyChips.mjs
+/scripts/testEngagement.mjs
+/scripts/testIgLikes.mjs
 
 # working dirs from pipeline scripts (logs, watchdog shards, tmp artifacts)
 /logs/
@@ -59,3 +63,6 @@ next-env.d.ts
 # generated run reports and stray logs (keep out of version control)
 *-report-*.json
 *.log
+
+# session chat transcript dumps (large, local-only)
+/chat-transcript.md
