@@ -27,6 +27,32 @@ export const WEIGHTS = {
 
 export type EventKind = keyof typeof WEIGHTS
 
+/**
+ * Exponential-decay parameters for the trending formula.
+ * Active only when NEXT_PUBLIC_TRENDING_FORMULA=decay (staged rollout flag).
+ *
+ * Each event contributes:
+ *   base_weight * log_cap(1 + n_sameday) * 2^(−Δt_hours / halfLifeHours)
+ *
+ * where n_sameday = number of events from the same (restaurant, source, day)
+ * bucket, and Δt_hours = age of the bucket midpoint in hours.
+ *
+ * Tuning guide:
+ *   videoHalfLifeHours  — lower = sharper recency bias on videos (72h ≈ 3d)
+ *   reviewHalfLifeHours — reviews carry intent signal longer (168h = 7d)
+ *   photoHalfLifeHours  — same as reviews by default
+ *   capBase             — log base for per-day cap (2 → log₂; use 10 to loosen)
+ *   decayFloor          — contributions below this fraction are ignored;
+ *                         0.001 ≈ 10 half-lives effective lookback
+ */
+export const DECAY = {
+  videoHalfLifeHours: 72,
+  reviewHalfLifeHours: 168,
+  photoHalfLifeHours: 168,
+  capBase: 2,
+  decayFloor: 0.001,
+} as const
+
 export type Window = '24h' | '7d' | '30d'
 
 export const WINDOW_HOURS: Record<Window, number> = {

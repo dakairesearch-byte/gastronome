@@ -51,7 +51,7 @@ Entry format:
 
 **Blocking:** Stage-1 implementation (Score Card OG images, sitemap SEO, all sharing mechanics in Stage 6). Every sharing K-factor loop in the engagement report is blocked on this gate.
 
-**Status:** open
+**Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.
 
 ---
 
@@ -70,7 +70,7 @@ Entry format:
 
 **Blocking:** Stage 2 (trust substrate) implementation; Stage 3 Verdict Stack UI; all community scoring work. Also recommend adjudicating alongside Gate 5 (autoconfirm OFF + Google OAuth ON) since §2 rollout Phase 1 requires autoconfirm OFF before any public aggregate renders.
 
-**Status:** open
+**Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.
 
 ---
 
@@ -89,7 +89,7 @@ Entry format:
 
 **Blocking:** Any future BACKLOG item proposing streaks, FOMO notifications, variable-ratio spinners (unrestricted), or activity-count leaderboards is blocked on this gate. Directly prerequisite to the social notifications design and public-profile design when those features are built.
 
-**Status:** open
+**Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.
 
 ---
 
@@ -108,7 +108,7 @@ Entry format:
 
 **Blocking:** Stage 4 ranking foundations (trending decay + caps → seeded explore shuffle → HOME rails / DISCOVER split). Also blocks the QFA blended ranker (Gate 5, not yet proposed).
 
-**Status:** open
+**Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.
 
 ---
 
@@ -127,4 +127,4 @@ Entry format:
 
 **Blocking:** Stage 2 trust substrate (submit_verdict() RPC + identity tier stamping); any public community aggregate number ("% would return · N diners"); Founding Critic / referral mechanic (Stage 6).
 
-**Status:** open
+**Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.

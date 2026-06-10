@@ -71,6 +71,63 @@ export type Database = {
         }
         Relationships: []
       }
+      _chips_junk_backup_20260609: {
+        Row: {
+          google_count: number | null
+          id: string | null
+          instagram_mentions: number | null
+          keyword: string | null
+          match_confidence: number | null
+          match_method: string | null
+          menu_item_id: string | null
+          raw_keyword: string | null
+          restaurant_id: string | null
+          review_mentions: number | null
+          sample_quote: string | null
+          score: number | null
+          scored_at: string | null
+          scraped_at: string | null
+          source_breakdown: Json | null
+          tiktok_mentions: number | null
+        }
+        Insert: {
+          google_count?: number | null
+          id?: string | null
+          instagram_mentions?: number | null
+          keyword?: string | null
+          match_confidence?: number | null
+          match_method?: string | null
+          menu_item_id?: string | null
+          raw_keyword?: string | null
+          restaurant_id?: string | null
+          review_mentions?: number | null
+          sample_quote?: string | null
+          score?: number | null
+          scored_at?: string | null
+          scraped_at?: string | null
+          source_breakdown?: Json | null
+          tiktok_mentions?: number | null
+        }
+        Update: {
+          google_count?: number | null
+          id?: string | null
+          instagram_mentions?: number | null
+          keyword?: string | null
+          match_confidence?: number | null
+          match_method?: string | null
+          menu_item_id?: string | null
+          raw_keyword?: string | null
+          restaurant_id?: string | null
+          review_mentions?: number | null
+          sample_quote?: string | null
+          score?: number | null
+          scored_at?: string | null
+          scraped_at?: string | null
+          source_breakdown?: Json | null
+          tiktok_mentions?: number | null
+        }
+        Relationships: []
+      }
       _dish_gap_targets: {
         Row: {
           id: string | null
@@ -161,6 +218,42 @@ export type Database = {
         Update: {
           id?: string | null
           rn?: number | null
+        }
+        Relationships: []
+      }
+      _extrev_dup_backup_20260609: {
+        Row: {
+          author_name: string | null
+          external_id: string | null
+          fetched_at: string | null
+          id: string | null
+          published_at: string | null
+          rating: number | null
+          restaurant_id: string | null
+          source: string | null
+          text: string | null
+        }
+        Insert: {
+          author_name?: string | null
+          external_id?: string | null
+          fetched_at?: string | null
+          id?: string | null
+          published_at?: string | null
+          rating?: number | null
+          restaurant_id?: string | null
+          source?: string | null
+          text?: string | null
+        }
+        Update: {
+          author_name?: string | null
+          external_id?: string | null
+          fetched_at?: string | null
+          id?: string | null
+          published_at?: string | null
+          rating?: number | null
+          restaurant_id?: string | null
+          source?: string | null
+          text?: string | null
         }
         Relationships: []
       }
@@ -539,7 +632,253 @@ export type Database = {
         }
         Relationships: []
       }
+      _restaurants_backup_20260609: {
+        Row: {
+          _norm_name: string | null
+          accolades: Json | null
+          address: string | null
+          avg_rating: number | null
+          beli_score: number | null
+          beli_url: string | null
+          business_status: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          cuisine: string | null
+          description: string | null
+          eater_38: boolean | null
+          flagged_for_removal: boolean | null
+          google_photo_url: string | null
+          google_place_id: string | null
+          google_rating: number | null
+          google_review_count: number | null
+          google_url: string | null
+          hours: Json | null
+          id: string | null
+          image_url: string | null
+          infatuation_rating: number | null
+          infatuation_review_snippet: string | null
+          infatuation_url: string | null
+          instagram_follower_count: number | null
+          instagram_handle: string | null
+          instagram_last_fetched_at: string | null
+          instagram_url: string | null
+          is_featured: boolean | null
+          james_beard_winner: boolean | null
+          last_fetched_at: string | null
+          latitude: number | null
+          longitude: number | null
+          menu_format: string | null
+          menu_note: string | null
+          michelin_designation: string | null
+          michelin_stars: number | null
+          michelin_url: string | null
+          name: string | null
+          neighborhood: string | null
+          phone: string | null
+          photo_url: string | null
+          photo_urls: string[] | null
+          price_range: number | null
+          review_count: number | null
+          reviews_fetched_at: string | null
+          social_score: number | null
+          state: string | null
+          updated_at: string | null
+          website: string | null
+          website_photo_url: string | null
+          yelp_id: string | null
+          yelp_photo_url: string | null
+          yelp_rating: number | null
+          yelp_review_count: number | null
+          yelp_url: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          _norm_name?: string | null
+          accolades?: Json | null
+          address?: string | null
+          avg_rating?: number | null
+          beli_score?: number | null
+          beli_url?: string | null
+          business_status?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuisine?: string | null
+          description?: string | null
+          eater_38?: boolean | null
+          flagged_for_removal?: boolean | null
+          google_photo_url?: string | null
+          google_place_id?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
+          google_url?: string | null
+          hours?: Json | null
+          id?: string | null
+          image_url?: string | null
+          infatuation_rating?: number | null
+          infatuation_review_snippet?: string | null
+          infatuation_url?: string | null
+          instagram_follower_count?: number | null
+          instagram_handle?: string | null
+          instagram_last_fetched_at?: string | null
+          instagram_url?: string | null
+          is_featured?: boolean | null
+          james_beard_winner?: boolean | null
+          last_fetched_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          menu_format?: string | null
+          menu_note?: string | null
+          michelin_designation?: string | null
+          michelin_stars?: number | null
+          michelin_url?: string | null
+          name?: string | null
+          neighborhood?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          photo_urls?: string[] | null
+          price_range?: number | null
+          review_count?: number | null
+          reviews_fetched_at?: string | null
+          social_score?: number | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+          website_photo_url?: string | null
+          yelp_id?: string | null
+          yelp_photo_url?: string | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          yelp_url?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          _norm_name?: string | null
+          accolades?: Json | null
+          address?: string | null
+          avg_rating?: number | null
+          beli_score?: number | null
+          beli_url?: string | null
+          business_status?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuisine?: string | null
+          description?: string | null
+          eater_38?: boolean | null
+          flagged_for_removal?: boolean | null
+          google_photo_url?: string | null
+          google_place_id?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
+          google_url?: string | null
+          hours?: Json | null
+          id?: string | null
+          image_url?: string | null
+          infatuation_rating?: number | null
+          infatuation_review_snippet?: string | null
+          infatuation_url?: string | null
+          instagram_follower_count?: number | null
+          instagram_handle?: string | null
+          instagram_last_fetched_at?: string | null
+          instagram_url?: string | null
+          is_featured?: boolean | null
+          james_beard_winner?: boolean | null
+          last_fetched_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          menu_format?: string | null
+          menu_note?: string | null
+          michelin_designation?: string | null
+          michelin_stars?: number | null
+          michelin_url?: string | null
+          name?: string | null
+          neighborhood?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          photo_urls?: string[] | null
+          price_range?: number | null
+          review_count?: number | null
+          reviews_fetched_at?: string | null
+          social_score?: number | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+          website_photo_url?: string | null
+          yelp_id?: string | null
+          yelp_photo_url?: string | null
+          yelp_rating?: number | null
+          yelp_review_count?: number | null
+          yelp_url?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       _top_dishes_backup_20260601: {
+        Row: {
+          computed_at: string | null
+          display_name: string | null
+          google_mentions: number | null
+          id: string | null
+          instagram_mentions: number | null
+          menu_item_id: string | null
+          negative_count: number | null
+          neutral_count: number | null
+          positive_count: number | null
+          price_cents: number | null
+          rank: number | null
+          restaurant_id: string | null
+          sample_quote: string | null
+          sample_quote_source: string | null
+          score: number | null
+          tier: string | null
+          tiktok_mentions: number | null
+          total_mentions: number | null
+        }
+        Insert: {
+          computed_at?: string | null
+          display_name?: string | null
+          google_mentions?: number | null
+          id?: string | null
+          instagram_mentions?: number | null
+          menu_item_id?: string | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          positive_count?: number | null
+          price_cents?: number | null
+          rank?: number | null
+          restaurant_id?: string | null
+          sample_quote?: string | null
+          sample_quote_source?: string | null
+          score?: number | null
+          tier?: string | null
+          tiktok_mentions?: number | null
+          total_mentions?: number | null
+        }
+        Update: {
+          computed_at?: string | null
+          display_name?: string | null
+          google_mentions?: number | null
+          id?: string | null
+          instagram_mentions?: number | null
+          menu_item_id?: string | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          positive_count?: number | null
+          price_cents?: number | null
+          rank?: number | null
+          restaurant_id?: string | null
+          sample_quote?: string | null
+          sample_quote_source?: string | null
+          score?: number | null
+          tier?: string | null
+          tiktok_mentions?: number | null
+          total_mentions?: number | null
+        }
+        Relationships: []
+      }
+      _top_dishes_backup_20260609: {
         Row: {
           computed_at: string | null
           display_name: string | null
@@ -1085,6 +1424,114 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      restaurant_community_stats: {
+        Row: {
+          ci_halfwidth: number | null
+          computed_at: string | null
+          elo: number
+          mean_calibrated: number | null
+          mean_raw: number | null
+          n_been: number
+          n_comparisons: number
+          n_ratings: number
+          n_return_asked: number
+          n_return_yes: number
+          restaurant_id: string
+          weighted_n: number
+        }
+        Insert: {
+          ci_halfwidth?: number | null
+          computed_at?: string | null
+          elo?: number
+          mean_calibrated?: number | null
+          mean_raw?: number | null
+          n_been?: number
+          n_comparisons?: number
+          n_ratings?: number
+          n_return_asked?: number
+          n_return_yes?: number
+          restaurant_id: string
+          weighted_n?: number
+        }
+        Update: {
+          ci_halfwidth?: number | null
+          computed_at?: string | null
+          elo?: number
+          mean_calibrated?: number | null
+          mean_raw?: number | null
+          n_been?: number
+          n_comparisons?: number
+          n_ratings?: number
+          n_return_asked?: number
+          n_return_yes?: number
+          restaurant_id?: string
+          weighted_n?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_community_stats_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_comparisons: {
+        Row: {
+          created_at: string
+          id: string
+          identity_tier: number
+          loser_id: string
+          prompted_context: string | null
+          trust_weight: number
+          user_id: string
+          winner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identity_tier?: number
+          loser_id: string
+          prompted_context?: string | null
+          trust_weight?: number
+          user_id: string
+          winner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identity_tier?: number
+          loser_id?: string
+          prompted_context?: string | null
+          trust_weight?: number
+          user_id?: string
+          winner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_comparisons_loser_id_fkey"
+            columns: ["loser_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_comparisons_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_comparisons_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurant_dish_signals: {
         Row: {
@@ -1922,39 +2369,99 @@ export type Database = {
           },
         ]
       }
+      review_votes: {
+        Row: {
+          created_at: string
+          review_id: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          created_at?: string
+          review_id: string
+          user_id: string
+          vote?: number
+        }
+        Update: {
+          created_at?: string
+          review_id?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_votes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           author_id: string
-          content: string
+          content: string | null
           created_at: string | null
+          dish_tags: string[] | null
           id: string
-          rating: number
+          identity_tier: number
+          ip_hash: string | null
+          quarantined: boolean
+          rating: number | null
           restaurant_id: string
-          title: string
+          title: string | null
+          trust_weight: number
+          ua_hash: string | null
           updated_at: string | null
           visit_date: string | null
+          visit_verified: boolean
+          would_return: boolean | null
         }
         Insert: {
           author_id: string
-          content: string
+          content?: string | null
           created_at?: string | null
+          dish_tags?: string[] | null
           id?: string
-          rating: number
+          identity_tier?: number
+          ip_hash?: string | null
+          quarantined?: boolean
+          rating?: number | null
           restaurant_id: string
-          title: string
+          title?: string | null
+          trust_weight?: number
+          ua_hash?: string | null
           updated_at?: string | null
           visit_date?: string | null
+          visit_verified?: boolean
+          would_return?: boolean | null
         }
         Update: {
           author_id?: string
-          content?: string
+          content?: string | null
           created_at?: string | null
+          dish_tags?: string[] | null
           id?: string
-          rating?: number
+          identity_tier?: number
+          ip_hash?: string | null
+          quarantined?: boolean
+          rating?: number | null
           restaurant_id?: string
-          title?: string
+          title?: string | null
+          trust_weight?: number
+          ua_hash?: string | null
           updated_at?: string | null
           visit_date?: string | null
+          visit_verified?: boolean
+          would_return?: boolean | null
         }
         Relationships: [
           {
@@ -2596,6 +3103,67 @@ export type Database = {
           },
         ]
       }
+      user_rating_stats: {
+        Row: {
+          computed_at: string
+          mean_rating: number | null
+          n_ratings: number
+          stddev_rating: number | null
+          user_id: string
+        }
+        Insert: {
+          computed_at?: string
+          mean_rating?: number | null
+          n_ratings?: number
+          stddev_rating?: number | null
+          user_id: string
+        }
+        Update: {
+          computed_at?: string
+          mean_rating?: number | null
+          n_ratings?: number
+          stddev_rating?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rating_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_trust: {
+        Row: {
+          components: Json | null
+          computed_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          components?: Json | null
+          computed_at?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          components?: Json | null
+          computed_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_trust_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_dish_mentions: {
         Row: {
           confidence: number | null
@@ -2842,14 +3410,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// ---------------------------------------------------------------------------
-// Manual additions (NOT generated by Supabase). Preserved across regeneration.
-// Convenience Row aliases + aggregator-specific domain types used across the
-// app. Regenerated 2026-06-07 from live schema (project trwdqzsfgeydafojajbh)
-// to fix schema drift: added the google-chips table and removed the
-// non-existent rating-snapshots table. See reports/remediation-2026-06-07.
-// ---------------------------------------------------------------------------
 
 // Helper types
 export type Profile = Database['public']['Tables']['profiles']['Row']

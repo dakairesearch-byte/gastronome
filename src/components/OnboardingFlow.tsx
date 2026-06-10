@@ -1071,9 +1071,11 @@ function SignUpStep({
       </div>
 
       {/* Google OAuth — offered up front so new users can sign up in one tap.
-          Dormant until the Google provider is enabled in Supabase, in which
-          case it surfaces a friendly note instead of failing silently. */}
-      <button
+          Hidden behind NEXT_PUBLIC_GOOGLE_AUTH until the Supabase provider is
+          live — prevents the browser from navigating to a raw 400 JSON page
+          (onboarding-01). Remove the env guard (or set to "1") after Step 4
+          of gate5-auth-ops/RUNBOOK.md is complete. */}
+      {process.env.NEXT_PUBLIC_GOOGLE_AUTH === '1' && <button
         type="button"
         onClick={onGoogle}
         disabled={oauthLoading || submitting}
@@ -1091,7 +1093,7 @@ function SignUpStep({
           <GoogleIcon />
         )}
         <span className="text-sm font-medium">Continue with Google</span>
-      </button>
+      </button>}
 
       <div className="flex items-center gap-3 my-5">
         <span className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />

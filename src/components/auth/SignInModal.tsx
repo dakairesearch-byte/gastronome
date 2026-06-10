@@ -647,7 +647,10 @@ export default function SignInModal({
                   {/* OAuth row — hidden on forgot-password since it doesn't apply. */}
                   {mode !== 'forgot' && (
                     <>
-                      <button
+                      {/* Guard: only render when NEXT_PUBLIC_GOOGLE_AUTH=1.
+                          Prevents raw-JSON 400 until the provider is enabled
+                          (onboarding-01). See gate5-auth-ops/RUNBOOK.md Step 4. */}
+                      {process.env.NEXT_PUBLIC_GOOGLE_AUTH === '1' && <button
                         type="button"
                         onClick={handleGoogle}
                         disabled={oauthLoading || loading}
@@ -667,7 +670,7 @@ export default function SignInModal({
                         <span className="text-sm font-medium">
                           Continue with Google
                         </span>
-                      </button>
+                      </button>}
                       <div className="flex items-center gap-3 my-5">
                         <span
                           className="flex-1 h-px"

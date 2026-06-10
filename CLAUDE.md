@@ -198,6 +198,32 @@ lane, it files a Suggestion tagged with that lane — never crosses.
 - Picking between 2+ viable approaches with meaningful tradeoffs
 - Any deletion of code touched in the last 30 days, even if "obviously dead"
 
+**Engagement gate — also ASK before shipping any of these as a default-on feature:**
+- Any mechanic using **loss-framing or expiry** (streaks with guilt pushes, "your streak expires
+  tonight", anything that frames absence as a loss rather than an opportunity)
+- Any **interpersonal comparison in a notification** ("3 friends ate here without you", "you've
+  fallen behind", any push containing another user's name/action as social pressure)
+- Any **variable-ratio reward schedule** (randomized spinners, loot-box-adjacent reveals,
+  unpredictable point payouts — includes Tonight's Pick unless it is quality-gated and re-spin
+  capped per the adopted shape in §4 of reports/ENGAGEMENT_AND_COMMUNITY_SCORING_2026-06-09.md)
+- Any **contribution-volume leaderboard** (ranking users by count of reviews, check-ins, votes,
+  or any raw activity metric — profiles must describe taste, never activity volume)
+
+The gate blocks *defaults*, not features. An opt-in version a user explicitly enables is not a
+default — it does not require this gate (the user consented). Exception: notification framings
+on the "Banned forever" list in reports/stage0/gate3-engagement-gate/notification-policy.md
+never ship, opt-in or not. The gate requires: a QUESTIONS.md entry, an explicit owner approval,
+and a written one-sentence user-benefit rationale that cannot be paraphrased as "it improves
+retention."
+
+**Two code-enforced defaults (apply at implementation time, not today):**
+- Social/comparison notifications are **opt-in**. The default notification set is Gastronome-world
+  news only ("a restaurant you saved just earned a Michelin star") — never interpersonal comparison
+  by default.
+- No public-profile metric counts raw contribution volume. Profiles surface taste signal (cuisines
+  explored, neighborhoods covered, score distribution) — never a "N reviews written" badge or
+  leaderboard position computed from activity count.
+
 **DO** (act, then report in STATE.md):
 - Read-only investigation
 - Test additions, comments, behavior-preserving refactors
