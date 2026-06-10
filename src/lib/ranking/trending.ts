@@ -385,14 +385,17 @@ export async function fetchRawData(
       (from, to) =>
         supabase.from('restaurants').select('id, city, cuisine').range(from, to)
     ),
-    paginateSelect<{ restaurant_id: string; created_at: string }>((from, to) =>
+    // created_at is nullable in the generated types; the .gt() filter
+    // excludes NULLs server-side, so the runtime rows always carry one —
+    // the flatMap/guards below exist purely to narrow the type.
+    paginateSelect<{ restaurant_id: string; created_at: string | null }>((from, to) =>
       supabase
         .from('restaurant_videos')
         .select('restaurant_id, created_at')
         .gt('created_at', cutoff)
         .range(from, to)
     ),
-    paginateSelect<{ restaurant_id: string; created_at: string }>((from, to) =>
+    paginateSelect<{ restaurant_id: string; created_at: string | null }>((from, to) =>
       supabase
         .from('reviews')
         .select('restaurant_id, created_at')
@@ -400,7 +403,7 @@ export async function fetchRawData(
         .range(from, to)
     ),
     // review_photos.created_at + inner join to reviews for restaurant_id
-    paginateSelect<{ created_at: string; reviews: unknown }>((from, to) =>
+    paginateSelect<{ created_at: string | null; reviews: unknown }>((from, to) =>
       supabase
         .from('review_photos')
         .select('created_at, reviews!inner(restaurant_id)')
@@ -415,15 +418,13 @@ export async function fetchRawData(
     cuisine: r.cuisine,
   }))
 
-  const videoEvents = videoRows.map((v) => ({
-    restaurant_id: v.restaurant_id,
-    created_at: v.created_at,
-  }))
+  const videoEvents = videoRows.flatMap((v) =>
+    v.created_at ? [{ restaurant_id: v.restaurant_id, created_at: v.created_at }] : []
+  )
 
-  const reviewEvents = reviewRows.map((r) => ({
-    restaurant_id: r.restaurant_id,
-    created_at: r.created_at,
-  }))
+  const reviewEvents = reviewRows.flatMap((r) =>
+    r.created_at ? [{ restaurant_id: r.restaurant_id, created_at: r.created_at }] : []
+  )
 
   // Supabase nested relation shape: `reviews` is either an object or array
   // depending on whether the relation is many-to-one. For review_photos →
@@ -431,17 +432,19 @@ export async function fetchRawData(
   // defensively handle both.
   const photoEvents: Array<{ restaurant_id: string; created_at: string }> = []
   for (const row of photoRows) {
-    const typedRow = row as unknown as { created_at: string; reviews: unknown }
+    const typedRow = row as unknown as { created_at: string | null; reviews: unknown }
+    if (!typedRow.created_at) continue
+    const createdAt = typedRow.created_at
     const rel = typedRow.reviews
     if (!rel) continue
     if (Array.isArray(rel)) {
       for (const entry of rel) {
         const rid = (entry as { restaurant_id?: string }).restaurant_id
-        if (rid) photoEvents.push({ restaurant_id: rid, created_at: typedRow.created_at })
+        if (rid) photoEvents.push({ restaurant_id: rid, created_at: createdAt })
       }
     } else {
       const rid = (rel as { restaurant_id?: string }).restaurant_id
-      if (rid) photoEvents.push({ restaurant_id: rid, created_at: typedRow.created_at })
+      if (rid) photoEvents.push({ restaurant_id: rid, created_at: createdAt })
     }
   }
 

@@ -11,12 +11,17 @@ import { WEIGHTS } from './weights'
 
 // ---------- helpers ----------
 
+// Fixed event timestamp for fixtures. The default (legacy) formula ignores
+// timestamps entirely; the decay path is exercised separately. Any valid
+// ISO string satisfies the RawData event shape.
+const TEST_TS = new Date().toISOString()
+
 function rawData(
   restaurants: Array<{ id: string; city: string | null; cuisine?: string | null }>,
   events: {
-    videos?: Array<{ restaurant_id: string }>
-    reviews?: Array<{ restaurant_id: string }>
-    photos?: Array<{ restaurant_id: string }>
+    videos?: Array<{ restaurant_id: string; created_at: string }>
+    reviews?: Array<{ restaurant_id: string; created_at: string }>
+    photos?: Array<{ restaurant_id: string; created_at: string }>
   } = {}
 ): RawData {
   return {
@@ -32,10 +37,10 @@ function rawData(
 }
 
 function nVideos(restaurantId: string, n: number) {
-  return Array.from({ length: n }, () => ({ restaurant_id: restaurantId }))
+  return Array.from({ length: n }, () => ({ restaurant_id: restaurantId, created_at: TEST_TS }))
 }
 function nReviews(restaurantId: string, n: number) {
-  return Array.from({ length: n }, () => ({ restaurant_id: restaurantId }))
+  return Array.from({ length: n }, () => ({ restaurant_id: restaurantId, created_at: TEST_TS }))
 }
 
 // ---------- pure helpers ----------
@@ -150,7 +155,7 @@ describe('computeScoresFromData — high-volume city does not drown low-volume c
       { id: 'austin_leader', city: 'Austin' as const },
       { id: 'austin_other', city: 'Austin' as const },
     ]
-    const videos: Array<{ restaurant_id: string }> = []
+    const videos: Array<{ restaurant_id: string; created_at: string }> = []
     // NYC baseline: 10 videos each for nyc_0..nyc_8
     for (let i = 0; i < 9; i++) videos.push(...nVideos(`nyc_${i}`, 10))
     // NYC top gets 15 (1.5x baseline)
