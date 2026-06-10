@@ -17,9 +17,9 @@ interface BookmarkButtonProps {
   restaurantId: string
   /**
    * Presentation variant.
-   *   - `hero` (default) â translucent white-on-dark pill matching the
+   *   - `hero` (default) — translucent white-on-dark pill matching the
    *     dark hero on the restaurant detail page, sits next to Share.
-   *   - `card` â smaller, dark-on-light round icon for restaurant cards.
+   *   - `card` — smaller, dark-on-light round icon for restaurant cards.
    */
   variant?: 'hero' | 'card'
   className?: string
@@ -29,11 +29,11 @@ interface BookmarkButtonProps {
  * Bookmark toggle + "save to collection" popover.
  *
  * Primary tap: toggles the flat favorites list (shows up on the home
- * "Your Favorites" rail). A small â affordance opens a popover that
+ * "Your Favorites" rail). A small ▾ affordance opens a popover that
  * lets users drop the restaurant into any named collection, or create
  * a new one inline.
  *
- * All state lives in `src/lib/collections.ts` under localStorage â no
+ * All state lives in `src/lib/collections.ts` under localStorage — no
  * auth / DB dependency yet, so bookmarks don't sync across devices.
  */
 export default function BookmarkButton({
@@ -71,7 +71,7 @@ export default function BookmarkButton({
       try {
         listener?.subscription?.unsubscribe?.()
       } catch {
-        /* swallow â unmount path */
+        /* swallow — unmount path */
       }
     }
   }, [])
@@ -146,11 +146,15 @@ export default function BookmarkButton({
     }
     try {
       const created = createCollection(trimmed)
-      // Auto-add the current restaurant to the newly-made collection â
+      // Auto-add the current restaurant to the newly-made collection —
       // the user clearly wanted it there; skipping the extra click.
       toggleInCollection(created.id, restaurantId)
       setNewName('')
       setError(null)
+      // Clear any pending favorite Undo — otherwise a lastAction left over
+      // from a favorite toast within the last 3s renders an Undo button on
+      // this toast that would wrongly toggle the favorite.
+      setLastAction(null)
       setToast(`Added to ${created.name}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create')

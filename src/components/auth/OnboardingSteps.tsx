@@ -65,41 +65,37 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
   }, [supabase])
 
   useEffect(() => {
-    // Only fetch cities we don't already have a preview for. Previously this
-    // fired one unindexed query PER selected city (up to MAX_CITIES round
-    // trips). Batch the missing ones into a single `.in('city', [...])`
-    // request and bucket the results back out per city on the client.
+    // Only fetch cities we don't already have a preview for.
     const missing = selCities.filter((name) => !previews[name])
     if (missing.length === 0) return
 
     let active = true
-    // Note: `.in` is exact-match (case-sensitive), unlike the prior per-city
-    // `.ilike`. The city labels here come straight from the `cities` table,
-    // and `restaurants.city` is populated from the same canonical list, so an
-    // exact match is correct and lets a single indexed query serve all cities.
+    // One small indexed query per missing city (max MAX_CITIES), each capped
+    // at 2 rows server-side. The previous single `.in('city', missing)` query
+    // had no `.limit()`, so PostgREST's 1000-row default cap applied to the
+    // globally rating-sorted result — a selected city whose restaurants all
+    // ranked below the cap got an empty preview even though rows exist.
     // Still gate to rows that *have* a usable photo so we never render the
     // empty image placeholder, and keep `photo_urls` (the array column
     // populated by enrichPlacesAndPhotos.ts) as a fallback source.
-    supabase
-      .from('restaurants')
-      .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
-      .in('city', missing)
-      .or('photo_url.not.is.null,google_photo_url.not.is.null')
-      .order('google_rating', { ascending: false, nullsFirst: false })
-      .then(({ data }) => {
-        if (!active) return
-        const rows = (data ?? []) as Restaurant[]
-        // Bucket per city, capping at 2 rows each (the previous per-query
-        // `.limit(2)`). Rows arrive rating-sorted, so taking the first two
-        // per bucket preserves the "top rated" preview.
-        const byCity: Record<string, Restaurant[]> = {}
-        for (const name of missing) byCity[name] = []
-        for (const r of rows) {
-          const bucket = byCity[r.city]
-          if (bucket && bucket.length < 2) bucket.push(r)
-        }
-        setPreviews((p) => ({ ...p, ...byCity }))
+    Promise.all(
+      missing.map((name) =>
+        supabase
+          .from('restaurants')
+          .select('id, name, cuisine, city, neighborhood, photo_url, google_photo_url, photo_urls')
+          .eq('city', name)
+          .or('photo_url.not.is.null,google_photo_url.not.is.null')
+          .order('google_rating', { ascending: false, nullsFirst: false })
+          .limit(2)
+      )
+    ).then((results) => {
+      if (!active) return
+      const byCity: Record<string, Restaurant[]> = {}
+      missing.forEach((name, i) => {
+        byCity[name] = (results[i]?.data ?? []) as Restaurant[]
       })
+      setPreviews((p) => ({ ...p, ...byCity }))
+    })
     return () => {
       active = false
     }

@@ -53,6 +53,8 @@ export default function GooglePlacesAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null)
   const autocompleteServiceRef = useRef<any>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Monotonic id so out-of-order async responses can't clobber newer ones.
+  const searchSeqRef = useRef(0)
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -124,7 +126,10 @@ export default function GooglePlacesAutocomplete({
     async (searchQuery: string): Promise<LocalRestaurantResult[]> => {
       if (!searchQuery.trim()) return []
 
-      const sanitized = searchQuery.replace(/[%_\\]/g, '')
+      // Strip ilike wildcards AND PostgREST `or=` syntax characters — a
+      // comma or paren in the query (e.g. "Joe's, NYC") would otherwise
+      // split/break the or() filter expression and 400 the request.
+      const sanitized = searchQuery.replace(/[%_\\,()]/g, '')
       const { data } = await supabase
         .from('restaurants')
         .select('*')
@@ -243,6 +248,11 @@ export default function GooglePlacesAutocomplete({
   const performSearch = useCallback(
     async (searchQuery: string) => {
       if (!searchQuery.trim()) {
+        // Invalidate any in-flight search too — emptying the input via
+        // backspace must not let a slow older response reopen the dropdown
+        // (same race as handleClear).
+        searchSeqRef.current++
+        setIsLoading(false)
         setResults([])
         setIsOpen(false)
         return
@@ -250,6 +260,7 @@ export default function GooglePlacesAutocomplete({
 
       setIsLoading(true)
       setSelectedIndex(-1)
+      const seq = ++searchSeqRef.current
 
       try {
         const [localResults, googleResults] = await Promise.all([
@@ -257,15 +268,20 @@ export default function GooglePlacesAutocomplete({
           googleApiAvailable ? searchGooglePlaces(searchQuery) : Promise.resolve([]),
         ])
 
+        // A newer search (or a select/clear) superseded this one — drop it
+        // so a slow stale response can't overwrite fresher results.
+        if (seq !== searchSeqRef.current) return
+
         // Combine results: local first, then Google
         const combined = [...localResults, ...googleResults]
         setResults(combined)
         setIsOpen(combined.length > 0)
       } catch (error) {
+        if (seq !== searchSeqRef.current) return
         console.error('Search error:', error)
         setResults([])
       } finally {
-        setIsLoading(false)
+        if (seq === searchSeqRef.current) setIsLoading(false)
       }
     },
     [searchLocalRestaurants, searchGooglePlaces, googleApiAvailable]
@@ -288,6 +304,12 @@ export default function GooglePlacesAutocomplete({
 
   // Handle result selection
   const handleSelectResult = (result: SearchResult) => {
+    // Cancel any pending debounce and invalidate in-flight searches —
+    // otherwise a search queued before the click reopens the dropdown
+    // with stale results after the input has been cleared.
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    searchSeqRef.current++
+    setIsLoading(false)
     onSelect(result)
     setQuery('')
     setResults([])
@@ -351,6 +373,10 @@ export default function GooglePlacesAutocomplete({
   }, [isOpen])
 
   const handleClear = () => {
+    // Same race as handleSelectResult: kill pending/in-flight searches.
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    searchSeqRef.current++
+    setIsLoading(false)
     setQuery('')
     setResults([])
     setIsOpen(false)

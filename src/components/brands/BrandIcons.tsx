@@ -51,21 +51,21 @@ function LogoImg({
 }
 
 /* -------------------------------------------------------------------- */
-/*  Google "G" â official 4-color mark, served from /public/logos/.       */
+/*  Google "G" — official 4-color mark, served from /public/logos/.       */
 /* -------------------------------------------------------------------- */
 export function GoogleGIcon({ size = 14, title }: IconProps) {
   return <LogoImg src="/logos/google-g.svg" alt={title ?? 'Google'} size={size} />
 }
 
 /* -------------------------------------------------------------------- */
-/*  Yelp â red burst with stylized "y".                                  */
+/*  Yelp — red burst with stylized "y".                                  */
 /* -------------------------------------------------------------------- */
 export function YelpIcon({ size = 14, title, style, ...props }: IconProps) {
   // Simplified Yelp burst: six red petals radiating from center. Drawn
   // at 48x48 so stroking stays crisp when scaled down into a 14px pill.
   //
   // `display: block` + `flexShrink: 0` keep the SVG from contributing
-  // baseline whitespace inside `inline-flex items-center` pills â without
+  // baseline whitespace inside `inline-flex items-center` pills — without
   // it the icon's inline-default rendering adds a few pixels of descent
   // space and the parent row reads as taller / "stretched out" next to
   // pills that use next/image (which already gets display: inline-block).
@@ -84,7 +84,7 @@ export function YelpIcon({ size = 14, title, style, ...props }: IconProps) {
       {title ? <title>{title}</title> : null}
       <rect width="48" height="48" rx="10" fill="#D32323" />
       <g fill="#FFFFFF">
-        {/* Stylized "y" â a Y-shaped glyph inspired by the Yelp mark. */}
+        {/* Stylized "y" — a Y-shaped glyph inspired by the Yelp mark. */}
         <path d="M22.3 10.5c0-1.2 1-2 2.2-1.9 1.4.1 4.6 1 5.6 1.6.9.5 1.2 1.5.7 2.3-.4.7-5.3 8-5.9 8.7-.5.6-1.5.9-2.2.3-.6-.5-.6-1.1-.6-1.7l.2-9.3z" />
         <path d="M30.5 22.8c-.6-.3-1.5 0-1.9.6-.4.6-2 4.2-2.3 5-.3.8.2 1.7 1 1.9.8.2 5.4 0 6.1-.2.9-.3 1.3-1 1.2-1.8-.1-.8-3-4.8-4.1-5.5z" />
         <path d="M16.6 29.5c-.5-.8-1.5-1-2.3-.5-.8.6-4.5 4.3-4.9 4.9-.5.8-.3 1.8.4 2.2.6.4 5.2 2.3 6.1 2.4.9.1 1.7-.4 1.9-1.3.1-.8-.3-6.3-1.2-7.7z" />
@@ -95,10 +95,10 @@ export function YelpIcon({ size = 14, title, style, ...props }: IconProps) {
 }
 
 /* -------------------------------------------------------------------- */
-/*  Michelin rosette â red 6-petal flower used for the Guide's stars.    */
+/*  Michelin rosette — red 6-petal flower used for the Guide's stars.    */
 /*                                                                       */
 /*  Single-star variant uses the official SVG from Wikimedia Commons.    */
-/*  Pass `count` (1, 2, or 3) for the multi-star variants â those file   */
+/*  Pass `count` (1, 2, or 3) for the multi-star variants — those file   */
 /*  assets render the row of N rosettes in the canonical Michelin style. */
 /* -------------------------------------------------------------------- */
 export function MichelinStarIcon({
@@ -125,7 +125,7 @@ export function MichelinStarIcon({
 }
 
 /* -------------------------------------------------------------------- */
-/*  Bib Gourmand â a tiny Bibendum-like silhouette in Michelin red.       */
+/*  Bib Gourmand — a tiny Bibendum-like silhouette in Michelin red.       */
 /* -------------------------------------------------------------------- */
 export function BibGourmandIcon({ size = 14, title, style, ...props }: IconProps) {
   const id = useId()
@@ -133,7 +133,7 @@ export function BibGourmandIcon({ size = 14, title, style, ...props }: IconProps
   // "trending row labels look stretched out" report: this inline SVG
   // was rendering with default `display: inline`, which carries text-
   // baseline ascent/descent. Inside the trending list's accolade pill
-  // (`inline-flex items-center px-1.5 py-0.5 â¦`), that extra invisible
+  // (`inline-flex items-center px-1.5 py-0.5 …`), that extra invisible
   // line-box made the bib pill ~4px taller than the JBF/Eater/Michelin
   // pills (which use next/image and already get `display: inline-block`).
   // The whole list row inherited the bib pill's height, making every
@@ -186,14 +186,14 @@ export function BibGourmandIcon({ size = 14, title, style, ...props }: IconProps
 }
 
 /* -------------------------------------------------------------------- */
-/*  James Beard Foundation â official 2019 logo, served from /public.    */
+/*  James Beard Foundation — official 2019 logo, served from /public.    */
 /* -------------------------------------------------------------------- */
 export function JamesBeardIcon({ size = 14, title }: IconProps) {
   return <LogoImg src="/logos/james-beard.svg" alt={title ?? 'James Beard Foundation'} size={size} />
 }
 
 /* -------------------------------------------------------------------- */
-/*  Eater â official Eater logo, served from /public/logos.              */
+/*  Eater — official Eater logo, served from /public/logos.              */
 /* -------------------------------------------------------------------- */
 export function EaterIcon({ size = 14, title }: IconProps) {
   return <LogoImg src="/logos/eater.svg" alt={title ?? 'Eater'} size={size} />

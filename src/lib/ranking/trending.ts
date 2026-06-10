@@ -348,16 +348,19 @@ export async function topTrendingRestaurants(
   const selected = options.allowZeroScores ? ranked : ranked.filter((r) => r.score > 0)
   if (selected.length === 0) return []
 
-  const { data: rows } = await supabase
-    .from('restaurants')
-    .select('*')
-    .in(
-      'id',
-      selected.map((r) => r.restaurant_id)
-    )
-
+  // Chunk the id list: a single unbounded `.in()` over thousands of ids
+  // (callers that omit `limit`) both overflows the PostgREST GET URL and
+  // silently truncates the un-ranged select at the 1000-row default cap.
+  const ids = selected.map((r) => r.restaurant_id)
   const byId = new Map<string, Restaurant>()
-  for (const row of rows ?? []) byId.set(row.id, row as Restaurant)
+  const CHUNK = 200
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const { data: rows } = await supabase
+      .from('restaurants')
+      .select('*')
+      .in('id', ids.slice(i, i + CHUNK))
+    for (const row of rows ?? []) byId.set(row.id, row as Restaurant)
+  }
 
   const out: TrendingRestaurant[] = []
   for (const entry of selected) {

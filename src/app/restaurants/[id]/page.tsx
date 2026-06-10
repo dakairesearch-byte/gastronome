@@ -331,10 +331,16 @@ export default async function RestaurantPage({
               light
               crumbs={[
                 { label: 'Discover', href: '/discover' },
-                {
-                  label: restaurant.city,
-                  href: `/discover?city=${encodeURIComponent(restaurant.city)}`,
-                },
+                // city is nullable — a null city used to render an empty
+                // crumb linking to /discover?city=null.
+                ...(restaurant.city
+                  ? [
+                      {
+                        label: restaurant.city,
+                        href: `/discover?city=${encodeURIComponent(restaurant.city)}`,
+                      },
+                    ]
+                  : []),
                 { label: restaurant.name },
               ]}
             />

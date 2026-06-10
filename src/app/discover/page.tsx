@@ -38,6 +38,7 @@ import DiscoverCollection from '@/components/discover/DiscoverCollection'
 import {
   getEditorialCollectionBySlug,
   getEditorialCollectionByFilter,
+  type EditorialCollection,
 } from '@/lib/collections/editorial'
 import { DEFAULT_CITY } from '@/lib/hooks/useCity'
 
@@ -74,10 +75,30 @@ function DiscoverShellContent() {
   // list + CollectionHeader instead of bouncing to the unfiltered Browse view.
   const preset = searchParams.get('preset')
   const accolade = searchParams.get('accolade')
-  const cuisineParam = searchParams.get('cuisine')
+  const cuisineParam = searchParams.get('cuisine')?.trim() || null
+  // Cuisines without a canonical collection (e.g. the home page's
+  // ?cuisine=French / ?cuisine=Sandwiches tiles) previously resolved to
+  // null and dead-ended on the unfiltered Browse view. Synthesize a
+  // minimal cuisine collection so the deep-link still lands on the
+  // filtered list it advertised.
+  const fallbackCuisineCollection: EditorialCollection | null = cuisineParam
+    ? {
+        slug: `cuisine-${cuisineParam.toLowerCase()}`,
+        title: cuisineParam,
+        description: `${cuisineParam} restaurants in this city.`,
+        longDescription: `${cuisineParam} restaurants in this city, ranked by Gastronome Score.`,
+        curator: 'Gastronome',
+        eyebrow: 'GASTRONOME EDITORIAL',
+        brand: 'gastronome',
+        rankBasis: 'Ranked by Gastronome Score',
+        preserveOrder: false,
+        filter: { kind: 'cuisine', value: cuisineParam },
+      }
+    : null
   const collection =
     (preset ? getEditorialCollectionBySlug(preset) : null) ??
-    getEditorialCollectionByFilter({ accolade, cuisine: cuisineParam })
+    getEditorialCollectionByFilter({ accolade, cuisine: cuisineParam }) ??
+    fallbackCuisineCollection
 
   // Local, controlled mirror of the query so typing is instant; the URL is
   // updated (debounced) so the result body and shareable link stay in sync.

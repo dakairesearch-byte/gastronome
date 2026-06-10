@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +21,11 @@ export default function ResetPasswordPage() {
   const supabase = createClient()
 
   const [ready, setReady] = useState(false)
+  // Ref mirror of `ready` so the "declare the link expired" timeout below
+  // reads the CURRENT value — the closure otherwise captures the initial
+  // `false` and flips to "invalid link" even after the recovery event
+  // arrived and readied the form.
+  const readyRef = useRef(false)
   const [sessionMissing, setSessionMissing] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -37,6 +42,7 @@ export default function ResetPasswordPage() {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (!active) return
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        readyRef.current = true
         setReady(true)
         setSessionMissing(false)
       }
@@ -50,12 +56,13 @@ export default function ResetPasswordPage() {
       } = await supabase.auth.getSession()
       if (!active) return
       if (session) {
+        readyRef.current = true
         setReady(true)
       } else {
         // Give the recovery event a brief window to arrive before declaring
         // the link invalid/expired.
         setTimeout(() => {
-          if (active && !ready) setSessionMissing(true)
+          if (active && !readyRef.current) setSessionMissing(true)
         }, 1500)
       }
     })()

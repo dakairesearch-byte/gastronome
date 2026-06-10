@@ -21,9 +21,16 @@ const q = `${SUPA}/rest/v1/restaurants?select=id,name,city,google_place_id&busin
 let rows;
 {
   // PostgREST can't do NOT IN subquery; fetch operational+placeid, then filter by a videos lookup.
-  const r = await fetch(`${SUPA}/rest/v1/restaurants?select=id,name,city,google_place_id&business_status=eq.OPERATIONAL&google_place_id=not.is.null&limit=10000`,
-    { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } });
-  const all = await r.json();
+  // Paginate: Supabase caps responses at 1000 rows regardless of a larger `limit=` value.
+  const all = []; let aOff = 0;
+  while (true) {
+    const r = await fetch(`${SUPA}/rest/v1/restaurants?select=id,name,city,google_place_id&business_status=eq.OPERATIONAL&google_place_id=not.is.null&order=id&limit=1000&offset=${aOff}`,
+      { headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}` } });
+    const b = await r.json();
+    if (!Array.isArray(b)) throw new Error(`restaurants page fetch failed (${r.status}): ${JSON.stringify(b)}`);
+    if (!b.length) break;
+    all.push(...b); aOff += b.length; if (b.length < 1000) break;
+  }
   // fetch distinct restaurant_ids that have videos (paginate)
   const haveVid = new Set(); let off = 0;
   while (true) {

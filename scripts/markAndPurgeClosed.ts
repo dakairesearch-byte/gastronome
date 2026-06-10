@@ -67,7 +67,16 @@ async function main() {
     return
   }
 
-  const { data: closed } = await s.from('restaurants').select('id, name, city, michelin_designation').eq('business_status', 'CLOSED_PERMANENTLY')
+  // Paginate: PostgREST caps un-ranged selects at 1000 rows; an unpaginated read
+  // here would silently purge only the first 1000 CLOSED_PERMANENTLY rows.
+  const closed: Array<{ id: string; name: string; city: string | null; michelin_designation: string | null }> = []
+  for (let cFrom = 0; ; cFrom += 1000) {
+    const { data, error } = await s.from('restaurants').select('id, name, city, michelin_designation').eq('business_status', 'CLOSED_PERMANENTLY').order('id').range(cFrom, cFrom + 999)
+    if (error) throw error
+    if (!data?.length) break
+    closed.push(...(data as any))
+    if (data.length < 1000) break
+  }
   console.log(`\n=== will DELETE these ${closed?.length} rows (cascades to history/menus/mentions): ===`)
   for (const r of (closed ?? []) as any[]) console.log(`  ${r.name} — ${r.city} — michelin=${r.michelin_designation ?? 'none'}`)
 

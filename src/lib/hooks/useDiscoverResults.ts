@@ -177,6 +177,11 @@ function sortRestaurants(rows: Restaurant[], sort: SortKey): Restaurant[] {
 function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
   if (f.cities.length && !f.cities.some((c) => c.toLowerCase() === r.city?.toLowerCase()))
     return false
+  if (
+    f.neighborhoods.length &&
+    !f.neighborhoods.some((n) => n.toLowerCase() === r.neighborhood?.toLowerCase())
+  )
+    return false
   if (f.cuisines.length && !f.cuisines.includes(r.cuisine)) return false
   if (f.googleMinRating > 0 && (r.google_rating ?? 0) < f.googleMinRating)
     return false
@@ -353,7 +358,7 @@ export default function useDiscoverResults(
             if (query.trim()) {
               const sanitized = query.replace(/[%_\\]/g, '')
               bq = bq.or(
-                `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%`
+                `name.ilike.%${sanitized}%,cuisine.ilike.%${sanitized}%,city.ilike.%${sanitized}%,neighborhood.ilike.%${sanitized}%`
               )
             }
             if (filters.cities.length) bq = bq.or(cityIlikeClause(filters.cities))

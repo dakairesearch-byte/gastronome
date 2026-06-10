@@ -57,17 +57,20 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
   }
   const extras = restaurant as Restaurant & AccoladeExtras
   const michelinYear = extras.michelin_year ?? null
+  // `michelin_stars` is nullable in the regenerated schema — treat null as 0
+  // so star comparisons type-check and a null-stars Bib Gourmand still badges.
+  const michelinStars = restaurant.michelin_stars ?? 0
 
   // Michelin stars (most prominent)
-  if (restaurant.michelin_stars > 0) {
-    const starsLabel = `${restaurant.michelin_stars} Michelin ${restaurant.michelin_stars === 1 ? 'Star' : 'Stars'} — Michelin Guide's highest distinction, awarded for exceptional cooking.`
+  if (michelinStars > 0) {
+    const starsLabel = `${michelinStars} Michelin ${michelinStars === 1 ? 'Star' : 'Stars'} — Michelin Guide's highest distinction, awarded for exceptional cooking.`
     badges.push(
       <BadgeLink key="michelin-stars" href={restaurant.michelin_url}>
         <span
           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-sm"
           title={starsLabel}
         >
-          {Array.from({ length: restaurant.michelin_stars }).map((_, i) => (
+          {Array.from({ length: michelinStars }).map((_, i) => (
             // Stable id keyed off the restaurant so the diffing keeps
             // the same DOM nodes across re-renders that change star count.
             <Star
@@ -77,14 +80,14 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
               aria-hidden="true"
             />
           ))}
-          <span>{`Michelin ${restaurant.michelin_stars === 1 ? 'Star' : 'Stars'}${yearSuffix(michelinYear)}`}</span>
+          <span>{`Michelin ${michelinStars === 1 ? 'Star' : 'Stars'}${yearSuffix(michelinYear)}`}</span>
         </span>
       </BadgeLink>
     )
   }
 
   // Michelin designation (Bib Gourmand, Plate, etc.) without stars
-  if (restaurant.michelin_designation && restaurant.michelin_stars === 0) {
+  if (restaurant.michelin_designation && michelinStars === 0) {
     const designationLabel = `${getDesignationDisplay(restaurant.michelin_designation)} — recognized by the Michelin Guide.`
     badges.push(
       <BadgeLink key="michelin-designation" href={restaurant.michelin_url}>
@@ -101,7 +104,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
 
   // James Beard. The `james_beard_nominated` column was dropped in the
   // award-history migration; nominee/finalist/semifinalist info now lives
-  // in `restaurant_jbf_history`. Only render the winner badge here â pages
+  // in `restaurant_jbf_history`. Only render the winner badge here — pages
   // that want richer recognition status should join that history table.
   if (restaurant.james_beard_winner) {
     // Wrapped in BadgeLink to match the Michelin/Eater pattern even when
@@ -122,7 +125,7 @@ export default function AccoladesBadges({ restaurant, maxBadges }: AccoladesBadg
     )
   }
 
-  // Eater 38 â wrap in BadgeLink so the badge is clickable through to the
+  // Eater 38 — wrap in BadgeLink so the badge is clickable through to the
   // Eater list when we have an eater_url. BadgeLink falls back to a plain
   // span when href is null, matching the Michelin/JBF pattern above.
   if (restaurant.eater_38) {

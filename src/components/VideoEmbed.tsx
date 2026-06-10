@@ -20,7 +20,15 @@ function isValidShortcode(id: string | null | undefined): id is string {
 }
 
 export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
-  const canEmbed = isValidShortcode(video.video_id)
+  // TikTok's /embed/v2/ endpoint only accepts the NUMERIC video id (the
+  // trailing segment of tiktok.com/@user/video/<digits>). A non-numeric
+  // scraped value (e.g. a vm.tiktok.com short-link code) passes the generic
+  // shortcode regex but renders TikTok's error page — require digits so bad
+  // ids fall back to the "watch on platform" deep link instead.
+  const canEmbed =
+    video.platform === 'tiktok'
+      ? /^\d+$/.test(video.video_id ?? '')
+      : isValidShortcode(video.video_id)
   const embedUrl = !canEmbed
     ? null
     : video.platform === 'tiktok'

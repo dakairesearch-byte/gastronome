@@ -66,11 +66,11 @@ export async function GET(request: NextRequest) {
         if (cityPattern) q3 = q3.ilike('city', cityPattern)
         return q3
       })(),
-      // 4. Dishes (D5) — ranked top dishes by dish_name.
+      // 4. Dishes (D5) — ranked top dishes by display_name.
       supabase
         .from('restaurant_top_dishes')
-        .select('dish_name, restaurant_id, score')
-        .ilike('dish_name', pattern)
+        .select('display_name, restaurant_id, score')
+        .ilike('display_name', pattern)
         .order('score', { ascending: false, nullsFirst: false })
         .limit(6),
     ])
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     // Resolve restaurant names for the dish hits (top_dishes has no FK
     // embed relationship in the generated types, so look names up by id).
     const dishRows = (dishRes.data ?? []) as Array<{
-      dish_name: string
+      display_name: string
       restaurant_id: string
     }>
     let dishes: { dish_name: string; restaurant_id: string; restaurant_name: string }[] = []
@@ -131,7 +131,9 @@ export async function GET(request: NextRequest) {
         idToName.set(r.id, r.name)
       }
       dishes = dishRows.map((d) => ({
-        dish_name: d.dish_name,
+        // Response key stays `dish_name` for client back-compat; the DB
+        // column is `display_name`.
+        dish_name: d.display_name,
         restaurant_id: d.restaurant_id,
         restaurant_name: idToName.get(d.restaurant_id) ?? '',
       }))
