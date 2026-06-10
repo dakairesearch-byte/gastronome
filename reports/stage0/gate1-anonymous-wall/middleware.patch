@@ -1,0 +1,78 @@
+--- a/src/lib/supabase/middleware.ts
++++ b/src/lib/supabase/middleware.ts
+@@ -3,16 +3,14 @@
+ import { Database } from '@/types/database'
+ 
+ /**
+- * Paths that must never trigger an onboarding redirect.
++ * Paths that are part of the auth/onboarding flow itself and must never
++ * trigger the onboarding redirect (to avoid infinite loops).
+  *
+- * Anonymous visitors are required to complete the onboarding flow
+- * (problem → solution → city → sign-up) before they can explore the
+- * app. Only the onboarding page itself, the auth endpoints, API
+- * routes, and Next.js internals are allowed to bypass the gate.
+- *
+- * `/auth/login` and `/auth/signup` are intentionally exempt so that
+- * *returning* users can sign in without re-walking the pitch. The
+- * onboarding flow itself links to `/auth/login` for that purpose.
++ * Public-read decision (Gate 1): anonymous visitors may browse all read
++ * routes without an account. Write actions (bookmark, review, verdict,
++ * profile edit) are gated at the component level via openSignInModal().
++ * This list is now used only to prevent redirect loops — not to
++ * enumerate the full set of "safe" routes.
+  */
+ const ONBOARDING_EXEMPT_PREFIXES = [
+   '/onboarding',
+@@ -86,15 +84,26 @@
+   const pathname = request.nextUrl.pathname
+   const exempt = isExempt(pathname)
+ 
+-  // Anonymous visitors → forced to /onboarding. The flow is the app's
+-  // marketing page and sign-up funnel combined; there's no way to
+-  // browse without an account by design.
+-  if (!user && !exempt) {
+-    const url = request.nextUrl.clone()
+-    url.pathname = '/onboarding'
+-    url.search = ''
+-    return NextResponse.redirect(url)
+-  }
++  // [Gate 1 — public-read] Anonymous visitors may browse freely.
++  // Write-gating is enforced at the component level (openSignInModal).
++  // The anonymous-wall redirect that lived here has been removed. See:
++  //   reports/stage0/gate1-anonymous-wall/plan.md
++  //
++  // To restore the wall during a rollback, re-add:
++  //
++  //   if (!user && !exempt) {
++  //     const url = request.nextUrl.clone()
++  //     url.pathname = '/onboarding'
++  //     url.search = ''
++  //     return NextResponse.redirect(url)
++  //   }
++  //
++  // Or set ANONYMOUS_WALL=true in the environment and use the env-flag
++  // variant instead (rollback without editing logic):
++  //
++  //   if (process.env.ANONYMOUS_WALL === 'true' && !user && !exempt) {
++  //     ...same block...
++  //   }
+ 
+   // Authed-but-unfinished users → forced to complete onboarding. We use
+   // `.maybeSingle()` because brand-new users may have signed up but
+@@ -112,7 +121,14 @@
+     if (!profile || profile.onboarding_completed === false) {
+       const url = request.nextUrl.clone()
+       url.pathname = '/onboarding'
+-      url.search = ''
++      // Preserve the originally-requested URL as ?next= so that after
++      // onboarding completion, the user lands on the page they intended
++      // to reach (fixes UIUX catalog item onboarding-02). Encode the
++      // full pathname+search to survive any special characters.
++      const next = request.nextUrl.pathname + request.nextUrl.search
++      url.search = next && next !== '/onboarding'
++        ? '?next=' + encodeURIComponent(next)
++        : ''
+       return NextResponse.redirect(url)
+     }
+   }

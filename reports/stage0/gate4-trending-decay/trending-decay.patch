@@ -1,0 +1,399 @@
+--- a/src/lib/ranking/weights.ts	2026-06-10 10:17:46
++++ b/src/lib/ranking/weights.ts	2026-06-10 10:18:05
+@@ -27,6 +27,32 @@
+ 
+ export type EventKind = keyof typeof WEIGHTS
+ 
++/**
++ * Exponential-decay parameters for the trending formula.
++ * Active only when NEXT_PUBLIC_TRENDING_FORMULA=decay (staged rollout flag).
++ *
++ * Each event contributes:
++ *   base_weight * log_cap(1 + n_sameday) * 2^(−Δt_hours / halfLifeHours)
++ *
++ * where n_sameday = number of events from the same (restaurant, source, day)
++ * bucket, and Δt_hours = age of the bucket midpoint in hours.
++ *
++ * Tuning guide:
++ *   videoHalfLifeHours  — lower = sharper recency bias on videos (72h ≈ 3d)
++ *   reviewHalfLifeHours — reviews carry intent signal longer (168h = 7d)
++ *   photoHalfLifeHours  — same as reviews by default
++ *   capBase             — log base for per-day cap (2 → log₂; use 10 to loosen)
++ *   decayFloor          — contributions below this fraction are ignored;
++ *                         0.001 ≈ 10 half-lives effective lookback
++ */
++export const DECAY = {
++  videoHalfLifeHours: 72,
++  reviewHalfLifeHours: 168,
++  photoHalfLifeHours: 168,
++  capBase: 2,
++  decayFloor: 0.001,
++} as const
++
+ export type Window = '24h' | '7d' | '30d'
+ 
+ export const WINDOW_HOURS: Record<Window, number> = {
+--- a/src/lib/ranking/trending.ts	2026-06-10 10:17:46
++++ b/src/lib/ranking/trending.ts	2026-06-10 10:19:27
+@@ -6,16 +6,38 @@
+  * aggregate-rating blends, no placement algorithms — those were all
+  * deleted and replaced with this one transparent pipeline.
+  *
+- * Pipeline:
+- *   1. Count weighted engagement events inside a time window.
+- *   2. Compute the raw score (sum of event_count * weight).
++ * Pipeline (decay formula, NEXT_PUBLIC_TRENDING_FORMULA=decay):
++ *   1. Fetch engagement events with their timestamps.
++ *   2. For each (restaurant, source, day) bucket apply a per-day log cap,
++ *      then multiply by the event-type base weight and an exponential decay
++ *      factor: base_weight * log_cap(1+n) * 2^(−Δt/h).
+  *   3. Normalize by the median raw score across restaurants in the same
+  *      city — this prevents high-volume cities (NYC) from drowning out
+  *      low-volume cities (Austin).
+  *   4. When a city is too sparse to have a meaningful median (median = 0),
+  *      fall back to the global median, then to the raw score.
+  *
+- * All weights live in `./weights.ts`. Tune ranking there, not here.
++ * When the flag is OFF (default), the legacy rectangular-window count path
++ * runs unchanged: count weighted events inside the window, then steps 3-4.
++ *
++ * All weights and decay parameters live in `./weights.ts`. Tune there, not here.
++ *
++ * DECAY FORMULA RATIONALE
++ * -----------------------
++ * The rectangular-window formula has two documented bugs:
++ *
++ *   Cliff-edge: a restaurant with videos from 6d 23h ago scores identically to
++ *   one with videos from 1h ago; at the window boundary its score drops to
++ *   zero with no real-world signal change.
++ *
++ *   Backfill-spike: 40 TikToks backfilled in one pipeline run contribute
++ *   120 pts (40 × 3); one organic video/day for 5 days contributes 15 pts.
++ *   The backfill wins 8× despite being a worse freshness signal.
++ *
++ * The exponential decay + per-day log₂ cap fixes both:
++ *   - 40 same-day videos → log₂(41) × 3 × decay ≈ 16 pts at t=0, decaying away
++ *   - 5 organic videos → 5 × log₂(2) × 3 × (varying decay) ≈ 7.9 pts
++ *   - Backfill advantage: 2× at ingestion, halved every 72h
+  */
+ 
+ import { cache } from 'react'
+@@ -23,6 +45,7 @@
+ import type { Database, Restaurant } from '@/types/database'
+ import { paginateSelect } from '@/lib/supabase/paginate'
+ import {
++  DECAY,
+   DEFAULT_WINDOW,
+   WEIGHTS,
+   WINDOW_HOURS,
+@@ -68,15 +91,89 @@
+ 
+ export interface RawData {
+   restaurants: Array<{ id: string; city: string | null; cuisine: string | null }>
+-  videoEvents: Array<{ restaurant_id: string }>
+-  reviewEvents: Array<{ restaurant_id: string }>
+-  photoEvents: Array<{ restaurant_id: string }>
++  videoEvents: Array<{ restaurant_id: string; created_at: string }>
++  reviewEvents: Array<{ restaurant_id: string; created_at: string }>
++  photoEvents: Array<{ restaurant_id: string; created_at: string }>
+ }
+ 
+ // ---------- Pure helpers (testable without a database) ----------
+ 
+ /**
++ * Staged-rollout flag for the decay formula. OFF (legacy rectangular window)
++ * unless NEXT_PUBLIC_TRENDING_FORMULA=decay. Remove after 2 weeks of stable
++ * decay operation (see gate4 rollout plan).
++ */
++export function decayEnabled(): boolean {
++  return process.env.NEXT_PUBLIC_TRENDING_FORMULA === 'decay'
++}
++
++/**
++ * Compute the exponential decay weight for an event at a given age.
++ * Returns a value in (0, 1]. Weights below DECAY.decayFloor are treated as 0.
++ */
++export function decayWeight(ageHours: number, halfLifeHours: number): number {
++  const w = Math.pow(2, -ageHours / halfLifeHours)
++  return w < DECAY.decayFloor ? 0 : w
++}
++
++/**
++ * Group events by (restaurant_id, UTC day), compute the per-day log cap, and
++ * return the total decayed weighted contribution for each restaurant.
++ *
++ * Each call handles a single event source, so the bucket key is effectively
++ * (restaurant, source, day). cap(n) = log_base(1 + n) where
++ * base = DECAY.capBase (default 2 = log₂); the decay age is the bucket's
++ * mean event timestamp (midpoint for a uniform batch).
++ *
++ * This ensures a 40-video backfill day contributes log₂(41) ≈ 5.36 effective
++ * events rather than 40, collapsing the documented backfill-spike bug.
++ */
++export function decayedContributions(
++  events: Array<{ restaurant_id: string; created_at: string }>,
++  baseWeight: number,
++  halfLifeHours: number,
++  now: Date = new Date()
++): Map<string, number> {
++  type BucketKey = string // `${restaurant_id}::${YYYY-MM-DD}`
++  const buckets = new Map<
++    BucketKey,
++    { restaurant_id: string; count: number; sumEpoch: number }
++  >()
++
++  for (const ev of events) {
++    const ts = new Date(ev.created_at)
++    if (isNaN(ts.getTime())) continue // skip malformed timestamps
++    const dayKey = ts.toISOString().slice(0, 10) // YYYY-MM-DD UTC
++    const key: BucketKey = `${ev.restaurant_id}::${dayKey}`
++    const existing = buckets.get(key)
++    if (existing) {
++      existing.count++
++      existing.sumEpoch += ts.getTime()
++    } else {
++      buckets.set(key, { restaurant_id: ev.restaurant_id, count: 1, sumEpoch: ts.getTime() })
++    }
++  }
++
++  const result = new Map<string, number>()
++  const nowMs = now.getTime()
++  const logBase = Math.log(DECAY.capBase)
++
++  for (const { restaurant_id, count, sumEpoch } of buckets.values()) {
++    const avgAgeHours = (nowMs - sumEpoch / count) / 3_600_000
++    const dw = decayWeight(avgAgeHours, halfLifeHours)
++    if (dw === 0) continue
++    const cap = Math.log(1 + count) / logBase // log_base(1 + n)
++    const contribution = baseWeight * cap * dw
++    result.set(restaurant_id, (result.get(restaurant_id) ?? 0) + contribution)
++  }
++
++  return result
++}
++
++/**
+  * Compute the raw weighted score from a set of event counts.
++ * Used by the legacy rectangular path; retained for callers/tests that have
++ * plain EventCounts. The decay path scores via `decayedContributions`.
+  */
+ export function weightedSum(counts: EventCounts): number {
+   return (
+@@ -106,11 +203,29 @@
+ export function cutoffForWindow(window: Window, now: Date = new Date()): string {
+   const hours = WINDOW_HOURS[window]
+   return new Date(now.getTime() - hours * 3600 * 1000).toISOString()
++}
++
++/**
++ * Effective lookback in hours under the decay formula, derived from the decay
++ * floor and the longest half-life (≈ 10 × max half-life ≈ 70d by default).
++ */
++export function effectiveLookbackHours(): number {
++  const maxHalfLife = Math.max(
++    DECAY.videoHalfLifeHours,
++    DECAY.reviewHalfLifeHours,
++    DECAY.photoHalfLifeHours
++  )
++  return maxHalfLife * Math.log2(1 / DECAY.decayFloor)
+ }
+ 
+ /**
+  * Compute per-restaurant scores from already-fetched raw data. Pure
+  * function — no database access. This is the unit you unit-test.
++ *
++ * With NEXT_PUBLIC_TRENDING_FORMULA=decay, scores use the exponential decay +
++ * per-day cap formula; `counts` then carry effective (capped, decayed) event
++ * equivalents rather than raw event tallies. Otherwise the legacy plain-count
++ * path runs unchanged.
+  */
+ export function computeScoresFromData(data: RawData): Map<string, ScoreData> {
+   const counts = new Map<string, EventCounts>()
+@@ -121,34 +236,63 @@
+     info.set(r.id, { city: r.city, cuisine: r.cuisine })
+   }
+ 
+-  for (const v of data.videoEvents) {
+-    const e = counts.get(v.restaurant_id)
+-    if (e) e.videos++
+-  }
+-  for (const r of data.reviewEvents) {
+-    const e = counts.get(r.restaurant_id)
+-    if (e) e.reviews++
+-  }
+-  for (const p of data.photoEvents) {
+-    const e = counts.get(p.restaurant_id)
+-    if (e) e.photos++
+-  }
+-
+-  // Compute raw scores
+   const rawByRestaurant = new Map<string, number>()
+   const rawByCity = new Map<string, number[]>()
+   const allRaw: number[] = []
+ 
+-  for (const [id, meta] of info) {
+-    const c = counts.get(id)!
+-    const raw = weightedSum(c)
+-    rawByRestaurant.set(id, raw)
+-    allRaw.push(raw)
+-    if (meta.city) {
+-      const arr = rawByCity.get(meta.city) ?? []
+-      arr.push(raw)
+-      rawByCity.set(meta.city, arr)
++  if (decayEnabled()) {
++    // Decay path: per-(restaurant, source, day) log cap × exponential decay.
++    const videoContribs = decayedContributions(data.videoEvents, WEIGHTS.video, DECAY.videoHalfLifeHours)
++    const reviewContribs = decayedContributions(data.reviewEvents, WEIGHTS.review, DECAY.reviewHalfLifeHours)
++    const photoContribs = decayedContributions(data.photoEvents, WEIGHTS.photo, DECAY.photoHalfLifeHours)
++
++    for (const [id, meta] of info) {
++      const videoC = videoContribs.get(id) ?? 0
++      const reviewC = reviewContribs.get(id) ?? 0
++      const photoC = photoContribs.get(id) ?? 0
++      // Effective event-count equivalents (capped + decayed), for
++      // debugTrending and the planned why-chip — not raw tallies.
++      counts.set(id, {
++        videos: videoC / WEIGHTS.video,
++        reviews: reviewC / WEIGHTS.review,
++        photos: photoC / WEIGHTS.photo,
++      })
++      const raw = videoC + reviewC + photoC
++      if (!isFinite(raw)) continue // guard against NaN/Infinity
++      rawByRestaurant.set(id, raw)
++      allRaw.push(raw)
++      if (meta.city) {
++        const arr = rawByCity.get(meta.city) ?? []
++        arr.push(raw)
++        rawByCity.set(meta.city, arr)
++      }
++    }
++  } else {
++    // Legacy rectangular path: plain in-window counts (timestamps ignored).
++    for (const v of data.videoEvents) {
++      const e = counts.get(v.restaurant_id)
++      if (e) e.videos++
+     }
++    for (const r of data.reviewEvents) {
++      const e = counts.get(r.restaurant_id)
++      if (e) e.reviews++
++    }
++    for (const p of data.photoEvents) {
++      const e = counts.get(p.restaurant_id)
++      if (e) e.photos++
++    }
++
++    for (const [id, meta] of info) {
++      const c = counts.get(id)!
++      const raw = weightedSum(c)
++      rawByRestaurant.set(id, raw)
++      allRaw.push(raw)
++      if (meta.city) {
++        const arr = rawByCity.get(meta.city) ?? []
++        arr.push(raw)
++        rawByCity.set(meta.city, arr)
++      }
++    }
+   }
+ 
+   const globalMedian = median(allRaw)
+@@ -159,7 +303,7 @@
+ 
+   const result = new Map<string, ScoreData>()
+   for (const [id, meta] of info) {
+-    const raw = rawByRestaurant.get(id)!
++    const raw = rawByRestaurant.get(id) ?? 0
+     const cityMed = meta.city ? cityMedians.get(meta.city) ?? 0 : 0
+     const denominator = cityMed > 0 ? cityMed : globalMedian
+     const normalized = denominator > 0 ? raw / denominator : raw
+@@ -216,13 +360,22 @@
+  * Event queries filter on `created_at` (i.e. "new to Gastronome inside the
+  * window"), not on source publish timestamps. Photos are joined back to
+  * their parent review to derive a restaurant_id.
++ *
++ * `created_at` timestamps are returned with each event row so that
++ * `computeScoresFromData` can compute per-event age for the decay formula.
++ * Under the decay flag the lookback extends to the effective decay horizon
++ * (≈ 10 × max half-life ≈ 70d by default); with the flag off the legacy
++ * rectangular window cutoff applies unchanged.
+  */
+ export async function fetchRawData(
+   supabase: Supabase,
+   window: Window,
+   now: Date = new Date()
+ ): Promise<RawData> {
+-  const cutoff = cutoffForWindow(window, now)
++  const lookbackHours = decayEnabled()
++    ? Math.max(WINDOW_HOURS[window], effectiveLookbackHours())
++    : WINDOW_HOURS[window]
++  const cutoff = new Date(now.getTime() - lookbackHours * 3_600_000).toISOString()
+ 
+   // All four queries are paginated: PostgREST caps un-ranged responses at
+   // 1000 rows, and the restaurants table, any 30d review window, and the
+@@ -232,25 +385,25 @@
+       (from, to) =>
+         supabase.from('restaurants').select('id, city, cuisine').range(from, to)
+     ),
+-    paginateSelect<{ restaurant_id: string }>((from, to) =>
++    paginateSelect<{ restaurant_id: string; created_at: string }>((from, to) =>
+       supabase
+         .from('restaurant_videos')
+-        .select('restaurant_id')
++        .select('restaurant_id, created_at')
+         .gt('created_at', cutoff)
+         .range(from, to)
+     ),
+-    paginateSelect<{ restaurant_id: string }>((from, to) =>
++    paginateSelect<{ restaurant_id: string; created_at: string }>((from, to) =>
+       supabase
+         .from('reviews')
+-        .select('restaurant_id')
++        .select('restaurant_id, created_at')
+         .gt('created_at', cutoff)
+         .range(from, to)
+     ),
+     // review_photos.created_at + inner join to reviews for restaurant_id
+-    paginateSelect<{ reviews: unknown }>((from, to) =>
++    paginateSelect<{ created_at: string; reviews: unknown }>((from, to) =>
+       supabase
+         .from('review_photos')
+-        .select('reviews!inner(restaurant_id)')
++        .select('created_at, reviews!inner(restaurant_id)')
+         .gt('created_at', cutoff)
+         .range(from, to)
+     ),
+@@ -264,28 +417,31 @@
+ 
+   const videoEvents = videoRows.map((v) => ({
+     restaurant_id: v.restaurant_id,
++    created_at: v.created_at,
+   }))
+ 
+   const reviewEvents = reviewRows.map((r) => ({
+     restaurant_id: r.restaurant_id,
++    created_at: r.created_at,
+   }))
+ 
+   // Supabase nested relation shape: `reviews` is either an object or array
+   // depending on whether the relation is many-to-one. For review_photos →
+   // reviews it's many-to-one, so the expected shape is an object, but we
+   // defensively handle both.
+-  const photoEvents: Array<{ restaurant_id: string }> = []
++  const photoEvents: Array<{ restaurant_id: string; created_at: string }> = []
+   for (const row of photoRows) {
+-    const rel = (row as unknown as { reviews: unknown }).reviews
++    const typedRow = row as unknown as { created_at: string; reviews: unknown }
++    const rel = typedRow.reviews
+     if (!rel) continue
+     if (Array.isArray(rel)) {
+       for (const entry of rel) {
+         const rid = (entry as { restaurant_id?: string }).restaurant_id
+-        if (rid) photoEvents.push({ restaurant_id: rid })
++        if (rid) photoEvents.push({ restaurant_id: rid, created_at: typedRow.created_at })
+       }
+     } else {
+       const rid = (rel as { restaurant_id?: string }).restaurant_id
+-      if (rid) photoEvents.push({ restaurant_id: rid })
++      if (rid) photoEvents.push({ restaurant_id: rid, created_at: typedRow.created_at })
+     }
+   }
+ 
