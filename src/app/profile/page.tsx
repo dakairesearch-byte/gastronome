@@ -359,8 +359,11 @@ function CollectionsPanel() {
 
   return (
     <div className="space-y-8">
-      {/* Add collection control */}
-      <div className="flex items-center justify-between">
+      {/* Add collection control — flex-wrap so the inline "new collection"
+          input + Add/Cancel group wraps under the list-count label on
+          ~375px screens instead of forcing horizontal page overflow (the
+          input's intrinsic width can't shrink). */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <p
           className="text-xs uppercase"
           style={{
@@ -498,8 +501,12 @@ function CollectionSection({
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      {/* flex-wrap + min-w-0: user-typed collection names are unbounded —
+          without these, a long name plus the rename/delete (or the
+          two-step delete-confirm) controls overflows the 375px viewport
+          horizontally instead of wrapping. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3">
+        <div className="min-w-0">
           {editing && id ? (
             <input
               autoFocus
@@ -522,7 +529,7 @@ function CollectionSection({
             />
           ) : (
             <h3
-              className="text-lg"
+              className="text-lg break-words"
               style={{
                 color: 'var(--color-text)',
                 fontFamily: 'var(--font-heading)',
@@ -1005,7 +1012,10 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '2px',
   color: 'var(--color-text)',
   fontFamily: 'var(--font-body)',
-  fontSize: '14px',
+  // 16px minimum prevents iOS Safari zoom-on-focus (same convention as
+  // the waitlist + reset-password inputs). At 14px, focusing any settings
+  // field auto-zoomed the viewport and left the page horizontally pannable.
+  fontSize: '16px',
 }
 
 function Field({

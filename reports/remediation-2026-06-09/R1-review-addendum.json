@@ -1,0 +1,26 @@
+{
+  "lane": "R1-data adversarial review addendum",
+  "date": "2026-06-09",
+  "project": "trwdqzsfgeydafojajbh",
+  "table": "restaurant_menu_items",
+  "notes": "Reviewer amendments to menu-data fixes A and C. Fix A header regex missed APPETIZERS/BEVERAGES variants (4 rows, same v101 section-header bug class, fk_refs=0, description and section NULL). Fix C scope (source='website') missed 1 v101 row with embedded newline in item_name. Also: menu-data-cleanup-backup.json contained raw unescaped control bytes (invalid JSON); re-serialized losslessly via python json strict=False round-trip.",
+  "amendments": [
+    {
+      "fix": "A-addendum: deleted 4 remaining section-header rows",
+      "reversal": "INSERT each row below back into restaurant_menu_items with the same column values",
+      "deleted_rows": [
+        {"id": "87677dd0-d986-48dd-b4dc-4a16a23e6acd", "restaurant_id": "ce88b4f5-1208-419e-81a4-5faa6e26e656", "source": "website-v101", "section": null, "item_name": "APPETIZERS", "price_raw": "$9", "price_cents": 900, "description": null, "raw_snippet": null, "source_url": "http://www.pueblitoviejo.com/", "created_at": "2026-06-01T04:51:46.862099+00:00", "updated_at": "2026-06-01T04:51:46.862099+00:00"},
+        {"id": "fc8dc2b1-7d0b-43d3-8966-f2dc8fa9f5df", "restaurant_id": "e9d9251b-1ed8-45bc-9096-b85d79c9407a", "source": "website-v101", "section": null, "item_name": "BEVERAGES", "price_raw": "$3.50", "price_cents": 350, "description": null, "raw_snippet": null, "source_url": "https://randazzosclambarnyc.com/", "created_at": "2026-06-01T04:54:06.510282+00:00", "updated_at": "2026-06-01T04:54:06.510282+00:00"},
+        {"id": "3681763e-bc1f-401a-83c2-cbd98d8d9c56", "restaurant_id": "eb3adb8a-f2ae-46f4-b389-0d2a1ceee028", "source": "website-v101", "section": null, "item_name": "APPETIZERS", "price_raw": "$12", "price_cents": 1200, "description": null, "raw_snippet": null, "source_url": "https://www.mimadresrestaurant.com/", "created_at": "2026-06-01T15:44:37.174003+00:00", "updated_at": "2026-06-01T15:44:37.174003+00:00"},
+        {"id": "7dda0a5b-1002-43e8-b74c-2cb2a068ef27", "restaurant_id": "bed73e3d-63a1-41d1-810f-0a153edca309", "source": "website-v101", "section": null, "item_name": "Appetizers", "price_raw": "$14", "price_cents": 1400, "description": null, "raw_snippet": null, "source_url": "http://www.chezjosephinenyc.com/", "created_at": "2026-06-01T04:56:26.840607+00:00", "updated_at": "2026-06-01T04:56:26.840607+00:00"}
+      ]
+    },
+    {
+      "fix": "C-addendum: replaced newline with space in 1 item_name",
+      "id": "f5a87732-bc57-4443-a910-3a8cd4f42efa",
+      "original_item_name": "Oysters*, Crabmeat,\nShrimp, Tuna Tartare*",
+      "new_item_name": "Oysters*, Crabmeat, Shrimp, Tuna Tartare*",
+      "reversal": "UPDATE restaurant_menu_items SET item_name = 'Oysters*, Crabmeat,' || chr(10) || 'Shrimp, Tuna Tartare*' WHERE id = 'f5a87732-bc57-4443-a910-3a8cd4f42efa'"
+    }
+  ]
+}

@@ -172,8 +172,12 @@ export default function SignInModal({
     }
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-      else trapFocus(e)
+      // Escape must not dismiss the dialog mid-onboarding — the backdrop
+      // and close button are already disabled in that phase (the user
+      // must finish; middleware would bounce them back anyway).
+      if (e.key === 'Escape') {
+        if (phase === 'auth') onClose()
+      } else trapFocus(e)
     }
     document.addEventListener('keydown', onKey)
     return () => {
@@ -181,7 +185,7 @@ export default function SignInModal({
       window.clearTimeout(t)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open, onClose])
+  }, [open, onClose, phase])
 
   if (!open) return null
 

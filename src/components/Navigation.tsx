@@ -89,6 +89,12 @@ export default function Navigation() {
   useEffect(() => {
     if (!mobileOpen) return
 
+    // Scroll-lock: the drawer is a fixed overlay, so without this the
+    // page behind it keeps scrolling (and on iOS the drawer itself can
+    // rubber-band). Mirrors SignInModal's lock/restore pattern.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     function trapFocus(e: KeyboardEvent) {
       if (e.key !== 'Tab') return
       const root = drawerRef.current
@@ -114,7 +120,10 @@ export default function Navigation() {
       else trapFocus(e)
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', onKey)
+    }
   }, [mobileOpen])
 
   const handleLogout = async () => {

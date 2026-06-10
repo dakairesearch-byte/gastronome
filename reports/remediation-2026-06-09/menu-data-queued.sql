@@ -1,0 +1,36 @@
+-- MENU DATA lane: QUEUED statements, needsOwnerApproval. Do NOT run without review.
+-- 2026-06-09. Backup convention: SELECT affected rows to a backup JSON first (see menu-data-cleanup-backup.json pattern).
+
+-- Q1: 16 item_names >= 80 chars (all source='website-v101'). These are descriptions/ingredient lists
+-- captured as the item name; the real dish name was lost by the scraper. Deleting loses real items;
+-- keeping shows ugly names. Owner call: delete now and re-fetch, or keep until v102 re-scrape.
+-- Preview:
+--   select id, restaurant_id, item_name, price_cents from restaurant_menu_items
+--   where char_length(item_name) >= 80;
+-- Action (after backup):
+--   delete from restaurant_menu_items
+--   where char_length(item_name) >= 80 and source = 'website-v101'
+--     and id not in (select menu_item_id from restaurant_top_dishes where menu_item_id is not null)
+--     and id not in (select matched_menu_item_id from restaurant_highlighted_dishes where matched_menu_item_id is not null);
+
+-- Q2: 75 legacy source='website' items across 40 restaurants that ALSO have website-v100/v101 items.
+-- Only 4 of 75 are name-duplicated in the newer source, so most legacy rows add unique (possibly stale)
+-- items; if the UI merges sources, menus mix fetch generations. Judgment: which generation wins per restaurant.
+-- Preview:
+--   select w.restaurant_id, count(*) legacy_items from restaurant_menu_items w
+--   where w.source='website' and exists (select 1 from restaurant_menu_items v
+--     where v.restaurant_id=w.restaurant_id and v.source in ('website-v100','website-v101'))
+--   group by 1 order by 2 desc;
+-- Action (after backup; guards exclude rows referenced by top_dishes/highlighted_dishes/google_chips):
+--   delete from restaurant_menu_items w
+--   where w.source='website'
+--     and exists (select 1 from restaurant_menu_items v where v.restaurant_id=w.restaurant_id
+--                 and v.source in ('website-v100','website-v101'))
+--     and w.id not in (select menu_item_id from restaurant_top_dishes where menu_item_id is not null)
+--     and w.id not in (select matched_menu_item_id from restaurant_highlighted_dishes where matched_menu_item_id is not null)
+--     and w.id not in (select menu_item_id from restaurant_google_chips where menu_item_id is not null);
+
+-- NOT queued (investigated, no action):
+--   * $650 Grilled Tomahawk Steak (price_cents=65000): price_raw='$650' confirms correct parse.
+--   * Remaining 3 same-name "duplicate" pairs are genuinely distinct items
+--     (Starters vs Happy Hour wings; $14 draft vs $8 NA pilsner; $37 entree vs $12 kids chicken).

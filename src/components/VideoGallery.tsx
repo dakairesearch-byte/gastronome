@@ -162,6 +162,19 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
     }
   }, [selectedVideo])
 
+  // Lock body scroll while the modal is open. Without this the page keeps
+  // scrolling behind the fixed overlay (wheel/touch events fall through once
+  // the embed iframe area is passed), which detaches the modal from the tile
+  // the user opened. Restore the previous inline value on close/unmount.
+  useEffect(() => {
+    if (!selectedVideo) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [selectedVideo])
+
   // Filter and sort
   const filteredVideos = videos
     .filter((v) => platform === 'all' || v.platform === platform)
@@ -175,7 +188,14 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
         case 'most_viewed':
           return (b.view_count ?? 0) - (a.view_count ?? 0)
         case 'newest':
-          return new Date(b.posted_at ?? b.created_at).getTime() - new Date(a.posted_at ?? a.created_at).getTime()
+          // posted_at is NULL for discovery-sweep rows and created_at is
+          // nullable in the generated types; coalesce to epoch 0 so rows
+          // with no usable date sort last instead of producing a type error
+          // (string | null is not a valid Date constructor arg).
+          return (
+            new Date(b.posted_at ?? b.created_at ?? 0).getTime() -
+            new Date(a.posted_at ?? a.created_at ?? 0).getTime()
+          )
         default:
           return 0
       }
@@ -304,13 +324,17 @@ export default function VideoGallery({ restaurantId }: VideoGalleryProps) {
                 <p className="text-white text-xs line-clamp-2 mb-1.5">{video.caption}</p>
               )}
               <div className="flex items-center gap-3 text-white/80 text-xs">
-                {video.like_count > 0 && (
+                {/* Counts are nullable in the generated row type; coalesce so
+                    null reads as 0 (hidden) instead of a strict-null type
+                    error. Zero counts stay hidden — sweep rows arrive with
+                    view_count 0, which would otherwise read as dead content. */}
+                {(video.like_count ?? 0) > 0 && (
                   <span className="flex items-center gap-1">
                     <Heart size={12} />
                     {formatCount(video.like_count)}
                   </span>
                 )}
-                {video.view_count > 0 && (
+                {(video.view_count ?? 0) > 0 && (
                   <span className="flex items-center gap-1">
                     <Eye size={12} />
                     {formatCount(video.view_count)}

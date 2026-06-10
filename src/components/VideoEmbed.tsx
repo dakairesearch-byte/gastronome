@@ -133,20 +133,24 @@ export default function VideoEmbed({ video, onClose }: VideoEmbedProps) {
         )}
 
         {/* Stats */}
+        {/* Counts are nullable in the generated row type; coalesce so null
+            reads as 0 (hidden) rather than tripping strict-null checks.
+            Zero/placeholder counts (sweep rows ship view_count 0) stay
+            hidden instead of rendering "0 views". */}
         <div className="flex items-center gap-4 text-sm text-gray-500">
-          {video.like_count > 0 && (
+          {(video.like_count ?? 0) > 0 && (
             <span className="flex items-center gap-1">
               <Heart size={14} className="text-red-400" />
               {formatCount(video.like_count)}
             </span>
           )}
-          {video.view_count > 0 && (
+          {(video.view_count ?? 0) > 0 && (
             <span className="flex items-center gap-1">
               <Eye size={14} className="text-gray-400" />
               {formatCount(video.view_count)}
             </span>
           )}
-          {video.comment_count > 0 && (
+          {(video.comment_count ?? 0) > 0 && (
             <span className="flex items-center gap-1">
               <MessageCircle size={14} className="text-gray-400" />
               {formatCount(video.comment_count)}

@@ -645,15 +645,51 @@ function QuickDropdown({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // Viewport coordinates for the panel. The tier-1 chip row is an
+  // overflow-x-auto scroll container, and per CSS overflow-y then
+  // computes to auto too — so an absolutely-positioned panel inside it
+  // gets clipped to the ~40px row height and is unusable. Rendering the
+  // panel position:fixed at the trigger's measured rect escapes the clip
+  // while keeping the same visual placement (6px below, left-aligned).
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
+  const toggleOpen = () => {
+    if (open) {
+      setOpen(false)
+      return
+    }
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    // Panel is w-56 (224px); clamp so it stays inside the viewport.
+    setPos({
+      top: rect.bottom + 6,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 232)),
+    })
+    setOpen(true)
+  }
+
   useEffect(() => {
+    if (!open) return
     function click(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    // A fixed panel doesn't track the trigger, so close on any scroll or
+    // resize outside the panel (scrolling the option list itself is fine).
+    function onScroll(e: Event) {
+      if (ref.current && e.target instanceof Node && ref.current.contains(e.target))
+        return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', click)
-    return () => document.removeEventListener('mousedown', click)
-  }, [])
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      document.removeEventListener('mousedown', click)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [open])
 
   const list = mode === 'single' ? singleOptions ?? [] : options ?? []
   const filtered = query
@@ -664,7 +700,7 @@ function QuickDropdown({
     <div className="relative flex-shrink-0" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className="flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm font-semibold transition-colors whitespace-nowrap"
         style={quickChipStyle(active)}
       >
@@ -675,10 +711,12 @@ function QuickDropdown({
           className={`transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {open && (
+      {open && pos && (
         <div
-          className="absolute top-full left-0 mt-1.5 w-56 max-h-72 overflow-y-auto border rounded-2xl shadow-lg z-50 py-1"
+          className="fixed w-56 max-h-72 overflow-y-auto border rounded-2xl shadow-lg z-50 py-1"
           style={{
+            top: pos.top,
+            left: pos.left,
             backgroundColor: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
           }}
@@ -784,11 +822,20 @@ function FilterSheet({
   isDefault: boolean
 }) {
   useEffect(() => {
+    // Scroll-lock while the sheet is open — it's a fixed overlay, so
+    // without this the results behind it keep scrolling (and the bottom
+    // sheet rubber-bands on iOS). Restored on close/unmount; mirrors the
+    // SignInModal lock/restore pattern.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     function key(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', key)
-    return () => document.removeEventListener('keydown', key)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', key)
+    }
   }, [onClose])
 
   return (

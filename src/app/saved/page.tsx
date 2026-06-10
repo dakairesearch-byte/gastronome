@@ -102,8 +102,11 @@ export default function SavedPage() {
   const hasAnything =
     favoriteRestaurants.length > 0 || nonEmptyCollections.length > 0
 
+  // div, not <main> — the root layout already wraps every page in
+  // <main id="main-content">, and nested <main> landmarks are invalid
+  // HTML / confuse screen-reader landmark navigation.
   return (
-    <main
+    <div
       className="min-h-screen"
       style={{ backgroundColor: 'var(--color-background)' }}
     >
@@ -201,6 +204,6 @@ export default function SavedPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }

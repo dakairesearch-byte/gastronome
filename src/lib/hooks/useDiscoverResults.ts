@@ -409,15 +409,18 @@ export default function useDiscoverResults(
 
           // ilike BEFORE limit so the cap selects from matching dishes, not a
           // top-40 prefix that's then filtered down to nothing.
+          // NOTE: the live column is display_name (dish_name does not exist on
+          // restaurant_top_dishes) — selecting dish_name 42703s and silently
+          // dropped this whole branch to the fallback.
           let tdq = supabase
             .from('restaurant_top_dishes')
             .select(
-              'dish_name, score, tier, total_mentions, restaurant:restaurants(*)'
+              'display_name, score, tier, total_mentions, restaurant:restaurants(*)'
             )
             .order('score', { ascending: false, nullsFirst: false })
             .limit(60)
           if (sanitized.trim()) {
-            tdq = tdq.ilike('dish_name', `%${sanitized}%`)
+            tdq = tdq.ilike('display_name', `%${sanitized}%`)
           }
           const { data: topRows, error: topErr } = await tdq
 
@@ -446,7 +449,7 @@ export default function useDiscoverResults(
 
           if (!topErr && topRows && topRows.length > 0) {
             const raw = (topRows as unknown as Array<{
-              dish_name: string
+              display_name: string
               score: number | null
               tier: string | null
               total_mentions: number | null
@@ -456,7 +459,7 @@ export default function useDiscoverResults(
                 (
                   d
                 ): d is {
-                  dish_name: string
+                  display_name: string
                   score: number | null
                   tier: string | null
                   total_mentions: number | null
@@ -464,7 +467,7 @@ export default function useDiscoverResults(
                 } => !!d.restaurant
               )
               .map((d) => ({
-                dish_name: d.dish_name,
+                dish_name: d.display_name,
                 mention_count: d.total_mentions ?? 0,
                 tier: d.tier,
                 isTopDish: true,
