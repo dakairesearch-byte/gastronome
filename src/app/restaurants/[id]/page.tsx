@@ -234,7 +234,7 @@ export default async function RestaurantPage({
   const score = gastronomeScore(restaurant)
   // `james_beard_nominated` was dropped — only the winner flag participates.
   const hasAccolades =
-    restaurant.michelin_stars > 0 ||
+    (restaurant.michelin_stars ?? 0) > 0 ||
     !!restaurant.michelin_designation ||
     restaurant.james_beard_winner ||
     restaurant.eater_38
@@ -243,10 +243,9 @@ export default async function RestaurantPage({
   // DT1 decision-bar inputs ------------------------------------------------
   // Price tier: price_range is a 1–4 integer from Google Places; anything
   // outside that range (incl. 0/null) means "unknown" → render nothing.
+  const priceRange = restaurant.price_range ?? 0
   const priceTier =
-    restaurant.price_range >= 1 && restaurant.price_range <= 4
-      ? '$'.repeat(restaurant.price_range)
-      : null
+    priceRange >= 1 && priceRange <= 4 ? '$'.repeat(priceRange) : null
   // Open/closed status from the lifecycle column. We only surface a chip for
   // the two states a diner can act on; OPERATIONAL is the happy path,
   // CLOSED_* is a hard stop. Unknown/null → no chip (avoid false signal).
@@ -484,12 +483,12 @@ export default async function RestaurantPage({
                     fontWeight: 600,
                     color: 'var(--color-text)',
                   }}
-                  title={`Price: ${'$'.repeat(restaurant.price_range)} (Google price level ${restaurant.price_range} of 4)`}
+                  title={`Price: ${'$'.repeat(priceRange)} (Google price level ${priceRange} of 4)`}
                 >
                   <span style={{ color: 'var(--color-text)' }}>{priceTier}</span>
-                  {restaurant.price_range < 4 && (
+                  {priceRange < 4 && (
                     <span style={{ color: 'var(--color-border)' }}>
-                      {'$'.repeat(4 - restaurant.price_range)}
+                      {'$'.repeat(4 - priceRange)}
                     </span>
                   )}
                 </span>

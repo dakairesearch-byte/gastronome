@@ -40,7 +40,7 @@ interface RestaurantCardProps {
 type AccoladeTier = 'michelin' | 'jbf' | 'eater' | null
 
 function getAccoladeTier(restaurant: Restaurant): AccoladeTier {
-  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation)
+  if ((restaurant.michelin_stars ?? 0) > 0 || restaurant.michelin_designation)
     return 'michelin'
   // `james_beard_nominated` was dropped — only winners get the accent now.
   if (restaurant.james_beard_winner) return 'jbf'
@@ -55,7 +55,7 @@ function getAccoladeTier(restaurant: Restaurant): AccoladeTier {
  * red/amber/pink stripe with no semantic content).
  */
 function accoladeTierLabel(restaurant: Restaurant): string | null {
-  if (restaurant.michelin_stars > 0 || restaurant.michelin_designation)
+  if ((restaurant.michelin_stars ?? 0) > 0 || restaurant.michelin_designation)
     return 'Michelin-recognized restaurant'
   if (restaurant.james_beard_winner) return 'James Beard winner'
   if (restaurant.eater_38) return 'Eater 38 listed'

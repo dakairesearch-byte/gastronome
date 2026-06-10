@@ -92,6 +92,7 @@ export async function fetchRecentEvents(
   const events: FeedEvent[] = []
 
   for (const row of restaurantRes.data ?? []) {
+    if (!row.created_at) continue
     events.push({
       id: `restaurant-${row.id}`,
       kind: 'restaurant_added',
@@ -121,6 +122,7 @@ export async function fetchRecentEvents(
       (row as unknown as { restaurants: unknown }).restaurants
     )
     if (!rel) continue
+    if (!row.created_at) continue
     const platform = row.platform === 'instagram' ? 'instagram' : 'tiktok'
     const day = isoDay(new Date(row.created_at))
     const key = `${row.restaurant_id}|${platform}|${day}`
@@ -160,6 +162,7 @@ export async function fetchRecentEvents(
       (row as unknown as { restaurants: unknown }).restaurants
     )
     if (!rel) continue
+    if (!row.created_at) continue
     events.push({
       id: `review-${row.id}`,
       kind: 'review_added',
@@ -181,6 +184,7 @@ export async function fetchRecentEvents(
       reviewRel.restaurants
     )
     if (!restaurantRel) continue
+    if (!row.created_at) continue
     events.push({
       id: `photo-${row.id}`,
       kind: 'photos_added',

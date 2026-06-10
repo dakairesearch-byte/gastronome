@@ -182,7 +182,7 @@ function matchesFilters(r: Restaurant, f: SearchFilters): boolean {
     !f.neighborhoods.some((n) => n.toLowerCase() === r.neighborhood?.toLowerCase())
   )
     return false
-  if (f.cuisines.length && !f.cuisines.includes(r.cuisine)) return false
+  if (f.cuisines.length && !f.cuisines.includes(r.cuisine ?? '')) return false
   if (f.googleMinRating > 0 && (r.google_rating ?? 0) < f.googleMinRating)
     return false
   if (f.googleMinReviews > 0 && (r.google_review_count ?? 0) < f.googleMinReviews)

@@ -37,6 +37,9 @@ describe('getRestaurantPhotoUrl', () => {
     photo_url: null as string | null,
     google_photo_url: null as string | null,
     yelp_photo_url: null as string | null,
+    image_url: null as string | null,
+    photo_urls: null as string[] | null,
+    website_photo_url: null as string | null,
     cuisine: '',
   }
 
