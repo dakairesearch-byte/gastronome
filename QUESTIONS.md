@@ -204,3 +204,22 @@ Entry format:
 **Blocking:** Stage 5 public Crowd Rank UI (feature-builder task, BACKLOG). Depends on: This-or-That duels live (Stage 5); comparison volume threshold met in at least one metro. Elo nightly job is already live and building comparison data.
 
 **Status:** open
+
+---
+
+## 2026-06-10 — privilege-hardening — Q-011
+
+**Context:** `information_schema.role_table_grants` on project trwdqzsfgeydafojajbh shows the Supabase platform-default grants leave `anon` and `authenticated` holding **TRUNCATE, TRIGGER, and REFERENCES** on public tables (verified on `public.restaurant_comparisons`; the default grant is `ALL`, so this applies to every table). TRUNCATE is **not subject to RLS** — any SQL execution path running as those roles could wipe a table regardless of policies. Exploitability today is low: PostgREST exposes none of these operations, and a codebase sweep found no dependents — no `supabase/functions/` directory exists; no SQL `TRUNCATE`, `CREATE TRIGGER`, or FK DDL anywhere in `scripts/` or `src/` (all grep hits are comments/string-truncation); the only raw-SQL probe (`scripts/archived/_check_sources.ts`) is an archived no-op. Pipeline scripts run as service_role (anon key only as fallback, via PostgREST CRUD), and service_role keeps full privileges. Proposed migration written but **not applied**: `supabase/migrations/20260610000004_revoke_truncate_trigger_references.sql`.
+
+**Question:** Apply the privilege-revoke migration (REVOKE TRUNCATE, TRIGGER, REFERENCES on all existing public tables from anon/authenticated, plus ALTER DEFAULT PRIVILEGES FOR ROLE postgres so future tables match)?
+
+**Options:**
+  A) Apply as written — existing tables + default privileges in one migration. Cheap defense-in-depth; nothing in the app or pipeline uses these privileges as the API roles; service_role unaffected. Rollback is a symmetric GRANT/ALTER DEFAULT PRIVILEGES.
+  B) Revoke on existing tables only, skip ALTER DEFAULT PRIVILEGES — smaller statement, but every future CREATE TABLE silently regresses to holding TRUNCATE again and needs a per-table revoke remembered by hand.
+  C) Decline — rely on PostgREST never exposing TRUNCATE/TRIGGER/REFERENCES and RLS for everything else. Zero work; leaves a standing RLS bypass primitive if any future surface (edge function, RPC with dynamic SQL, connection-string leak scoped to these roles) executes SQL as anon/authenticated.
+
+**Agent recommendation:** A — the migration is two statements, verified dependency-free, and closes a class of risk (RLS-exempt TRUNCATE) rather than a specific bug. The default-privileges half is the part that pays off long-term; without it the hardening erodes one table at a time.
+
+**Blocking:** Nothing in BACKLOG.md — proactive hardening; the migration file sits unapplied pending this answer.
+
+**Status:** open
