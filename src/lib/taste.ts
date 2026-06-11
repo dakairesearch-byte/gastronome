@@ -158,7 +158,7 @@ export function onlineUpdate(v: number[], x: number[], eta: number = ETA): numbe
  * Returns a NEW array; does not mutate.
  */
 export function applySeeds(v: number[], cuisines: string[], m: number = PSEUDO_WEIGHT): number[] {
-  let out = [...v]
+  const out = [...v]
   for (const cuisine of cuisines) {
     const idx = CUISINE_IDX[cuisine]
     if (idx === undefined) continue

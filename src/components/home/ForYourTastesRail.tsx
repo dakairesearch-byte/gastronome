@@ -96,15 +96,21 @@ export default function ForYourTastesRail({
   const [ranked, setRanked] = useState<Restaurant[]>(fallbackRestaurants.slice(0, 8))
   const [isPersonalized, setIsPersonalized] = useState(false)
 
-  // After mount, check for a taste signal and upgrade to personalized if found.
+  // After mount, check for a taste signal and upgrade to personalized if
+  // found. Deferred to a macrotask so the setState is not synchronous within
+  // the effect (react-hooks/set-state-in-effect) — the first paint shows the
+  // server-matching fallback either way, so the deferral is invisible.
   useEffect(() => {
-    const { ranked: personalRanked, isPersonalized: personal } =
-      buildPersonalizedRanking(candidates, scores)
-    if (personal && personalRanked.length > 0) {
-      setRanked(personalRanked)
-      setIsPersonalized(true)
-    }
-    // If no taste signal, keep showing the fallback list.
+    const t = setTimeout(() => {
+      const { ranked: personalRanked, isPersonalized: personal } =
+        buildPersonalizedRanking(candidates, scores)
+      if (personal && personalRanked.length > 0) {
+        setRanked(personalRanked)
+        setIsPersonalized(true)
+      }
+      // If no taste signal, keep showing the fallback list.
+    }, 0)
+    return () => clearTimeout(t)
   }, [candidates, scores])
 
   if (ranked.length === 0) return null

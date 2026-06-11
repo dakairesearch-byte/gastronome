@@ -81,7 +81,7 @@ interface QueuedEvent {
   event: ImpressionEvent
 }
 
-let _queue: QueuedEvent[] = []
+const _queue: QueuedEvent[] = []
 let _listenersAttached = false
 
 function flush(): void {
