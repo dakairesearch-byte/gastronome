@@ -21,6 +21,8 @@ interface LogItButtonProps {
   topDishes?: string[]
   /** Trigger a data refresh (e.g. community stats) after a verdict is saved. */
   onVerdictSaved?: () => void
+  /** City forwarded to the VerdictSheet duel prompt. Omit to suppress duels. */
+  restaurantCity?: string | null
 }
 
 export default function LogItButton({
@@ -28,6 +30,7 @@ export default function LogItButton({
   restaurantName,
   topDishes = [],
   onVerdictSaved,
+  restaurantCity,
 }: LogItButtonProps) {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
@@ -71,6 +74,7 @@ export default function LogItButton({
       <VerdictSheet
         restaurantId={restaurantId}
         restaurantName={restaurantName}
+        restaurantCity={restaurantCity}
         topDishes={topDishes}
         open={open}
         onClose={() => setOpen(false)}

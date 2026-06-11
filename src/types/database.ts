@@ -3325,6 +3325,29 @@ export type Database = {
           }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_comparison: {
+        Args: {
+          p_winner_id: string
+          p_loser_id: string
+          p_context?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          identity_tier: number
+          loser_id: string
+          prompted_context: string | null
+          trust_weight: number
+          user_id: string
+          winner_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "restaurant_comparisons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_verdict: {
         Args: {
           p_dish_tags?: string[]

@@ -21,6 +21,7 @@ import { X, Check, ChevronRight, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
 import { recordPositiveEvent } from '@/lib/taste'
+import DuelPrompt from '@/components/duels/DuelPrompt'
 
 export interface VerdictSheetProps {
   restaurantId: string
@@ -33,6 +34,11 @@ export interface VerdictSheetProps {
   onVerdictSaved?: () => void
   /** Restaurant metadata forwarded to the taste vector on positive signals. */
   tasteHint?: { cuisine: string | null; city: string | null; price_range: number | null; michelin_stars: number | null }
+  /**
+   * City of the just-logged restaurant — forwarded to DuelPrompt so it can
+   * find a same-city challenger. Omit or pass null to suppress the duel.
+   */
+  restaurantCity?: string | null
 }
 
 type Tier = 'been' | 'return' | 'rating' | 'dishes' | 'done'
@@ -96,6 +102,7 @@ export default function VerdictSheet({
   onClose,
   onVerdictSaved,
   tasteHint,
+  restaurantCity,
 }: VerdictSheetProps) {
   const [tier, setTier] = useState<Tier>('been')
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
@@ -104,6 +111,11 @@ export default function VerdictSheet({
   const [customDishes, setCustomDishes] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Duel state: userId resolved once when done state is first shown.
+  // duelShown prevents showing a second prompt if the sheet re-enters done.
+  const [duelUserId, setDuelUserId] = useState<string | null>(null)
+  const [duelShown, setDuelShown] = useState(false)
+  const [duelDismissed, setDuelDismissed] = useState(false)
 
   // Reset state when the sheet (re)opens. Uses the React-sanctioned
   // "adjust state during render" pattern instead of an effect, which
@@ -119,8 +131,31 @@ export default function VerdictSheet({
       setCustomDish('')
       setCustomDishes([])
       setErrorMsg(null)
+      setDuelUserId(null)
+      setDuelShown(false)
+      setDuelDismissed(false)
     }
   }
+
+  // When the done tier is first reached, resolve the caller's userId
+  // so DuelPrompt can fetch same-city Been verdicts. Deferred via
+  // setTimeout to keep out of the render cycle (satisfies no-sync-setState-in-effect).
+  useEffect(() => {
+    if (tier !== 'done' || duelShown) return
+    let active = true
+    const t = window.setTimeout(async () => {
+      if (!active) return
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!active) return
+      setDuelUserId(session?.user?.id ?? null)
+      setDuelShown(true)
+    }, 0)
+    return () => {
+      active = false
+      window.clearTimeout(t)
+    }
+  }, [tier, duelShown])
 
   // Body scroll lock
   useEffect(() => {
@@ -645,44 +680,58 @@ export default function VerdictSheet({
 
             {/* Done state */}
             {tier === 'done' && (
-              <div className="text-center py-6">
-                <div
-                  className="inline-flex items-center justify-center mb-4"
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '999px',
-                    backgroundColor: 'rgba(142,59,70,0.10)',
-                  }}
-                >
-                  <Check size={28} style={{ color: 'var(--color-action)' }} aria-hidden="true" />
+              <div className="py-4">
+                <div className="text-center">
+                  <div
+                    className="inline-flex items-center justify-center mb-4"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '999px',
+                      backgroundColor: 'rgba(142,59,70,0.10)',
+                    }}
+                  >
+                    <Check size={28} style={{ color: 'var(--color-action)' }} aria-hidden="true" />
+                  </div>
+                  <p
+                    className="text-xl mb-1"
+                    style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-text)', fontWeight: 600 }}
+                  >
+                    Verdict logged
+                  </p>
+                  <p
+                    className="text-sm mb-4"
+                    style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+                  >
+                    Thanks for adding your perspective.
+                  </p>
+                  {/* DuelPrompt: shown at most once per sheet session, only when city is known */}
+                  {duelShown && !duelDismissed && (
+                    <DuelPrompt
+                      restaurantId={restaurantId}
+                      restaurantName={restaurantName}
+                      restaurantCity={restaurantCity ?? null}
+                      userId={duelUserId}
+                      onDismiss={() => setDuelDismissed(true)}
+                    />
+                  )}
+                  {(!duelShown || duelDismissed) && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold transition-colors"
+                      style={{
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--r-input)',
+                        color: 'var(--color-text)',
+                        fontFamily: 'var(--font-body)',
+                        minHeight: 44,
+                      }}
+                    >
+                      Close
+                    </button>
+                  )}
                 </div>
-                <p
-                  className="text-xl mb-1"
-                  style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-text)', fontWeight: 600 }}
-                >
-                  Verdict logged
-                </p>
-                <p
-                  className="text-sm mb-6"
-                  style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-                >
-                  Thanks for adding your perspective.
-                </p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold transition-colors"
-                  style={{
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--r-input)',
-                    color: 'var(--color-text)',
-                    fontFamily: 'var(--font-body)',
-                    minHeight: 44,
-                  }}
-                >
-                  Close
-                </button>
               </div>
             )}
           </div>

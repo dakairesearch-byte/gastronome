@@ -128,3 +128,79 @@ Entry format:
 **Blocking:** Stage 2 trust substrate (submit_verdict() RPC + identity tier stamping); any public community aggregate number ("% would return · N diners"); Founding Critic / referral mechanic (Stage 6).
 
 **Status:** answered: Option A approved by owner 2026-06-10 ("approve all 5"). Applied same day — see commit for artifacts.
+
+---
+
+## 2026-06-11 — gates-wrapup — Q-007
+
+**Context:** Stage 7 metric-gated item — community scoring as a fifth source entering `score.ts`. The ENGAGEMENT report §2 §8 names this as Phase 3: `w_c = 0.35·n/(n+40)` (self-extinguishing weight), community counting toward the 2-source corroboration ceiling only at n ≥ 50 calibrated raters. The math and constants are fully specified; nothing in `score.ts` may change without an explicit owner decision gate per CLAUDE.md. A `/lab` preview should ship before any proposal lands so the owner sees real per-restaurant deltas rather than theory.
+
+**Question:** Approve community as a fifth source in `score.ts` with `w_c = 0.35·n/(n+40)`, corroboration-counting at n ≥ 50 calibrated raters, and the corroborating-weight semantics already used for the sparse Beli source?
+
+**Options:**
+  A) Approve the fifth source as specified: `w_c = 0.35·n/(n+40)` (n=4 → w_c ≈ 0.032, n=200 → w_c ≈ 0.29), corroboration only at n ≥ 50, existing AGREEMENT penalty applies (k=0.8 beyond 0.3 tolerance), scoreless restaurants capped at 8.0–8.5 by the existing single-source rule. Ship behind a `NEXT_PUBLIC_COMMUNITY_IN_SCORE` flag after `/lab` preview shows real deltas. — Moves the community number into the headline after enough volume; most transparent path; gives community energy a direct payoff.
+  B) Approve the weight formula but defer corroboration-counting indefinitely — community can raise the score but never unlock the elite 9.2+ band regardless of n. More conservative; preserves the aggregator brand longer; limits the attack surface for review-bombing the score directly.
+  C) Decline permanently — keep community BESIDE the score forever; remove the Phase 3 language from the roadmap. Cleanest separation; the Elo Crowd Rank already provides an alternative community number; risks under-valuing a large engaged community if one forms.
+
+**Agent recommendation:** A, but ONLY after ALL four prerequisites are confirmably true: (1) ≥500 calibrated ratings platform-wide; (2) per-user calibration live ≥60 days (not merely deployed — 60 days of actual calibration history); (3) trust weighting + brigade detector live in production (actively quarantining rows, not just deployed); (4) median rated restaurant ≥30 weighted votes. These are hard thresholds that may not be met for 6–12 months. Until then, build the `/lab` preview of what the score would have been if the formula were live (read-only, admin-only, real per-restaurant deltas). Do not propose this question for owner adjudication until the `/lab` preview is ready and all four prereqs are checkably true. Recommend building the `/lab` page first — it is prerequisite work and is independently useful for calibration monitoring.
+
+**Blocking:** Stage 7 fifth-source implementation. `/lab` preview is buildable once community stats are recomputing nightly (Stage 3 complete). The prerequisite thresholds are earned by volume over time.
+
+**Status:** open
+
+---
+
+## 2026-06-11 — gates-wrapup — Q-008
+
+**Context:** Stage 7 ranking — Thompson sampling on `feed_impressions`. The ENGAGEMENT report §3 specifies: after ~30 days of impression data, replace the current Gumbel-noise Plackett-Luce explore/exploit with Beta posteriors: `Beta(clicks+1, impressions−clicks+1)` per (restaurant, surface, city). This is a gated ranking-formula change per CLAUDE.md. The `feed_impressions` table was shipped in Stage 4 (commit 15c4aac); the data clock started then. Prerequisite: ~30 days of impression data — earliest possible check is approximately 2026-07-14.
+
+**Question:** Approve replacing Gumbel-noise explore/exploit with Thompson sampling on `Beta(clicks+1, impressions−clicks+1)` posteriors once ≥30 days of impression data exist?
+
+**Options:**
+  A) Approve Thompson sampling as specified, gated on ≥30 days of real impression data in `feed_impressions`. Posterior samples drawn at request time (one sample per candidate, rank by sample); seeds kept replayable via `hash(user_id, date)` for the admin debug endpoint. — Most statistically principled explore/exploit at moderate n; self-degrades gracefully when impressions are sparse (Beta(1,1) = uniform = current Gumbel behavior). Requires a data-density check before switching.
+  B) Approve Thompson sampling but require a held-out control rail to measure improvement before full rollout — adds experimental infrastructure but gives a real signal. Appropriate if impression density is uncertain after 30 days.
+  C) Defer indefinitely — keep Gumbel noise until QFA blended feed is approved (Q-009). Avoids two simultaneous ranking changes; simpler to reason about.
+
+**Agent recommendation:** A, contingent on the ≥30-day impression data threshold. The posterior degrades gracefully at low n (Beta(1,1) is uniform, identical to the cold-start behavior), so there is no risk in flipping early — only reduced benefit. Confirm the threshold is met by running: `SELECT COUNT(*), COUNT(DISTINCT restaurant_id) FROM feed_impressions WHERE created_at > now() - interval '30 days'` before switching. The admin debug endpoint must expose per-restaurant posterior parameters. Do not propose to owner until the 30-day data check passes.
+
+**Blocking:** Stage 7 ranking hardening. Depends on: `feed_impressions` logging live (shipped Stage 4, commit 15c4aac); ≥30 days of accumulated data; QFA (Q-009) is a separate gate and can be decided independently.
+
+**Status:** open
+
+---
+
+## 2026-06-11 — gates-wrapup — Q-009
+
+**Context:** Stage 7 ranking — the QFA blended feed formula and the NEXT_PUBLIC_TRENDING_FORMULA=decay flag flip. Two separable decisions: (a) `NEXT_PUBLIC_TRENDING_FORMULA=decay` is fully implemented per commit c79c5fd / Q-005 Option A; the Vercel env var is the only thing holding it back — **this sub-decision is immediately actionable today** and does not require the metric gate. (b) Full QFA blended feed `rank = Q^1.0 · (1+T)^0.5 · A^0.3` replaces the current score-only sort behind the >500-weekly-active-voters metric gate and is a gated ranking-formula change per CLAUDE.md.
+
+**Question:** (a) Immediately: flip `NEXT_PUBLIC_TRENDING_FORMULA=decay` in Vercel env to activate the approved decay formula? (b) Once ≥500 weekly active voters: approve QFA blended feed with `rank = Q^1.0 · (1+T)^0.5 · A^0.3` (Q = gastronomeScore/10, T = decayed trend ∈ [0,1], A = taste affinity ∈ [0.85, 1.15])?
+
+**Options:**
+  A) (a) Flip decay flag now — the formula exists, was approved in Q-005 Option A, is behind a flag for exactly this moment; fixes the documented April-backfill ranking bug immediately. (b) Approve QFA formula as specified, gated on ≥500 weekly active voters, with why-chip per card ("9.1 + trending + Italian like you") and a held-out score-only rail for 2 weeks post-launch. — Decouples an easy now-decision from a hard later-decision.
+  B) (a) Flip decay flag now. (b) Decline QFA permanently — keep score-only sort on Discover, decay-weighted trending on Home rails only. Simpler ranking story; avoids personalization concerns on Discover per §3 design principle ("algorithmic help reads as manipulation").
+  C) Bundle both decisions together — wait for the metric gate before doing either. Leaves the documented backfill-spike ranking bug in production until the voter threshold is reached.
+
+**Agent recommendation:** A for (a): flipping `NEXT_PUBLIC_TRENDING_FORMULA=decay` in Vercel is a one-line env change, was explicitly approved in Q-005, and fixes a documented production ranking bug. This sub-decision can and should be approved standalone without waiting for (b) — call it out as immediately actionable. For (b): A — the QFA formula is sound and protects Discover's deterministic character by bounding affinity to ±15% (A ∈ [0.85, 1.15]); the metric gate keeps it off until personalization has enough data to do real work. The why-chip per card is non-negotiable for transparency.
+
+**Blocking:** (a) Production ranking fix — unblocked today, requires only a Vercel env var update (`NEXT_PUBLIC_TRENDING_FORMULA=decay`). (b) Stage 7 blended feed; depends on: `feed_impressions` volume; taste vector v0 live (shipped Stage 4); ≥500 weekly active voters.
+
+**Status:** open
+
+---
+
+## 2026-06-11 — gates-wrapup — Q-010
+
+**Context:** Stage 5 / Stage 7 — Crowd Rank public display. The Elo computation exists (`scripts/computeCommunityStats.ts`, seeded from Gastronome Score, K=32/16, nightly batch). The `restaurant_community_stats.elo` column and `n_comparisons` counter are live. Current policy (SHARED FACTS): Crowd Rank is display-gated (hidden < 10 comparisons per restaurant; dense-metro rollout is a Phase-2 owner decision). Data and private surfaces may be built; no public ordinal ladder UI yet. The ENGAGEMENT report §2 Phase 2 specifies: "Crowd Rank in the 1-2 densest metros only (6 thin comparison graphs would fragment)."
+
+**Question:** Approve public Crowd Rank ordinal ladder display in the 1-2 densest metros, and choose which metro(s) go first?
+
+**Options:**
+  A) Launch public Crowd Rank in the single densest metro (by `n_comparisons` count at launch-decision time) once that metro crosses 200 total comparisons and ≥30 restaurants with ≥10 comparisons each. Display as "#12 in Austin · 87 head-to-heads", sorted by Elo lower-confidence bound (Elo − 2σ_elo). No rank shown for restaurants below 10 comparisons — "Unranked — settle it." Second metro follows when it crosses the same threshold organically. — Metro choice driven by data; one ladder is easier to monitor for Elo anomalies at launch.
+  B) Launch in the 2 densest metros simultaneously once both cross 200 comparisons. Creates cross-metro competitive energy; doubles the anomaly surface area for first monitoring.
+  C) Keep Crowd Rank private-only indefinitely — show only on personal profile ("Your Austin ranking: #12") and never surface a public metro ladder. Avoids tension between Elo rank and Gastronome Score on the same page; simpler moderation; loses the Beli-differentiation hook (public crowd ladder is the specific wedge vs Beli's personal-only rankings).
+
+**Agent recommendation:** A — one metro first is the correct minimum viable surface. The "1-2 densest metros" language in the report is a cap, not a mandate; starting with one minimizes anomaly surface area and keeps trust high if early Elo is noisy. Metro selection is a data decision at the time of approval: `SELECT r.city, COUNT(*) as n_comparisons FROM restaurant_comparisons rc JOIN restaurants r ON rc.winner_id = r.id GROUP BY r.city ORDER BY n_comparisons DESC LIMIT 2`. The public ladder UI is a separate feature-builder task — this gate approves the display decision; implementation follows after approval.
+
+**Blocking:** Stage 5 public Crowd Rank UI (feature-builder task, BACKLOG). Depends on: This-or-That duels live (Stage 5); comparison volume threshold met in at least one metro. Elo nightly job is already live and building comparison data.
+
+**Status:** open

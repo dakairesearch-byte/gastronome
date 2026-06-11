@@ -30,6 +30,8 @@ interface FirstForkProps {
   topDishes?: string[]
   className?: string
   onVerdictSaved?: () => void
+  /** City forwarded to the VerdictSheet duel prompt. Omit to suppress duels. */
+  restaurantCity?: string | null
 }
 
 export default function FirstFork({
@@ -40,6 +42,7 @@ export default function FirstFork({
   topDishes = [],
   className = '',
   onVerdictSaved,
+  restaurantCity,
 }: FirstForkProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -107,6 +110,7 @@ export default function FirstFork({
       <VerdictSheet
         restaurantId={restaurantId}
         restaurantName={restaurantName}
+        restaurantCity={restaurantCity}
         topDishes={topDishes}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

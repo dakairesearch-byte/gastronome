@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { getAllQualifyingDishPages } from '@/lib/dishPages'
 
 // Regenerate daily (ISR) so newly-added restaurants/cities appear without a
 // redeploy, while keeping the route cacheable rather than dynamic-per-request.
@@ -110,5 +111,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[sitemap] dynamic route enumeration failed:', err)
   }
 
-  return [...staticEntries, ...dynamicEntries]
+  // ── Dish SEO pages (/best/{city}/{dish}) ──────────────────────────
+  // Enumerate only qualifying city/dish pairs (same quality gate as the
+  // page itself: ≥3 restaurants with the dish, ≥2 with a Gastronome
+  // Score). This prevents junk URLs from polluting the sitemap.
+  const dishEntries: MetadataRoute.Sitemap = []
+  try {
+    const pairs = await getAllQualifyingDishPages()
+    for (const { citySlug, dishSlug } of pairs) {
+      // City-index page
+      dishEntries.push({
+        url: `${SITE_URL}/best/${citySlug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.75,
+      })
+      // Dish-detail page
+      dishEntries.push({
+        url: `${SITE_URL}/best/${citySlug}/${dishSlug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      })
+    }
+
+    // De-duplicate city-index entries (one per active city, not per dish)
+    const seen = new Set<string>()
+    const dedupedDishEntries: MetadataRoute.Sitemap = []
+    for (const entry of dishEntries) {
+      const key = entry.url
+      if (!seen.has(key)) {
+        seen.add(key)
+        dedupedDishEntries.push(entry)
+      }
+    }
+    dishEntries.length = 0
+    dishEntries.push(...dedupedDishEntries)
+  } catch (err) {
+    console.error('[sitemap] dish page enumeration failed:', err)
+  }
+
+  return [...staticEntries, ...dynamicEntries, ...dishEntries]
 }

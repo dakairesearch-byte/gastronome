@@ -70,3 +70,14 @@
 
 ## Archived design-ux cycle 11: 2026-05-23 (no-op)
 - **design-ux**: no-op. Pre-flight checks: git log on src/app/, src/components/, design/ since last cycle — no new commits; BACKLOG [design] item (cities-index critique) is in Next, not Now; QUESTIONS.md — no answered [design] questions.
+
+---
+
+## Archived cycle: 2026-05-23 (6-lane check — all no-op)
+
+- **data-steward**: no-op. BACKLOG Now `[steward]` `.env.example` done; Later items (computeTopDishes UPSERT, seed pipeline) deferred. No new scrape work queued.
+- **schema-guardian**: no-op. BACKLOG Next `[schema]` is read-only audit (migration `20260415140000` consistency); no new migrations or schema changes queued.
+- **ranking-specialist**: no-op. No `[ranking]` Now items. BACKLOG Next is audit-only (weights + signals documentation); no formula or weight changes.
+- **performance**: no-op. Bundle audit deferred until cities Now fix lands; no performance blockers or findings to report.
+- **feature-builder**: no-op. BACKLOG Now `[builder]` done (mojibake fix, cycle 2). Vitest backfill queued but not promoted to Now.
+- **design-ux**: no-op. No `[design]` Now items. BACKLOG Next is critique-only (cities index a11y + hierarchy); no layout changes proposed.

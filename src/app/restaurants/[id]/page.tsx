@@ -373,6 +373,7 @@ export default async function RestaurantPage({
               <LogItButton
                 restaurantId={restaurant.id}
                 restaurantName={restaurant.name}
+                restaurantCity={restaurant.city}
                 topDishes={topDishNames}
               />
               <BookmarkButton restaurantId={restaurant.id} />
@@ -726,6 +727,7 @@ export default async function RestaurantPage({
               <FirstFork
                 restaurantId={restaurant.id}
                 restaurantName={restaurant.name}
+                restaurantCity={restaurant.city}
                 sourceCount={score?.sourceCount ?? 0}
                 maxSources={GASTRONOME_SCORE_MAX_SOURCES}
                 topDishes={topDishNames}
