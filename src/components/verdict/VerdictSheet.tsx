@@ -101,8 +101,13 @@ export default function VerdictSheet({
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Reset state when sheet opens
-  useEffect(() => {
+  // Reset state when the sheet (re)opens. Uses the React-sanctioned
+  // "adjust state during render" pattern instead of an effect, which
+  // avoids a wasted closed-state render and satisfies
+  // react-hooks/set-state-in-effect.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setTier('been')
       setSelectedRating(null)
@@ -111,7 +116,7 @@ export default function VerdictSheet({
       setCustomDishes([])
       setErrorMsg(null)
     }
-  }, [open])
+  }
 
   // Body scroll lock
   useEffect(() => {

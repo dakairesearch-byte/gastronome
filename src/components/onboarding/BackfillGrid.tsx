@@ -52,7 +52,9 @@ interface BackfillGridProps {
 
 export default function BackfillGrid({ city, supabase, onDone }: BackfillGridProps) {
   const [restaurants, setRestaurants] = useState<GridRestaurant[]>([])
-  const [loading, setLoading] = useState(true)
+  // Loading only when there's a city to fetch for — avoids a synchronous
+  // setState inside the fetch effect (react-hooks/set-state-in-effect).
+  const [loading, setLoading] = useState(() => Boolean(city))
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
   /** How many Been RPCs have completed so far (used for a live progress count). */
@@ -61,12 +63,8 @@ export default function BackfillGrid({ city, supabase, onDone }: BackfillGridPro
   // Fetch top ~24 restaurants for the city on mount.
   useEffect(() => {
     let active = true
-    setLoading(true)
     ;(async () => {
-      if (!city) {
-        if (active) setLoading(false)
-        return
-      }
+      if (!city) return
       const { data } = await supabase
         .from('restaurants')
         .select(
@@ -325,7 +323,7 @@ export default function BackfillGrid({ city, supabase, onDone }: BackfillGridPro
             alignItems: 'center',
           }}
         >
-          Skip — I'll log later
+          Skip — I&apos;ll log later
         </button>
       </div>
     </div>
