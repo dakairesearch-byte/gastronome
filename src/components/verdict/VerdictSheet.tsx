@@ -144,9 +144,9 @@ export default function VerdictSheet({
 
   const rpc = useCallback(
     async (params: {
-      p_rating?: number | null
-      p_would_return?: boolean | null
-      p_dish_tags?: string[] | null
+      p_rating?: number
+      p_would_return?: boolean
+      p_dish_tags?: string[]
     }) => {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -156,8 +156,6 @@ export default function VerdictSheet({
       }
       const { error } = await supabase.rpc('submit_verdict', {
         p_restaurant_id: restaurantId,
-        p_ip: null,
-        p_ua: null,
         ...params,
       })
       if (error) {
@@ -180,10 +178,9 @@ export default function VerdictSheet({
     }
     setSubmitting(true)
     setErrorMsg(null)
+    // Been = partial call; optional params omitted (SQL defaults apply).
     const { error } = await supabase.rpc('submit_verdict', {
       p_restaurant_id: restaurantId,
-      p_ip: null,
-      p_ua: null,
     })
     setSubmitting(false)
     if (error) {

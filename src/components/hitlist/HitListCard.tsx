@@ -71,12 +71,10 @@ export default function HitListCard({
 
     setBusy(true)
     const supabase = createClient()
-    // Been = partial call with only p_restaurant_id (merges into existing verdict).
-    // Clients pass null ip/ua per SHARED FACTS; all other params are optional.
+    // Been = partial call with only p_restaurant_id (merges into existing
+    // verdict). Optional params are omitted — SQL defaults apply.
     const { error } = await supabase.rpc('submit_verdict', {
       p_restaurant_id: restaurant.id,
-      p_ip: null,
-      p_ua: null,
     })
     setBusy(false)
 

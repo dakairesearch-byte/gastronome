@@ -103,13 +103,9 @@ export default function BackfillGrid({ city, supabase, onDone }: BackfillGridPro
     setLogged(0)
     const ids = Array.from(selected)
     for (const restaurantId of ids) {
+      // Been = partial call; optional params omitted (SQL defaults apply).
       await supabase.rpc('submit_verdict', {
         p_restaurant_id: restaurantId,
-        p_rating: null,
-        p_would_return: null,
-        p_dish_tags: null,
-        p_ip: null,
-        p_ua: null,
       })
       setLogged((n) => n + 1)
     }

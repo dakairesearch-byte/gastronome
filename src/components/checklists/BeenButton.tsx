@@ -46,13 +46,9 @@ export default function BeenButton({
     startTransition(async () => {
       setError(null)
       const supabase = createClient()
+      // Been = partial call; optional params omitted (SQL defaults apply).
       const { error: rpcError } = await supabase.rpc('submit_verdict', {
         p_restaurant_id: restaurantId,
-        p_rating: null,
-        p_would_return: null,
-        p_dish_tags: null,
-        p_ip: null,
-        p_ua: null,
       })
       if (rpcError) {
         setError('Could not log visit. Try again.')
