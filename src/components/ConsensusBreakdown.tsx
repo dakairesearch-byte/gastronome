@@ -1,4 +1,5 @@
 import type { GastronomeScore } from '@/lib/score'
+import { computeVerdict } from '@/lib/verdict'
 
 /**
  * ConsensusBreakdown — "The Consensus" detail-page panel that replaces the
@@ -29,12 +30,15 @@ export default function ConsensusBreakdown({
   const spread = hi - lo
 
   // Verdict on agreement — the one-line "how much do they agree?" read.
+  // Derived from the SAME tier function as VerdictCard (src/lib/verdict.ts)
+  // so the two adjacent panels can never contradict each other on-page.
+  const tier = computeVerdict(breakdown).tier
   const verdict =
-    breakdown.length <= 1
+    tier.kind === 'single'
       ? { label: 'Single source', blurb: 'Only one rating feeds this — treat it as a thin read.' }
-      : spread <= 1
+      : tier.kind === 'unanimous'
         ? { label: 'Strong consensus', blurb: 'Every source lands within a point of each other.' }
-        : spread <= 2.5
+        : tier.kind === 'broad'
           ? { label: 'Broad agreement', blurb: 'Sources mostly line up on this one.' }
           : { label: 'Polarizing', blurb: 'Sources split — read the spread, not just the number.' }
 

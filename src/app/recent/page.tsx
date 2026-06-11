@@ -14,7 +14,8 @@ import EmptyState from '@/components/EmptyState'
 export const revalidate = 60
 
 export const metadata = {
-  title: "What's new | Gastronome",
+  // Brand suffix comes from the root layout title template ('%s · Gastronome').
+  title: "What's new",
   description:
     'Reverse-chronological feed of new restaurants, videos, reviews, and photos across Gastronome.',
 }

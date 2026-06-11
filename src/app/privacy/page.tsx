@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Gastronome',
+  // Brand suffix comes from the root layout title template ('%s · Gastronome').
+  title: 'Privacy Policy',
   description:
     'How Gastronome collects, uses, and protects your data, and how it aggregates third-party restaurant information.',
 }

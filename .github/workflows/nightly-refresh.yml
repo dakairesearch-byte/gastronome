@@ -62,3 +62,10 @@ jobs:
       - name: Health check
         # Exits non-zero if any pipeline assertion fails, failing the run.
         run: npx tsx scripts/healthCheck.ts
+
+      - name: Compute community stats
+        # Recomputes restaurant_community_stats + user_rating_stats from reviews
+        # and restaurant_comparisons. Full recompute — idempotent. --sleep adds
+        # a random 0-20 min jitter so the batch-recompute window is unobservable
+        # and timing-based attacks cannot measure per-vote deltas.
+        run: npx tsx scripts/computeCommunityStats.ts --write --sleep

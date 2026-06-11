@@ -11,6 +11,7 @@ import { MapPin, Phone, Globe, Star, ThumbsUp } from 'lucide-react'
 import Breadcrumb from '@/components/Breadcrumb'
 import GastronomeScoreBadge from '@/components/GastronomeScoreBadge'
 import ConsensusBreakdown from '@/components/ConsensusBreakdown'
+import VerdictCard from '@/components/VerdictCard'
 import ScoreSparkline from '@/components/ScoreSparkline'
 import StaticMapTile from '@/components/StaticMapTile'
 import { gastronomeScore } from '@/lib/score'
@@ -25,8 +26,10 @@ export const revalidate = 60
  * Previously restaurant URLs pasted into Slack, iMessage, or Twitter
  * produced a bare link with no title or preview image — embarrassing
  * for an aggregator whose whole pitch is rich restaurant context. We
- * now synthesize a descriptive title, subtitle, and hero image from
- * whichever photo source is available (primary, Google, Yelp).
+ * now synthesize a descriptive title and subtitle; the og:image is
+ * handled by the file-convention opengraph-image.tsx in this segment
+ * (a rendered Score Card), so we do NOT declare openGraph.images here
+ * — the file-convention image auto-wires and takes precedence.
  */
 export async function generateMetadata({
   params,
@@ -38,13 +41,14 @@ export async function generateMetadata({
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select(
-      'name, cuisine, city, neighborhood, photo_url, google_photo_url, yelp_photo_url, google_rating, description'
+      'name, cuisine, city, neighborhood, google_rating, description'
     )
     .eq('id', id)
     .single()
 
   if (!restaurant) {
-    return { title: 'Restaurant not found · Gastronome' }
+    // Brand suffix comes from the root layout title template ('%s · Gastronome').
+    return { title: 'Restaurant not found' }
   }
 
   const where = [restaurant.neighborhood, restaurant.city]
@@ -64,9 +68,6 @@ export async function generateMetadata({
     restaurant.description ||
     `Reviews from every major source for ${restaurant.name}${where ? ' in ' + where : ''}. See Google, Yelp, Beli, and Infatuation ratings side-by-side on Gastronome.`
 
-  const image =
-    restaurant.photo_url || restaurant.google_photo_url || restaurant.yelp_photo_url
-
   return {
     title,
     description,
@@ -74,13 +75,13 @@ export async function generateMetadata({
       title,
       description,
       type: 'article',
-      images: image ? [{ url: image, alt: restaurant.name }] : undefined,
+      // og:image is auto-wired from opengraph-image.tsx (Score Card) — no manual declaration needed.
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title,
       description,
-      images: image ? [image] : undefined,
+      // twitter:image is auto-wired from opengraph-image.tsx — no manual declaration needed.
     },
   }
 }
@@ -678,6 +679,13 @@ export default async function RestaurantPage({
                 connects the inputs to the headline Gastronome Score.
                 Hidden entirely when no source has a rating. */}
             {score && <ConsensusBreakdown score={score} />}
+
+            {/* The Verdict — cross-source consensus card (report #56, Stage 1).
+                Plain-English tier label ("Unanimous" / "Broad agreement" /
+                "Contested: Critics love it, Yelp shrugs") derived from the
+                per-source normalized spread, plus mini-bars for every source.
+                Renders nothing when score is null. */}
+            <VerdictCard score={score} />
 
             {/* Signature Dishes — sourced from restaurant_highlighted_dishes,
                 which unions LLM-extracted mentions from TikTok captions,

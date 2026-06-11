@@ -38,12 +38,17 @@ const spectral = Spectral({
 
 export const metadata: Metadata = {
   // metadataBase makes relative OG/Twitter image URLs resolve to absolute
-  // URLs (crawlers reject relative image paths). Falls back to localhost
-  // for local dev; production sets NEXT_PUBLIC_SITE_URL.
+  // URLs (crawlers reject relative image paths). Falls back to the
+  // Vercel-injected VERCEL_URL (preview deployments) then localhost for
+  // local dev; production always sets NEXT_PUBLIC_SITE_URL.
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    process.env.NEXT_PUBLIC_SITE_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
   ),
-  title: 'Gastronome — Every Restaurant Rating in One Place',
+  title: {
+    default: 'Gastronome — Every Restaurant Rating in One Place',
+    template: '%s · Gastronome',
+  },
   description:
     'Compare Google, Yelp, The Infatuation, and Michelin ratings side by side. Like Rotten Tomatoes, but for food.',
   keywords:
