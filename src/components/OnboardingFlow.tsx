@@ -19,13 +19,14 @@ import {
   EyeOff,
 } from 'lucide-react'
 import OnboardingRestaurantPreview from './OnboardingRestaurantPreview'
+import BackfillGrid from './onboarding/BackfillGrid'
 import type { City, Restaurant } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
 
 /**
  * Gastronome's default landing experience.
  *
- * Four panes, surfaced to EVERY visitor without an account:
+ * Five panes, surfaced to EVERY visitor without an account:
  *   1. Problem    — food ratings are scattered across Google, Yelp,
  *                   Michelin, The Infatuation, TikTok, Instagram.
  *   2. Solution   — Gastronome unifies them and layers in critic +
@@ -37,19 +38,25 @@ import type { User } from '@supabase/supabase-js'
  *                   browsing has been removed per product direction:
  *                   the whole value prop is preferences + saved
  *                   collections, which require an account.
+ *   5. Backfill   — optional "Been anywhere here?" grid seeding initial
+ *                   Been verdicts from the city's top restaurants.
+ *                   Fully skippable; only reached with an active session
+ *                   (not shown during email-confirm flow). On completion
+ *                   or skip, the user lands at `?next=` or `/`.
  *
  * Authed-but-unfinished users skip straight to pane 3, finalize the
  * city, and land on the "ready to explore" confirmation instead of a
  * sign-up form (pane 4 branches on session state).
  */
 
-type StepKey = 'problem' | 'solution' | 'city' | 'account'
-const STEPS: StepKey[] = ['problem', 'solution', 'city', 'account']
+type StepKey = 'problem' | 'solution' | 'city' | 'account' | 'backfill'
+const STEPS: StepKey[] = ['problem', 'solution', 'city', 'account', 'backfill']
 const STEP_LABELS: Record<StepKey, string> = {
   problem: 'Problem',
   solution: 'Solution',
   city: 'City',
   account: 'Sign up',
+  backfill: 'Visits',
 }
 
 export default function OnboardingFlow() {
@@ -235,8 +242,24 @@ export default function OnboardingFlow() {
   }, [displayName])
 
   /**
-   * Save preferences for an already-authed user and send them home.
-   * Called by pane 4's "Start exploring" button when we have a session.
+   * Navigate to the final destination after onboarding (and optional backfill)
+   * completes. Honors a ?next= param so users who were redirected to onboarding
+   * mid-journey land on their originally-requested page.
+   */
+  const finishFlow = () => {
+    const next =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('next')
+        : null
+    // Same-origin paths only — reject protocol-relative '//host' values so
+    // ?next= can't be abused as an open redirect.
+    router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/')
+    router.refresh()
+  }
+
+  /**
+   * Save preferences for an already-authed user, then advance to the backfill
+   * step. Called by pane 4's "Start exploring" button when we have a session.
    */
   const finishForAuthedUser = async () => {
     if (!user) return
@@ -270,8 +293,9 @@ export default function OnboardingFlow() {
         setSubmitting(false)
         return
       }
-      router.push('/')
-      router.refresh()
+      // Advance to the optional backfill step instead of jumping straight home.
+      setStepIndex(STEPS.indexOf('backfill'))
+      setSubmitting(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
@@ -404,8 +428,9 @@ export default function OnboardingFlow() {
         return
       }
 
-      router.push('/')
-      router.refresh()
+      // Advance to the optional backfill step instead of jumping straight home.
+      setStepIndex(STEPS.indexOf('backfill'))
+      setSubmitting(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
@@ -509,6 +534,13 @@ export default function OnboardingFlow() {
                 selectedCity={selectedCity}
               />
             ))}
+          {step === 'backfill' && (
+            <BackfillGrid
+              city={selectedCity}
+              supabase={supabase}
+              onDone={finishFlow}
+            />
+          )}
         </div>
 
         {error && (
@@ -527,9 +559,11 @@ export default function OnboardingFlow() {
 
         {/* Footer bar — hidden on pane 4 when we're mid-signup or
             awaiting email confirmation, since the primary action lives
-            inside the form / confirmation card itself. */}
+            inside the form / confirmation card itself.
+            Also hidden on the backfill step which has its own inline CTAs. */}
         {!(step === 'account' && !user && !awaitingConfirmation) &&
-          !awaitingConfirmation && (
+          !awaitingConfirmation &&
+          step !== 'backfill' && (
             <div
               className="px-6 sm:px-10 py-4 flex items-center justify-between gap-3"
               style={{ borderTop: '1px solid var(--color-border)' }}
@@ -605,8 +639,9 @@ export default function OnboardingFlow() {
       {/* Sign-in escape hatch — now visible on EVERY pane, not just
           pane 4's signup form. Returning users (cleared cookies,
           incognito) previously had to click through three pitch screens
-          before they could log in. Sweep v2 onboarding P0. */}
-      {!user && !awaitingConfirmation && (
+          before they could log in. Sweep v2 onboarding P0.
+          Hidden on the backfill step (user is already authed at that point). */}
+      {!user && !awaitingConfirmation && step !== 'backfill' && (
         <p
           className="text-center text-xs mt-4"
           style={{

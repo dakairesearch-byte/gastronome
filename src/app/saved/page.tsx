@@ -7,6 +7,7 @@ import { useFavorites, useCollections } from '@/lib/collections'
 import RestaurantCard from '@/components/RestaurantCard'
 import EmptyState from '@/components/EmptyState'
 import { RestaurantCardCompactSkeleton } from '@/components/LoadingSkeleton'
+import HitListSection from '@/components/hitlist/HitListSection'
 import type { Restaurant } from '@/types/database'
 
 /**
@@ -146,27 +147,7 @@ export default function SavedPage() {
         ) : (
           <div className="space-y-12">
             {favoriteRestaurants.length > 0 && (
-              <section aria-labelledby="saved-favorites-heading">
-                <h2
-                  id="saved-favorites-heading"
-                  className="text-lg font-semibold mb-4"
-                  style={{
-                    color: 'var(--color-text)',
-                    fontFamily: 'var(--font-heading)',
-                  }}
-                >
-                  Bookmarks
-                </h2>
-                <div className={GRID}>
-                  {favoriteRestaurants.map((r) => (
-                    <RestaurantCard
-                      key={r.id}
-                      restaurant={r}
-                      variant="compact"
-                    />
-                  ))}
-                </div>
-              </section>
+              <HitListSection restaurants={favoriteRestaurants} />
             )}
 
             {nonEmptyCollections.map(({ collection, restaurants }) => (

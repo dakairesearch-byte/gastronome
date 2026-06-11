@@ -14,8 +14,11 @@ import ConsensusBreakdown from '@/components/ConsensusBreakdown'
 import VerdictCard from '@/components/VerdictCard'
 import ScoreSparkline from '@/components/ScoreSparkline'
 import StaticMapTile from '@/components/StaticMapTile'
-import { gastronomeScore } from '@/lib/score'
+import { gastronomeScore, GASTRONOME_SCORE_MAX_SOURCES } from '@/lib/score'
 import { GoogleGIcon } from '@/components/brands/BrandIcons'
+import LogItButton from '@/components/verdict/LogItButton'
+import CommunityModule from '@/components/community/CommunityModule'
+import FirstFork from '@/components/FirstFork'
 import type { Metadata } from 'next'
 
 export const revalidate = 60
@@ -100,7 +103,7 @@ async function getRestaurantData(restaurantId: string) {
   // Parallel: related (prefer same cuisine, fall back to trending), video
   // count, and highlighted dishes (QA pass 2: previously fetched and
   // unused on this page — now rendered under "Signature Dishes").
-  const [sameCuisine, trending, videoCountResult, dishesResult] =
+  const [sameCuisine, trending, videoCountResult, dishesResult, topDishesResult, communityStatsResult] =
     await Promise.all([
       restaurant.cuisine && restaurant.cuisine !== 'Restaurant' && restaurant.city
         ? supabase
@@ -129,6 +132,21 @@ async function getRestaurantData(restaurantId: string) {
         .eq('restaurant_id', restaurantId)
         .order('rank', { ascending: true, nullsFirst: false })
         .limit(12),
+      // Top dishes for VerdictSheet chip picker (display_name, ranked)
+      supabase
+        .from('restaurant_top_dishes')
+        .select('display_name')
+        .eq('restaurant_id', restaurantId)
+        .order('rank', { ascending: true })
+        .limit(10),
+      // Diner ratings count — gates FirstFork. The "Not yet rated by
+      // diners" card must vanish as soon as any diner rating exists,
+      // even while critic coverage is still thin.
+      supabase
+        .from('restaurant_community_stats')
+        .select('n_ratings')
+        .eq('restaurant_id', restaurantId)
+        .maybeSingle(),
     ])
 
   // Prefer same-cuisine picks; pad with trending; final fallback = any
@@ -210,11 +228,18 @@ async function getRestaurantData(restaurantId: string) {
     if (dishes.length >= 6) break
   }
 
+  // Top dish display names for VerdictSheet chip picker
+  const topDishNames: string[] = (topDishesResult.data ?? [])
+    .map((d: { display_name: string }) => d.display_name)
+    .filter(Boolean)
+
   return {
     restaurant,
     relatedRestaurants,
     videoCount: videoCountResult.count ?? 0,
     dishes,
+    topDishNames,
+    communityRatingsCount: communityStatsResult.data?.n_ratings ?? 0,
   }
 }
 
@@ -228,7 +253,7 @@ export default async function RestaurantPage({
 
   if (!data) notFound()
 
-  const { restaurant, relatedRestaurants, videoCount, dishes } = data
+  const { restaurant, relatedRestaurants, videoCount, dishes, topDishNames, communityRatingsCount } = data
   // Compute the Gastronome Score once — it was previously recomputed three
   // times in the hero (gate + render + non-null assertion), each rebuilding
   // the full breakdown array.
@@ -345,6 +370,11 @@ export default async function RestaurantPage({
               ]}
             />
             <div className="flex items-center gap-2 flex-shrink-0">
+              <LogItButton
+                restaurantId={restaurant.id}
+                restaurantName={restaurant.name}
+                topDishes={topDishNames}
+              />
               <BookmarkButton restaurantId={restaurant.id} />
               <ShareButton
                 title={restaurant.name}
@@ -686,6 +716,26 @@ export default async function RestaurantPage({
                 per-source normalized spread, plus mini-bars for every source.
                 Renders nothing when score is null. */}
             <VerdictCard score={score} />
+
+            {/* FirstFork — honest empty-state when Gastronome score is null
+                or coverage is thin (1 of N sources). Invites the first diner
+                verdict without fake numbers. Suppressed once any diner
+                rating exists — "Not yet rated by diners" must never sit
+                above a CommunityModule that shows diner ratings. */}
+            {(!score || score.sourceCount <= 1) && communityRatingsCount === 0 && (
+              <FirstFork
+                restaurantId={restaurant.id}
+                restaurantName={restaurant.name}
+                sourceCount={score?.sourceCount ?? 0}
+                maxSources={GASTRONOME_SCORE_MAX_SOURCES}
+                topDishes={topDishNames}
+              />
+            )}
+
+            {/* CommunityModule — server-rendered community signal block.
+                Shows aggregate return rate + community mean (when gates met),
+                or named individual verdicts below gate thresholds. */}
+            <CommunityModule restaurantId={restaurant.id} />
 
             {/* Signature Dishes — sourced from restaurant_highlighted_dishes,
                 which unions LLM-extracted mentions from TikTok captions,

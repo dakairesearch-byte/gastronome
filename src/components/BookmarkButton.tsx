@@ -115,9 +115,17 @@ export default function BookmarkButton({
     // Track the prior state so the toast can offer one-tap Undo
     // (saving-lists QW: "Add an Undo action to the 2-second save toast").
     const wasFavorite = isFavorite
+    const currentCount = favorites.length
     toggleFavorite(restaurantId)
     setLastAction(wasFavorite ? 'unfavorited' : 'favorited')
-    setToast(wasFavorite ? 'Removed from favorites' : 'Saved to favorites')
+    if (wasFavorite) {
+      setToast('Removed from saved')
+    } else if (currentCount >= 10) {
+      // Save went through — lands on the overflow shelf, never blocked.
+      setToast('Saved for someday — see your full list in Saved')
+    } else {
+      setToast('Added to Hit List')
+    }
   }
 
   const handleUndoFavorite = () => {

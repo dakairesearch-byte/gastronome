@@ -3277,6 +3277,17 @@ export type Database = {
           }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_verdict: {
+        Args: {
+          p_restaurant_id: string
+          p_rating?: number | null
+          p_would_return?: boolean | null
+          p_dish_tags?: string[] | null
+          p_ip?: string | null
+          p_ua?: string | null
+        }
+        Returns: Database["public"]["Tables"]["reviews"]["Row"]
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
