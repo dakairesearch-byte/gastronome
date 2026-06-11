@@ -1,13 +1,23 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { topTrendingRestaurants } from '@/lib/ranking/trending'
-import SectionHeader from '@/components/SectionHeader'
-import SuggestionCard from '@/components/cards/SuggestionCard'
+import SearchAutocomplete from '@/components/search/SearchAutocomplete'
+import { EDITORIAL_COLLECTIONS } from '@/lib/collections/editorial'
+import { gastronomeScore } from '@/lib/score'
+import {
+  seededDailyShuffle,
+  mmrDiversify,
+  imputeQuality,
+  buildCohortMedians,
+} from '@/lib/ranking/explore'
+import TrendingRail from '@/components/home/TrendingRail'
+import CityBestRail from '@/components/home/CityBestRail'
+import ForYourTastesRail from '@/components/home/ForYourTastesRail'
+import WorthALookRail from '@/components/home/WorthALookRail'
 import RecentSearches from '@/components/home/RecentSearches'
 import FavoritesSection from '@/components/home/FavoritesSection'
 import EditorialPickImage from '@/components/home/EditorialPickImage'
-import SearchAutocomplete from '@/components/search/SearchAutocomplete'
-import { EDITORIAL_COLLECTIONS } from '@/lib/collections/editorial'
+import SectionHeader from '@/components/SectionHeader'
 import type { Restaurant } from '@/types/database'
 
 export const revalidate = 60
@@ -21,30 +31,7 @@ export const revalidate = 60
  */
 const FALLBACK_CITY = 'New York'
 
-/**
- * Editorial picks — formerly labeled "Saved Collections," which made
- * every user expect to manage their own saves under that header. These
- * are curated entry points into filtered Explore views (no user data
- * involved). Renamed + rephrased to set honest expectations. The
- * hover-bookmark affordance was also removed downstream — they're not
- * saveable, so the bookmark icon was a false signal.
- *
- * D1 (Wave 5) — taxonomy reconciliation + honest copy:
- *  - The Michelin pick used to be named "Special Occasions" here but
- *    "Michelin Stars" on Explore — two names for one collection. It now
- *    pulls its name + blurb from the canonical EDITORIAL_COLLECTIONS
- *    (matched by accolade filter value) so home and Explore can never
- *    drift. Same for Eater 38.
- *  - `tagline` replaced the old `type`, which leaked internal predicate
- *    codes ("High rating · low review count") into the UI. Each pick now
- *    states the user benefit instead.
- *  - Date Night / Quick Lunch / Hidden Gems are home-only shortcuts (not
- *    canonical collections), so they carry local benefit copy.
- */
-
-/** Canonical collection blurb keyed by its accolade filter value, so a
- *  home pick that maps to a real Explore collection borrows the exact
- *  same title + description. Falls back to the pick's local copy. */
+/** Canonical collection blurb keyed by its accolade filter value */
 function canonicalByAccolade(value: string) {
   return EDITORIAL_COLLECTIONS.find(
     (c) => c.filter.kind === 'accolade' && c.filter.value === value,
@@ -69,13 +56,9 @@ const EDITORIAL_PICKS = [
     tagline: 'Great sandwiches, in and out, back to work',
     image:
       'https://images.unsplash.com/photo-1627900440398-5db32dba8db1?w=600&q=80',
-    // Data uses the plural cuisine value "Sandwiches"; the old singular
-    // "Sandwich" matched 0 rows and the tile dead-ended on an empty page.
     href: '/discover?cuisine=Sandwiches',
   },
   {
-    // Renamed Special Occasions -> Michelin Stars so the collection has
-    // ONE name across home + Explore. Name/blurb sourced from canonical.
     id: 'michelin-stars',
     name: michelin?.title ?? 'Michelin Stars',
     tagline:
@@ -104,7 +87,7 @@ const EDITORIAL_PICKS = [
 ]
 
 /**
- * Resolve the city to show on the home page Suggestions section.
+ * Resolve the city to show on the home page.
  *
  * Signed-in users get their `profiles.home_city` so a Miami user sees
  * Miami restaurants on the home page. Anonymous users fall back to the
@@ -113,53 +96,234 @@ const EDITORIAL_PICKS = [
  */
 async function resolveHomeCity(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-): Promise<{ city: string; source: 'profile' | 'fallback' }> {
+): Promise<{
+  city: string
+  source: 'profile' | 'fallback'
+  userId: string | null
+  favoriteCuisines: string[]
+}> {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { city: FALLBACK_CITY, source: 'fallback' }
+  if (!user) return { city: FALLBACK_CITY, source: 'fallback', userId: null, favoriteCuisines: [] }
   const { data: profile } = await supabase
     .from('profiles')
-    .select('home_city')
+    .select('home_city, favorite_cuisines')
     .eq('id', user.id)
     .maybeSingle()
   const homeCity = profile?.home_city
+  const rawCuisines = profile?.favorite_cuisines
+  const favoriteCuisines = Array.isArray(rawCuisines)
+    ? rawCuisines.filter((c): c is string => typeof c === 'string')
+    : []
   return homeCity
-    ? { city: homeCity, source: 'profile' }
-    : { city: FALLBACK_CITY, source: 'fallback' }
+    ? { city: homeCity, source: 'profile', userId: user.id, favoriteCuisines }
+    : { city: FALLBACK_CITY, source: 'fallback', userId: user.id, favoriteCuisines }
 }
+
+/**
+ * Dedupe restaurants top-down: a restaurant that already appears in
+ * an earlier rail is removed from later rails.
+ */
+function dedupeAgainst(candidates: Restaurant[], seen: Set<string>): Restaurant[] {
+  const out: Restaurant[] = []
+  for (const r of candidates) {
+    if (!seen.has(r.id)) {
+      out.push(r)
+      seen.add(r.id)
+    }
+  }
+  return out
+}
+
+/** Today's date string in YYYY-MM-DD format (UTC), stable intra-day. */
+function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Number of restaurant columns on this rail. */
+const RAIL_SIZE = 8
 
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
 
-  const { city, source: citySource } = await resolveHomeCity(supabase)
+  const { city, source: citySource, userId, favoriteCuisines } =
+    await resolveHomeCity(supabase)
 
+  // ── Rail 1: Trending ──────────────────────────────────────────────────────
+  // Existing topTrendingRestaurants — untouched lib. No MMR on this rail.
   const trendingRestaurants = await topTrendingRestaurants(supabase, {
     city,
     window: '7d',
-    limit: 8,
+    limit: RAIL_SIZE,
   })
 
-  // Fallback: if trending has no results, show top-rated in the same city.
-  // [sweep-2026-05-26-v3 microcopy QW] Track whether we fell back so the
-  // section eyebrow can be honest ("Top-rated in X" vs "Trending this week").
-  let suggestions: Restaurant[] = trendingRestaurants
-  let usedTrendingFallback = false
-  if (suggestions.length === 0) {
-    usedTrendingFallback = true
-    const { data } = await supabase
-      .from('restaurants')
-      .select('*')
-      .ilike('city', city)
-      .order('google_rating', { ascending: false, nullsFirst: false })
-      .limit(8)
-    suggestions = (data ?? []) as Restaurant[]
+  // ── Fetch the full city pool once — shared across rails 2-4 ──────────────
+  // Fetch enough candidates that each rail has room after deduplication.
+  const { data: cityPool } = await supabase
+    .from('restaurants')
+    .select('*')
+    .ilike('city', city)
+    .limit(300)
+  const allCityRestaurants = (cityPool ?? []) as Restaurant[]
+
+  // Pre-compute Gastronome Scores for the whole pool once.
+  const scoreMap: Record<string, number> = {}
+  for (const r of allCityRestaurants) {
+    const gs = gastronomeScore(r)
+    if (gs !== null) scoreMap[r.id] = gs.score
   }
 
-  // Count-gate the Editorial Picks the same way Explore does so a curated
-  // tile never dead-ends on an empty results page. Each pick links to a
-  // real filter predicate (cuisine or accolade); we run a head:true count
-  // in the active city and drop tiles with zero matches. We also append
-  // the resolved &city= to every href so a Miami user lands on Miami
-  // results instead of the page's default city.
+  // Dedupe set — tracks what has already been shown in an earlier rail.
+  const seen = new Set<string>(trendingRestaurants.map((r) => r.id))
+
+  // ── Rail 2: Best of {city} ────────────────────────────────────────────────
+  // gastronomeScore with 2+ sources, sorted by score, then MMR diversify.
+  const multiSourceCandidates = allCityRestaurants.filter((r) => {
+    const gs = gastronomeScore(r)
+    return gs !== null && gs.sourceCount >= 2
+  })
+  const cityBestSorted = [...multiSourceCandidates].sort(
+    (a, b) => (scoreMap[b.id] ?? 0) - (scoreMap[a.id] ?? 0),
+  )
+  const cityBestPool = dedupeAgainst(cityBestSorted.slice(0, 32), seen)
+  const cityBestRaw = mmrDiversify(
+    cityBestPool,
+    (r) => scoreMap[r.id] ?? 0,
+  )
+  const cityBestRestaurants = cityBestRaw.slice(0, RAIL_SIZE)
+  for (const r of cityBestRestaurants) seen.add(r.id)
+
+  // ── Rail 3: For your tastes ───────────────────────────────────────────────
+  // Candidate pool = city restaurants with a score. Server passes the pool
+  // and the score map; ForYourTastesRail re-ranks client-side using
+  // getTasteAffinity (localStorage). Taste affinities are 1.0 on server.
+  //
+  // Day-0 fallback (70/20/10 interleave) built server-side:
+  //   70% multi-source best
+  //   20% favorite_cuisines match
+  //   10% explore pool (scoreless with imputation)
+  const scoredCandidates = dedupeAgainst(
+    [...allCityRestaurants].filter((r) => scoreMap[r.id] !== undefined),
+    new Set(seen), // snapshot; don't mutate seen yet
+  )
+
+  // Build 70/20/10 fallback for cold-start users.
+  // Rounding note: at RAIL_SIZE=8 naive rounding (6/2/0) starves the 10%
+  // explore slot entirely. Guarantee the explore slot at least 1 card and
+  // give the cuisine slot the remainder so the day-0 mix stays honest.
+  const fallback70Count = Math.round(RAIL_SIZE * 0.7)
+  const fallback10Count = Math.max(1, Math.floor(RAIL_SIZE * 0.1))
+  const fallback20Count = Math.max(0, RAIL_SIZE - fallback70Count - fallback10Count)
+
+  const bestForFallback = cityBestSorted
+    .filter((r) => !seen.has(r.id))
+    .slice(0, fallback70Count * 4)
+  const fallback70 = mmrDiversify(bestForFallback, (r) => scoreMap[r.id] ?? 0)
+    .slice(0, fallback70Count)
+
+  const cuisineMatch = favoriteCuisines.length > 0
+    ? allCityRestaurants.filter(
+        (r) =>
+          r.cuisine &&
+          favoriteCuisines.some(
+            (c) => c.toLowerCase() === r.cuisine!.toLowerCase(),
+          ) &&
+          !seen.has(r.id) &&
+          !fallback70.find((f) => f.id === r.id),
+      )
+    : []
+  const fallback20 = [...cuisineMatch]
+    .sort((a, b) => (scoreMap[b.id] ?? 0) - (scoreMap[a.id] ?? 0))
+    .slice(0, fallback20Count)
+
+  // 10% explore picks (scored, deduped, seeded)
+  const exploreSeed = `${userId ?? 'anon'}|${todayDateString()}`
+  const remainingForExplore = allCityRestaurants.filter(
+    (r) =>
+      scoreMap[r.id] !== undefined &&
+      !seen.has(r.id) &&
+      !fallback70.find((f) => f.id === r.id) &&
+      !fallback20.find((f) => f.id === r.id),
+  )
+  const fallback10 = seededDailyShuffle(
+    remainingForExplore,
+    (r) => scoreMap[r.id] ?? 0,
+    exploreSeed,
+  ).slice(0, fallback10Count)
+
+  const day0Fallback: Restaurant[] = [...fallback70, ...fallback20, ...fallback10]
+  // Backfill: anonymous users have no favorite_cuisines, so the 20% slot can
+  // come up empty and leave the rail short. Top up from the remaining
+  // city-best pool (already score-sorted, never previously shown).
+  if (day0Fallback.length < RAIL_SIZE) {
+    const have = new Set(day0Fallback.map((r) => r.id))
+    for (const r of cityBestSorted) {
+      if (day0Fallback.length >= RAIL_SIZE) break
+      if (!seen.has(r.id) && !have.has(r.id)) {
+        day0Fallback.push(r)
+        have.add(r.id)
+      }
+    }
+  }
+  const tasteRailCandidates = dedupeAgainst(scoredCandidates, new Set(seen))
+
+  // Mark these as seen after ForYourTastesRail renders (optimistic).
+  // We pass candidates and let the client component pick up to 8 after MMR.
+  // Update seen with the top candidates to reduce rail 4 overlap.
+  for (const r of tasteRailCandidates.slice(0, RAIL_SIZE)) seen.add(r.id)
+
+  // ── Rail 4: Worth a look ──────────────────────────────────────────────────
+  // Scoreless/thin rows ranked by imputeQuality (ordering only, never displayed),
+  // then seededDailyShuffle with daily rotation seed.
+  //
+  // Evidence gate: photo + address required (per plan §3).
+  const scorelessCandidates = allCityRestaurants.filter(
+    (r) =>
+      scoreMap[r.id] === undefined &&
+      !seen.has(r.id) &&
+      // Evidence gate: must have a photo and an address.
+      (r.photo_url || r.photo_urls?.[0] || r.google_photo_url) &&
+      r.address,
+  )
+
+  // Build cohort medians from scored rows for imputation.
+  const scoredRows = allCityRestaurants
+    .filter((r) => scoreMap[r.id] !== undefined)
+    .map((r) => ({ city: r.city, cuisine: r.cuisine, score: scoreMap[r.id] ?? null }))
+  const { cohortMedians, cityMedians } = buildCohortMedians(scoredRows)
+
+  // Rank by imputed quality (ordering only), then seeded daily shuffle.
+  const scorelessWithImputed = scorelessCandidates.map((r) => ({
+    restaurant: r,
+    imputed: imputeQuality(
+      { city: r.city, cuisine: r.cuisine },
+      cohortMedians,
+      cityMedians,
+    ) ?? -999,
+  }))
+  scorelessWithImputed.sort((a, b) => b.imputed - a.imputed)
+
+  // seededDailyShuffle with τ=0.25 on top imputed candidates.
+  const worthALookSeed = `${userId ?? 'anon'}|${todayDateString()}`
+  const shuffledScoreless = seededDailyShuffle(
+    scorelessWithImputed.slice(0, 40).map((x) => x.restaurant),
+    (r) => {
+      const entry = scorelessWithImputed.find((e) => e.restaurant.id === r.id)
+      // Shift imputed up so all values are positive before seededDailyShuffle
+      // (it takes log of the score; negative/zero inputs get clamped to 1e-9).
+      return Math.max(1e-9, (entry?.imputed ?? 0) + 10)
+    },
+    worthALookSeed,
+  )
+
+  // MMR diversify the explore rail.
+  const worthALookRaw = mmrDiversify(
+    shuffledScoreless.slice(0, 32),
+    // Relevance for MMR: use imputed rank (index as proxy to preserve shuffle order).
+    (r) => 1 / (1 + shuffledScoreless.indexOf(r)),
+  )
+  const worthALookRestaurants = worthALookRaw.slice(0, RAIL_SIZE)
+
+  // ── Editorial picks (count-gated) ────────────────────────────────────────
   const editorialPicks = (
     await Promise.all(
       EDITORIAL_PICKS.map(async (pick) => {
@@ -178,8 +342,6 @@ export default async function HomePage() {
           q = q.gte('google_rating', 4.3).lte('google_review_count', 500)
         const { count } = await q
 
-        // Append the resolved city so the destination matches what the
-        // home page is showing.
         url.searchParams.set('city', city)
         const href = `/discover${url.search}`
 
@@ -191,10 +353,7 @@ export default async function HomePage() {
   return (
     <div style={{ backgroundColor: 'var(--color-background)', minHeight: '100vh' }}>
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        {/* Search hero — primary "where do I go tonight" entry point.
-            Sweep v2 P0: home page previously had no search affordance
-            anywhere; a diner with intent ("Italian, tonight") couldn't
-            ask the homepage anything. Now the page leads with one. */}
+        {/* ── Hero / Search ── preserved exactly as before; do not modify ── */}
         <section className="mb-12 sm:mb-16">
           <h1
             className="text-3xl sm:text-4xl mb-3"
@@ -218,11 +377,6 @@ export default async function HomePage() {
             The critics, the crowd, and the feed — every verdict on one page.
             Stop opening six tabs to pick dinner.
           </p>
-          {/* Real autocomplete (hero variant) — the static <Link> here
-              looked like a search box but typing did nothing and no query
-              was ever recorded. SearchAutocomplete fires live suggestions,
-              records the search into RecentSearches, and scopes results to
-              the resolved city. */}
           <div className="max-w-2xl">
             <SearchAutocomplete
               variant="hero"
@@ -230,13 +384,6 @@ export default async function HomePage() {
               placeholder="Search restaurants, cuisines, neighborhoods, or dishes…"
             />
           </div>
-          {/* Scent chips — advertise that dish + neighborhood search exist.
-              The hero box accepts free text, but nothing told users they
-              could search by a specific dish or a neighborhood. "By dish"
-              flips /discover into dishes mode; the example chips prefill a
-              query that resolves against dish names and neighborhoods. All
-              route into the unified /discover surface (mode + q params it
-              reads). */}
           <div className="max-w-2xl mt-4 flex flex-wrap items-center gap-2">
             <Link
               href="/discover?mode=dishes"
@@ -269,23 +416,10 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-        </section>
-
-        {/* Suggestions section — header names the city so users never
-            have to wonder. Eyebrow label changed from "Curated Selection"
-            (which overpromised editorial taste on what is actually a
-            7-day trending algorithm) to "Trending this week".
-            [sweep-2026-05-26-v3 microcopy QW] When trending was empty and
-            we fell back to top-rated, use "Top-rated in {city}" so the
-            label is honest about what the user is actually seeing. */}
-        <section className="mb-16">
-          <SectionHeader
-            label={usedTrendingFallback ? `Top-rated in ${city}` : 'Trending this week'}
-            title={`Suggestions in ${city}`}
-          />
+          {/* City resolution notice for anonymous users */}
           {citySource === 'fallback' && (
             <p
-              className="text-xs mb-4 -mt-2"
+              className="text-xs mt-4"
               style={{
                 color: 'var(--color-text-secondary)',
                 fontFamily: 'var(--font-body)',
@@ -302,110 +436,124 @@ export default async function HomePage() {
               to personalize.
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {suggestions.map((r) => (
-              <SuggestionCard key={r.id} restaurant={r} />
-            ))}
-          </div>
         </section>
 
-        {/* Personal rails — RecentSearches and FavoritesSection each own
-            their <SectionHeader> now (sweep-2026-05-26-v3 R2). Both
-            components return null when empty, so no orphan heading floats
-            over blank space. The <section> wrappers are kept for layout
-            but hold no heading of their own. */}
+        {/* ── Four transparent rails ── */}
+
+        {/* Rail 1 — Trending this week
+            Objective: "What people are talking about right now"
+            No MMR — trending is its own diversity signal.  */}
+        <TrendingRail restaurants={trendingRestaurants} city={city} />
+
+        {/* Rail 2 — Best of {city}
+            Objective: "Highest-rated by cross-source consensus"
+            Only restaurants with 2+ rating sources; MMR diversify applied. */}
+        <CityBestRail restaurants={cityBestRestaurants} city={city} />
+
+        {/* Rail 3 — For your tastes
+            Objective: personalized ("Picked for your taste…") or honest cold-start
+            ("Highly rated in your city, curated for a first visit").
+            Client island: re-ranks by score × getTasteAffinity in browser.
+            Day-0 fallback = 70/20/10 interleave built server-side.
+            MMR diversify inside the component. */}
+        <ForYourTastesRail
+          candidates={tasteRailCandidates}
+          fallbackRestaurants={day0Fallback}
+          city={city}
+          scores={scoreMap}
+        />
+
+        {/* Rail 4 — Worth a look
+            Objective: "New and under-the-radar spots"
+            Scoreless/thin rows; ranked by imputeQuality (ordering only, never shown);
+            seededDailyShuffle rotates daily, stable intra-day.
+            Cards always show honest no-score treatment.
+            MMR diversify applied. */}
+        <WorthALookRail restaurants={worthALookRestaurants} city={city} />
+
+        {/* Personal rails — RecentSearches and FavoritesSection each own their
+            <SectionHeader>; return null when empty so no orphan heading floats. */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           <section>
             <RecentSearches />
           </section>
-
           <section>
             <FavoritesSection />
           </section>
         </div>
 
-        {/* Editorial picks — was "Saved Collections" which implied user
-            data. Renamed to make the curated-entry intent explicit. The
-            bookmark hover icon was removed (these aren't user saves).
-            D1 (Wave 5): eyebrow is now "Editor's picks" — these are NOT
-            personalized, so the old "Curated for you" overpromised. Each
-            tile surfaces the live count computed above and a plain-English
-            benefit tagline (not the internal predicate code), and the rail
-            carries a "See all collections" link into the Explore taxonomy
-            so home + Explore read as one system. */}
+        {/* Editorial picks — count-gated, links into Explore */}
         {editorialPicks.length > 0 && (
-        <section>
-          <SectionHeader
-            label="Editor's picks"
-            title="Start here"
-          />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {editorialPicks.map((c) => (
+          <section>
+            <SectionHeader
+              label="Editor's picks"
+              title="Start here"
+            />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {editorialPicks.map((c) => (
+                <Link
+                  key={c.id}
+                  href={c.href}
+                  className="overflow-hidden cursor-pointer transition-shadow group block"
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    borderRadius: 'var(--r-card)',
+                    boxShadow: 'var(--shadow-1)',
+                  }}
+                  aria-label={`${c.name} — ${c.tagline} (${c.count} in ${city})`}
+                >
+                  <div className="overflow-hidden relative rounded-sm aspect-square">
+                    <EditorialPickImage src={c.image} />
+                  </div>
+                  <div className="p-4">
+                    <h3
+                      className="text-lg mb-1"
+                      style={{
+                        color: 'var(--color-text)',
+                        fontFamily: 'var(--font-heading)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {c.name}
+                    </h3>
+                    <p
+                      className="text-sm mb-2"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {c.tagline}
+                    </p>
+                    <p
+                      className="text-xs uppercase tracking-wide"
+                      style={{
+                        color: 'var(--color-action)',
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {c.count} {c.count === 1 ? 'spot' : 'spots'} in {city}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-6">
               <Link
-                key={c.id}
-                href={c.href}
-                className="overflow-hidden cursor-pointer transition-shadow group block"
+                href="/discover"
+                className="inline-flex items-center gap-1 text-sm hover:underline underline-offset-2"
                 style={{
-                  backgroundColor: 'var(--color-surface)',
-                  borderRadius: 'var(--r-card)',
-                  boxShadow: 'var(--shadow-1)',
+                  color: 'var(--color-action)',
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
                 }}
-                aria-label={`${c.name} — ${c.tagline} (${c.count} in ${city})`}
               >
-                <div className="overflow-hidden relative rounded-sm aspect-square">
-                  <EditorialPickImage src={c.image} />
-                </div>
-                <div className="p-4">
-                  <h3
-                    className="text-lg mb-1"
-                    style={{
-                      color: 'var(--color-text)',
-                      fontFamily: 'var(--font-heading)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {c.name}
-                  </h3>
-                  <p
-                    className="text-sm mb-2"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      fontFamily: 'var(--font-body)',
-                    }}
-                  >
-                    {c.tagline}
-                  </p>
-                  <p
-                    className="text-xs uppercase tracking-wide"
-                    style={{
-                      color: 'var(--color-action)',
-                      fontFamily: 'var(--font-body)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {c.count} {c.count === 1 ? 'spot' : 'spots'} in {city}
-                  </p>
-                </div>
+                See all collections
+                <span aria-hidden="true">→</span>
               </Link>
-            ))}
-          </div>
-          {/* Bridge into the full Discover taxonomy so the home rail does
-              not read as a separate, competing set of collections. */}
-          <div className="mt-6">
-            <Link
-              href="/discover"
-              className="inline-flex items-center gap-1 text-sm hover:underline underline-offset-2"
-              style={{
-                color: 'var(--color-action)',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 500,
-              }}
-            >
-              See all collections
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        </section>
+            </div>
+          </section>
         )}
       </div>
     </div>

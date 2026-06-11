@@ -11,6 +11,7 @@ import {
 } from '@/lib/collections'
 import { createClient } from '@/lib/supabase/client'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
+import { recordPositiveEvent } from '@/lib/taste'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface BookmarkButtonProps {
@@ -23,6 +24,8 @@ interface BookmarkButtonProps {
    */
   variant?: 'hero' | 'card'
   className?: string
+  /** Restaurant metadata forwarded to the taste vector on save. */
+  tasteHint?: { cuisine: string | null; city: string | null; price_range: number | null; michelin_stars: number | null }
 }
 
 /**
@@ -40,6 +43,7 @@ export default function BookmarkButton({
   restaurantId,
   variant = 'hero',
   className = '',
+  tasteHint,
 }: BookmarkButtonProps) {
   const favorites = useFavorites()
   const collections = useCollections()
@@ -117,6 +121,7 @@ export default function BookmarkButton({
     const wasFavorite = isFavorite
     const currentCount = favorites.length
     toggleFavorite(restaurantId)
+    if (!wasFavorite && tasteHint) recordPositiveEvent(tasteHint)
     setLastAction(wasFavorite ? 'unfavorited' : 'favorited')
     if (wasFavorite) {
       setToast('Removed from saved')

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Check, ChevronRight, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { openSignInModal } from '@/components/auth/SignInModalHost'
+import { recordPositiveEvent } from '@/lib/taste'
 
 export interface VerdictSheetProps {
   restaurantId: string
@@ -30,6 +31,8 @@ export interface VerdictSheetProps {
   onClose: () => void
   /** Optional callback after any successful RPC call. */
   onVerdictSaved?: () => void
+  /** Restaurant metadata forwarded to the taste vector on positive signals. */
+  tasteHint?: { cuisine: string | null; city: string | null; price_range: number | null; michelin_stars: number | null }
 }
 
 type Tier = 'been' | 'return' | 'rating' | 'dishes' | 'done'
@@ -92,6 +95,7 @@ export default function VerdictSheet({
   open,
   onClose,
   onVerdictSaved,
+  tasteHint,
 }: VerdictSheetProps) {
   const [tier, setTier] = useState<Tier>('been')
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
@@ -197,11 +201,12 @@ export default function VerdictSheet({
       setErrorMsg(null)
       if (value !== null) {
         await rpc({ p_would_return: value })
+        if (value === true && tasteHint) recordPositiveEvent(tasteHint)
       }
       setSubmitting(false)
       setTier('rating')
     },
-    [rpc]
+    [rpc, tasteHint]
   )
 
   // Tier 3: Rating
@@ -212,11 +217,12 @@ export default function VerdictSheet({
       if (rating !== null) {
         setSelectedRating(rating)
         await rpc({ p_rating: rating })
+        if (rating >= 7 && tasteHint) recordPositiveEvent(tasteHint)
       }
       setSubmitting(false)
       setTier('dishes')
     },
-    [rpc]
+    [rpc, tasteHint]
   )
 
   // Tier 4: Dish tags

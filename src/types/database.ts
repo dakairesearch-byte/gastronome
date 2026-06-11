@@ -1300,6 +1300,54 @@ export type Database = {
           },
         ]
       }
+      feed_impressions: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          position: number
+          restaurant_id: string
+          session_id: string
+          surface: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: never
+          position: number
+          restaurant_id: string
+          session_id: string
+          surface: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: never
+          position?: number
+          restaurant_id?: string
+          session_id?: string
+          surface?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_impressions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_impressions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fetch_logs: {
         Row: {
           completed_at: string | null
@@ -3279,14 +3327,38 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       submit_verdict: {
         Args: {
+          p_dish_tags?: string[]
+          p_ip?: string
+          p_rating?: number
           p_restaurant_id: string
-          p_rating?: number | null
-          p_would_return?: boolean | null
-          p_dish_tags?: string[] | null
-          p_ip?: string | null
-          p_ua?: string | null
+          p_ua?: string
+          p_would_return?: boolean
         }
-        Returns: Database["public"]["Tables"]["reviews"]["Row"]
+        Returns: {
+          author_id: string
+          content: string | null
+          created_at: string | null
+          dish_tags: string[] | null
+          id: string
+          identity_tier: number
+          ip_hash: string | null
+          quarantined: boolean
+          rating: number | null
+          restaurant_id: string
+          title: string | null
+          trust_weight: number
+          ua_hash: string | null
+          updated_at: string | null
+          visit_date: string | null
+          visit_verified: boolean
+          would_return: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       unaccent: { Args: { "": string }; Returns: string }
     }
